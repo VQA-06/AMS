@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Save, RefreshCw } from 'lucide-react';
 import { Member } from '@/shared/types';
 import { MemberInput } from '@/shared/schemas/member.schema';
+import { ModalPortal } from '../ui/ModalPortal';
 
 interface MemberFormModalProps {
   isOpen: boolean;
@@ -101,8 +102,9 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop-full animate-in fade-in">
-      <div className="w-full max-w-lg rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[85vh] flex flex-col my-auto">
+    <ModalPortal>
+      <div className="modal-backdrop-full animate-in fade-in">
+        <div className="w-full max-w-lg rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[85vh] flex flex-col my-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -277,5 +279,6 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
         </form>
       </div>
     </div>
+  </ModalPortal>
   );
 };

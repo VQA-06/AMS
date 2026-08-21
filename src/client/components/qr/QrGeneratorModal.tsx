@@ -13,6 +13,7 @@ import {
 import { Member, Event } from '@/shared/types';
 import { fetchApi } from '../../lib/api-client';
 import { DigitalPassCard } from './DigitalPassCard';
+import { ModalPortal } from '../ui/ModalPortal';
 
 interface QrGeneratorModalProps {
   isOpen: boolean;
@@ -161,8 +162,9 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
   const currentEvent = events.find((e) => e.id === selectedEventId);
 
   return (
-    <div className="modal-backdrop-full animate-in fade-in">
-      <div className="w-full max-w-2xl rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[88vh] flex flex-col my-auto">
+    <ModalPortal>
+      <div className="modal-backdrop-full animate-in fade-in">
+        <div className="w-full max-w-2xl rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[88vh] flex flex-col my-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -428,5 +430,6 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
         )}
       </div>
     </div>
-  );
+  </ModalPortal>
+);
 };

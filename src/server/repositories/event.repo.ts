@@ -116,19 +116,19 @@ export class EventRepository {
     }
     if (data.description !== undefined) {
       fields.push('description = ?');
-      values.push(data.description);
+      values.push(data.description ?? null);
     }
     if (data.location_name !== undefined) {
       fields.push('location_name = ?');
-      values.push(data.location_name);
+      values.push(data.location_name ?? null);
     }
     if (data.starts_at !== undefined) {
       fields.push('starts_at = ?');
-      values.push(data.starts_at);
+      values.push(data.starts_at ?? null);
     }
     if (data.ends_at !== undefined) {
       fields.push('ends_at = ?');
-      values.push(data.ends_at);
+      values.push(data.ends_at ?? null);
     }
     if (data.qr_policy !== undefined) {
       fields.push('qr_policy = ?');

@@ -8,6 +8,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { generateIdCardDataUrl, downloadIdCardImage } from '../../lib/idcard-canvas';
+import { ModalPortal } from '../ui/ModalPortal';
 
 export interface PrintableToken {
   id: string;
@@ -213,8 +214,9 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
   };
 
   return (
-    <div className="modal-backdrop-full animate-in fade-in">
-      <div className="w-full max-w-5xl h-[92dvh] sm:h-[90vh] rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700 shadow-2xl flex flex-col overflow-hidden my-auto">
+    <ModalPortal>
+      <div className="modal-backdrop-full animate-in fade-in">
+        <div className="w-full max-w-5xl h-[92dvh] sm:h-[90vh] rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700 shadow-2xl flex flex-col overflow-hidden my-auto">
         {/* Top Header & Action Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-slate-900/90 gap-3 shrink-0">
           <div>
@@ -316,5 +318,6 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
         </div>
       </div>
     </div>
-  );
+  </ModalPortal>
+);
 };

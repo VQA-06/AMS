@@ -41,18 +41,40 @@ describe('Reliability, Concurrency & Network Resiliency Tests', () => {
       }
     });
 
-    it('should throw ApiError with NETWORK_OFFLINE on connection drop', async () => {
-      globalThis.fetch = vi.fn().mockImplementation(() => {
-        const err = new TypeError('Failed to fetch');
-        return Promise.reject(err);
-      });
-
+    it('should throw ApiError with NETWORK_OFFLINE on connection drop when offline', async () => {
+      const originalOnLine = typeof navigator !== 'undefined' ? navigator.onLine : true;
       try {
+        Object.defineProperty(globalThis.navigator, 'onLine', { value: false, configurable: true });
+        globalThis.fetch = vi.fn().mockImplementation(() => {
+          const err = new TypeError('Failed to fetch');
+          return Promise.reject(err);
+        });
+
         await fetchApi('/api/data', { retries: 0 });
       } catch (e: any) {
         expect(e instanceof ApiError).toBe(true);
         expect(e.code).toBe('NETWORK_OFFLINE');
         expect(e.message).toContain('Koneksi internet terputus');
+      } finally {
+        Object.defineProperty(globalThis.navigator, 'onLine', { value: originalOnLine, configurable: true });
+      }
+    });
+
+    it('should throw ApiError with NETWORK_ERROR on unexpected network exception', async () => {
+      const originalOnLine = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      try {
+        Object.defineProperty(globalThis.navigator, 'onLine', { value: true, configurable: true });
+        globalThis.fetch = vi.fn().mockImplementation(() => {
+          const err = new TypeError('Failed to fetch');
+          return Promise.reject(err);
+        });
+
+        await fetchApi('/api/data', { retries: 0 });
+      } catch (e: any) {
+        expect(e instanceof ApiError).toBe(true);
+        expect(e.code).toBe('NETWORK_ERROR');
+      } finally {
+        Object.defineProperty(globalThis.navigator, 'onLine', { value: originalOnLine, configurable: true });
       }
     });
 

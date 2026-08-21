@@ -33,6 +33,7 @@ import { GuestPassModal } from '../components/events/GuestPassModal';
 import { DigitalPassCard } from '../components/qr/DigitalPassCard';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { AlertModal } from '../components/ui/AlertModal';
+import { ModalPortal } from '../components/ui/ModalPortal';
 import { BulkActionBar, BulkActionItem } from '@/client/components/ui/BulkActionBar';
 
 interface EventDetailPageProps {
@@ -1353,180 +1354,186 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
       {/* Individual Digital Pass Card View Modal */}
       {selectedTokenForCard && selectedTokenForCard.qr_token && !selectedTokenForCard.revoked_at && (
-        <div className="modal-backdrop-full animate-in fade-in">
-          <DigitalPassCard
-            tokenString={selectedTokenForCard.qr_token}
-            memberName={selectedTokenForCard.member_name || 'Peserta'}
-            memberExternalId={selectedTokenForCard.member_external_id || selectedTokenForCard.member_id}
-            memberDivision={selectedTokenForCard.member_division}
-            eventName={event.name}
-            scope={selectedTokenForCard.scope}
-            expiresAt={selectedTokenForCard.expires_at}
-            onClose={() => setSelectedTokenForCard(null)}
-          />
-        </div>
+        <ModalPortal>
+          <div className="modal-backdrop-full animate-in fade-in">
+            <DigitalPassCard
+              tokenString={selectedTokenForCard.qr_token}
+              memberName={selectedTokenForCard.member_name || 'Peserta'}
+              memberExternalId={selectedTokenForCard.member_external_id || selectedTokenForCard.member_id}
+              memberDivision={selectedTokenForCard.member_division}
+              eventName={event.name}
+              scope={selectedTokenForCard.scope}
+              expiresAt={selectedTokenForCard.expires_at}
+              onClose={() => setSelectedTokenForCard(null)}
+            />
+          </div>
+        </ModalPortal>
       )}
 
       {/* Manual Attendance Modal */}
       {isManualModalOpen && (
-        <div className="modal-backdrop-full animate-in fade-in">
-          <form
-            onSubmit={handleManualSubmit}
-            className="w-full max-w-md rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 space-y-3.5 sm:space-y-4 my-auto max-h-[92dvh] overflow-y-auto"
-          >
-            <h3 className="font-heading font-bold text-lg text-white">Input Absensi Manual</h3>
-            <p className="text-xs text-slate-400">
-              Gunakan jika kamera bermasalah atau anggota hadir secara fisik tanpa tiket QR.
-            </p>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Pilih Anggota:</label>
-              <select
-                required
-                value={manualMemberId}
-                onChange={(e) => setManualMemberId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
-              >
-                <option value="">-- Pilih Anggota --</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.external_id}) {m.division ? `- ${m.division}` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Pilih Sesi:</label>
-              <select
-                value={manualSessionType}
-                onChange={(e) => setManualSessionType(e.target.value as SessionType)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
-              >
-                <option value="CHECKIN">CHECK-IN (Masuk)</option>
-                <option value="CHECKOUT">CHECK-OUT (Keluar)</option>
-                <option value="BREAK_OUT">BREAK OUT (Istirahat Keluar)</option>
-                <option value="BREAK_IN">BREAK IN (Istirahat Masuk)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Alasan Pencatatan Manual <span className="text-rose-400">*</span>:
-              </label>
-              <textarea
-                required
-                value={manualReason}
-                onChange={(e) => setManualReason(e.target.value)}
-                placeholder="misal: Ponsel anggota mati / lupa membawa tiket QR fisik"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500 min-h-[80px]"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsManualModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                disabled={manualLoading}
-                className="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20"
-              >
-                {manualLoading ? 'Menyimpan...' : 'Catat Hadir Manual'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Promote Guest Modal */}
-      {promotingGuest && (
-        <div className="modal-backdrop-full animate-in fade-in">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 animate-in zoom-in-95 my-auto max-h-[92dvh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                  <UserCheck className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-heading font-bold text-base text-white">
-                    Angkat Menjadi Anggota Resmi
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    {promotingGuest.isBulk
-                      ? `Memproses ${promotingGuest.bulkCount} peserta tamu`
-                      : promotingGuest.memberName}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPromotingGuest(null)}
-                className="text-slate-400 hover:text-white p-1"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-800/40 text-xs text-emerald-300 space-y-1">
-              <p className="font-bold flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Riwayat Presensi Tetap Tersimpan Utuh</span>
+        <ModalPortal>
+          <div className="modal-backdrop-full animate-in fade-in">
+            <form
+              onSubmit={handleManualSubmit}
+              className="w-full max-w-md rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 space-y-3.5 sm:space-y-4 my-auto max-h-[92dvh] overflow-y-auto"
+            >
+              <h3 className="font-heading font-bold text-lg text-white">Input Absensi Manual</h3>
+              <p className="text-xs text-slate-400">
+                Gunakan jika kamera bermasalah atau anggota hadir secara fisik tanpa tiket QR.
               </p>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
-                Peserta akan diberikan <strong>ID Anggota resmi baru</strong> dan <strong>QR Universal permanen</strong>. Presensi pada kegiatan penerimaan ini otomatis diakui dan terhitung di Pelacak Keaktifan.
-              </p>
-            </div>
 
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-300">
-                Pilih Divisi (Opsional):
-              </label>
-              <div className="flex items-center gap-2 glass-panel p-2.5 rounded-xl border border-slate-800">
-                <Building2 className="w-4 h-4 text-sky-400 shrink-0" />
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Pilih Anggota:</label>
                 <select
-                  value={promoteDivision}
-                  onChange={(e) => setPromoteDivision(e.target.value)}
-                  className="w-full bg-transparent text-xs text-white focus:outline-none"
+                  required
+                  value={manualMemberId}
+                  onChange={(e) => setManualMemberId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
                 >
-                  <option value="" className="bg-slate-900">-- Tanpa Divisi / Pilih Nanti --</option>
-                  {divisions.map((div, i) => (
-                    <option key={i} value={div} className="bg-slate-900">
-                      {div}
+                  <option value="">-- Pilih Anggota --</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.external_id}) {m.division ? `- ${m.division}` : ''}
                     </option>
                   ))}
                 </select>
               </div>
-              <p className="text-[10px] text-slate-500">
-                Email dan nomor HP dapat dilengkapi atau diedit manual kapan saja di menu Master Anggota.
-              </p>
-            </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setPromotingGuest(null)}
-                disabled={promoteLoading}
-                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white rounded-xl"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmPromote}
-                disabled={promoteLoading}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 active:scale-95 transition-all"
-              >
-                <UserCheck className="w-4 h-4" />
-                <span>{promoteLoading ? 'Memproses...' : 'Ya, Angkat Jadi Anggota'}</span>
-              </button>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Pilih Sesi:</label>
+                <select
+                  value={manualSessionType}
+                  onChange={(e) => setManualSessionType(e.target.value as SessionType)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                >
+                  <option value="CHECKIN">CHECK-IN (Masuk)</option>
+                  <option value="CHECKOUT">CHECK-OUT (Keluar)</option>
+                  <option value="BREAK_OUT">BREAK OUT (Istirahat Keluar)</option>
+                  <option value="BREAK_IN">BREAK IN (Istirahat Masuk)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Alasan Pencatatan Manual <span className="text-rose-400">*</span>:
+                </label>
+                <textarea
+                  required
+                  value={manualReason}
+                  onChange={(e) => setManualReason(e.target.value)}
+                  placeholder="misal: Ponsel anggota mati / lupa membawa tiket QR fisik"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500 min-h-[80px]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsManualModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={manualLoading}
+                  className="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20"
+                >
+                  {manualLoading ? 'Menyimpan...' : 'Catat Hadir Manual'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </ModalPortal>
+      )}
+
+      {/* Promote Guest Modal */}
+      {promotingGuest && (
+        <ModalPortal>
+          <div className="modal-backdrop-full animate-in fade-in">
+            <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 animate-in zoom-in-95 my-auto max-h-[92dvh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <UserCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-bold text-base text-white">
+                      Angkat Menjadi Anggota Resmi
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      {promotingGuest.isBulk
+                        ? `Memproses ${promotingGuest.bulkCount} peserta tamu`
+                        : promotingGuest.memberName}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPromotingGuest(null)}
+                  className="text-slate-400 hover:text-white p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-800/40 text-xs text-emerald-300 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Riwayat Presensi Tetap Tersimpan Utuh</span>
+                </p>
+                <p className="text-slate-300 text-[11px] leading-relaxed">
+                  Peserta akan diberikan <strong>ID Anggota resmi baru</strong> dan <strong>QR Universal permanen</strong>. Presensi pada kegiatan penerimaan ini otomatis diakui dan terhitung di Pelacak Keaktifan.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-300">
+                  Pilih Divisi (Opsional):
+                </label>
+                <div className="flex items-center gap-2 glass-panel p-2.5 rounded-xl border border-slate-800">
+                  <Building2 className="w-4 h-4 text-sky-400 shrink-0" />
+                  <select
+                    value={promoteDivision}
+                    onChange={(e) => setPromoteDivision(e.target.value)}
+                    className="w-full bg-transparent text-xs text-white focus:outline-none"
+                  >
+                    <option value="" className="bg-slate-900">-- Tanpa Divisi / Pilih Nanti --</option>
+                    {divisions.map((div, i) => (
+                      <option key={i} value={div} className="bg-slate-900">
+                        {div}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Email dan nomor HP dapat dilengkapi atau diedit manual kapan saja di menu Master Anggota.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setPromotingGuest(null)}
+                  disabled={promoteLoading}
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmPromote}
+                  disabled={promoteLoading}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 active:scale-95 transition-all"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  <span>{promoteLoading ? 'Memproses...' : 'Ya, Angkat Jadi Anggota'}</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Confirmation Modal */}

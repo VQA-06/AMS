@@ -67,4 +67,47 @@ describe('SPA Routing Fallback & Network Resilience Tests', () => {
     expect(error.code).toBe('VALIDATION_ERROR');
     expect(error.details).toEqual({ field: 'name' });
   });
+
+  it('should handle backend error responses cleanly in fetchApi without throwing body already read TypeError', async () => {
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async () =>
+        new Response(
+          JSON.stringify({
+            ok: false,
+            error: {
+              code: 'VALIDATION_FAILED',
+              message: 'Nama kegiatan wajib diisi.',
+            },
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+
+      const { fetchApi } = await import('../src/client/lib/api-client');
+      await expect(fetchApi('/api/events', { method: 'POST' })).rejects.toThrow(
+        'Nama kegiatan wajib diisi.'
+      );
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('should handle non-JSON HTML 500 error responses cleanly in fetchApi', async () => {
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async () =>
+        new Response('<!DOCTYPE html><html><body>Internal Error</body></html>', {
+          status: 500,
+          statusText: 'Internal Server Error',
+          headers: { 'Content-Type': 'text/html' },
+        });
+
+      const { fetchApi } = await import('../src/client/lib/api-client');
+      await expect(fetchApi('/api/events', { method: 'POST' })).rejects.toThrow(
+        /Terjadi gangguan pada server backend/
+      );
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });

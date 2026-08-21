@@ -23,6 +23,7 @@ import { Admin, AuditLog, Member, Role } from '@/shared/types';
 import { fetchApi } from '../lib/api-client';
 import { useAuth } from '../hooks/useAuth';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { ModalPortal } from '../components/ui/ModalPortal';
 import { AlertModal } from '../components/ui/AlertModal';
 import { BulkActionBar, BulkActionItem } from '@/client/components/ui/BulkActionBar';
 
@@ -821,8 +822,9 @@ export const SettingsPage: React.FC = () => {
 
           {/* Edit Admin Modal */}
           {editingAdmin && (
-            <div className="modal-backdrop-full animate-in fade-in">
-              <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 animate-in zoom-in-95 my-auto">
+            <ModalPortal>
+              <div className="modal-backdrop-full animate-in fade-in">
+                <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 animate-in zoom-in-95 my-auto">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                   <div className="flex items-center gap-2">
                     <Edit2 className="w-4 h-4 text-sky-400" />
@@ -915,7 +917,8 @@ export const SettingsPage: React.FC = () => {
                 </form>
               </div>
             </div>
-          )}
+          </ModalPortal>
+        )}
 
           {/* Role-Based Access Control Matrix Card */}
           <div className="lg:col-span-3 glass-panel-elevated rounded-3xl p-6 border border-slate-800 space-y-4 mt-2">

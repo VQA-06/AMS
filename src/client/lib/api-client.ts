@@ -19,7 +19,8 @@ export interface FetchApiOptions extends RequestInit {
 
 /**
  * Enterprise-Grade Resilient HTTP Client
- * - Automatic 30s timeout with AbortController for mobile resilience
+ * - Single-pass body stream read (eliminates TypeError: Already read)
+ * - Automatic 30s timeout with AbortController
  * - Automatic retry with exponential backoff on transient network drops for GET requests
  * - Clear, transparent error descriptions
  */
@@ -71,15 +72,21 @@ export async function fetchApi<T = unknown>(
         return text as unknown as T;
       }
 
-      let json: ApiResponse<T> | null = null;
+      // Single-pass body read to prevent stream consumption collision
       let rawText = '';
-      try {
-        json = await response.json();
-      } catch {
+      if (typeof response.text === 'function') {
+        rawText = await response.text();
+      } else if (typeof response.json === 'function') {
+        const j = await response.json();
+        rawText = JSON.stringify(j);
+      }
+
+      let json: ApiResponse<T> | null = null;
+      if (rawText && rawText.trim() !== '') {
         try {
-          rawText = await response.text();
+          json = JSON.parse(rawText);
         } catch {
-          // ignore
+          // Response is non-JSON (e.g. plain text or HTML error page)
         }
       }
 
@@ -101,14 +108,16 @@ export async function fetchApi<T = unknown>(
         }
 
         if (response.status >= 500) {
+          const cleanSnippet = rawText && !rawText.startsWith('<!') && rawText.length < 200 ? `: ${rawText}` : '';
           throw new ApiError(
-            `Terjadi gangguan pada server backend (${response.status}: ${response.statusText || 'Internal Error'}).`,
+            `Terjadi gangguan pada server backend (${response.status}: ${response.statusText || 'Internal Server Error'})${cleanSnippet}.`,
             'SERVER_ERROR'
           );
         }
 
         throw new ApiError(
-          rawText || `Permintaan gagal dengan status ${response.status} (${response.statusText || 'Error'}).`,
+          (rawText && !rawText.startsWith('<!') ? rawText : null) ||
+            `Permintaan gagal dengan status ${response.status} (${response.statusText || 'Error'}).`,
           'REQUEST_ERROR'
         );
       }
@@ -142,23 +151,16 @@ export async function fetchApi<T = unknown>(
         );
       }
 
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         throw new ApiError(
           'Koneksi internet terputus. Silakan periksa jaringan Wi-Fi atau data seluler Anda.',
           'NETWORK_OFFLINE'
         );
       }
 
-      if (isNetworkFail) {
-        throw new ApiError(
-          'Gagal terhubung ke server. Periksa stabilitas koneksi internet Anda atau coba sesaat lagi.',
-          'NETWORK_ERROR'
-        );
-      }
-
       throw new ApiError(
-        err instanceof Error ? err.message : 'Terjadi gangguan jaringan atau server.',
-        'UNKNOWN_ERROR'
+        err instanceof Error ? err.message : 'Terjadi gangguan pada permintaan jaringan.',
+        'NETWORK_ERROR'
       );
     }
   }

@@ -26,6 +26,7 @@ import { DigitalPassCard } from '../components/qr/DigitalPassCard';
 import { PrintBadgeSheet, PrintableToken } from '../components/qr/PrintBadgeSheet';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { AlertModal } from '../components/ui/AlertModal';
+import { ModalPortal } from '../components/ui/ModalPortal';
 
 import { BulkActionBar, BulkActionItem } from '@/client/components/ui/BulkActionBar';
 import { UserCheck } from 'lucide-react';
@@ -640,17 +641,19 @@ export const MembersPage: React.FC<MembersPageProps> = ({
 
       {/* Individual Digital Pass Card View Modal */}
       {selectedPassData && (
-        <div className="modal-backdrop-full animate-in fade-in">
-          <DigitalPassCard
-            tokenString={selectedPassData.tokenString}
-            memberName={selectedPassData.memberName}
-            memberExternalId={selectedPassData.memberExternalId}
-            memberDivision={selectedPassData.memberDivision}
-            scope="universal"
-            expiresAt={selectedPassData.expiresAt}
-            onClose={() => setSelectedPassData(null)}
-          />
-        </div>
+        <ModalPortal>
+          <div className="modal-backdrop-full animate-in fade-in">
+            <DigitalPassCard
+              tokenString={selectedPassData.tokenString}
+              memberName={selectedPassData.memberName}
+              memberExternalId={selectedPassData.memberExternalId}
+              memberDivision={selectedPassData.memberDivision}
+              scope="universal"
+              expiresAt={selectedPassData.expiresAt}
+              onClose={() => setSelectedPassData(null)}
+            />
+          </div>
+        </ModalPortal>
       )}
 
       {/* Bulk Print Sheet (Clean A4 Print Window) */}
@@ -662,19 +665,21 @@ export const MembersPage: React.FC<MembersPageProps> = ({
       />
 
       {isImportOpen && (
-        <div className="modal-backdrop-full animate-in fade-in">
-          <div className="w-full max-w-4xl my-auto max-h-[92dvh] overflow-y-auto">
-            <ImportWizard
-              onSuccess={() => {
-                setIsImportOpen(false);
-                loadMembers();
-                loadOptions();
-                onRefreshGlobal?.();
-              }}
-              onCancel={() => setIsImportOpen(false)}
-            />
+        <ModalPortal>
+          <div className="modal-backdrop-full animate-in fade-in">
+            <div className="w-full max-w-4xl my-auto max-h-[92dvh] overflow-y-auto">
+              <ImportWizard
+                onSuccess={() => {
+                  setIsImportOpen(false);
+                  loadMembers();
+                  loadOptions();
+                  onRefreshGlobal?.();
+                }}
+                onCancel={() => setIsImportOpen(false)}
+              />
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Confirmation Modal */}

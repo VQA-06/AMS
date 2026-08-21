@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle2, XCircle, User, Building2, Calendar, Clock, X } from 'lucide-react';
+import { ModalPortal } from '../ui/ModalPortal';
 
 export interface ScanResultData {
   success: boolean;
@@ -26,10 +27,11 @@ export const ResultModal: React.FC<ResultModalProps> = ({ result, onDismiss }) =
   if (!result) return null;
 
   return (
-    <div
-      className="modal-backdrop-full transition-opacity animate-in fade-in"
-      onClick={onDismiss}
-    >
+    <ModalPortal>
+      <div
+        className="modal-backdrop-full transition-opacity animate-in fade-in"
+        onClick={onDismiss}
+      >
       <div
         className={`w-full max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border transition-transform animate-in zoom-in-95 my-auto ${
           result.success
@@ -152,5 +154,6 @@ export const ResultModal: React.FC<ResultModalProps> = ({ result, onDismiss }) =
         </button>
       </div>
     </div>
-  );
+  </ModalPortal>
+);
 };

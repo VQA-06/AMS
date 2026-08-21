@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { AlertTriangle, AlertCircle, Info, CheckCircle2, X } from 'lucide-react';
+import { ModalPortal } from './ModalPortal';
 
 export type ModalType = 'danger' | 'warning' | 'info' | 'success';
 
@@ -73,12 +74,13 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const style = getStyle();
 
   return (
-    <div className="modal-backdrop-full animate-in fade-in duration-200">
-      <div
-        className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 animate-in zoom-in-95 duration-200 text-slate-100 relative my-auto"
-        role="dialog"
-        aria-modal="true"
-      >
+    <ModalPortal>
+      <div className="modal-backdrop-full animate-in fade-in duration-200">
+        <div
+          className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 animate-in zoom-in-95 duration-200 text-slate-100 relative my-auto"
+          role="dialog"
+          aria-modal="true"
+        >
         <button
           type="button"
           disabled={loading}
@@ -132,5 +134,6 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         </div>
       </div>
     </div>
-  );
+  </ModalPortal>
+);
 };

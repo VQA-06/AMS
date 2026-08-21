@@ -31,7 +31,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({ result, onDismiss }) =
       onClick={onDismiss}
     >
       <div
-        className={`w-full max-w-md rounded-3xl p-6 shadow-2xl border transition-transform animate-in zoom-in-95 ${
+        className={`w-full max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border transition-transform animate-in zoom-in-95 my-auto ${
           result.success
             ? 'bg-gradient-to-b from-slate-900 via-slate-900 to-emerald-950/40 border-emerald-500/50 ring-4 ring-emerald-500/20'
             : 'bg-gradient-to-b from-slate-900 via-slate-900 to-rose-950/40 border-rose-500/50 ring-4 ring-rose-500/20'

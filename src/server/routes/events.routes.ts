@@ -42,7 +42,7 @@ eventsRoutes.post('/', authMiddleware, requireRole(['owner', 'admin']), async (c
     ends_at: input.ends_at,
     qr_policy: input.qr_policy,
     status: input.status,
-    session_modes: JSON.stringify(input.session_modes),
+    session_modes: typeof input.session_modes === 'string' ? input.session_modes : JSON.stringify(input.session_modes || ['CHECKIN']),
     allow_manual_attendance: input.allow_manual_attendance ? 1 : 0,
     grace_minutes: input.grace_minutes,
   });
@@ -192,7 +192,12 @@ eventsRoutes.patch('/:id', authMiddleware, requireRole(['owner', 'admin']), asyn
     ends_at: input.ends_at,
     qr_policy: input.qr_policy,
     status: input.status,
-    session_modes: input.session_modes ? JSON.stringify(input.session_modes) : undefined,
+    session_modes:
+      input.session_modes !== undefined
+        ? typeof input.session_modes === 'string'
+          ? input.session_modes
+          : JSON.stringify(input.session_modes)
+        : undefined,
     allow_manual_attendance:
       input.allow_manual_attendance !== undefined ? (input.allow_manual_attendance ? 1 : 0) : undefined,
     grace_minutes: input.grace_minutes,

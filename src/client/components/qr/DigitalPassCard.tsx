@@ -30,7 +30,7 @@ export const DigitalPassCard: React.FC<DigitalPassCardProps> = ({
   const isPerpetual = scope === 'universal' || new Date(expiresAt).getFullYear() >= 2090;
 
   return (
-    <div className="glass-panel-elevated rounded-3xl p-5 sm:p-6 border border-slate-700/80 shadow-2xl relative flex flex-col items-center text-center max-w-sm w-full mx-auto animate-in zoom-in-95">
+    <div className="glass-panel-elevated rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-700/80 shadow-2xl relative flex flex-col items-center text-center max-w-sm w-full mx-auto animate-in zoom-in-95">
       {onClose && (
         <button
           onClick={onClose}

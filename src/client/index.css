@@ -18,22 +18,42 @@
   }
 }
 
-/* Full-bleed Modal Backdrop Overlay (No top/bottom gaps on mobile) */
+/* Full-bleed Mobile-First Modal Backdrop Overlay */
 .modal-backdrop-full {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem; /* 12px for mobile */
+  background-color: rgba(2, 6, 23, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 640px) {
+  .modal-backdrop-full {
+    padding: 1.5rem; /* 24px for tablet/desktop */
+  }
+}
+
+/* Bleed blur pseudo-element to prevent mobile browser address-bar scroll gaps */
+.modal-backdrop-full::before {
+  content: '';
   position: fixed;
   top: -120px;
   bottom: -120px;
   left: -120px;
   right: -120px;
-  padding: 120px 16px;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(2, 6, 23, 0.88);
+  background-color: rgba(2, 6, 23, 0.85);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  overscroll-behavior: contain;
+  z-index: -1;
+  pointer-events: none;
 }
 
 /* Smooth Scrolling & GPU Isolation */

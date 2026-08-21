@@ -52,10 +52,17 @@ app.route('/api/scan', scanRoutes);
 app.route('/api/attendances', attendanceRoutes);
 app.route('/api/audit', auditRoutes);
 
-// Fallback for static assets in production Cloudflare Workers
+// Fallback for static assets and Single Page Application (SPA) HTML5 History routing
 app.all('*', async (c) => {
   if (c.env.ASSETS) {
-    return c.env.ASSETS.fetch(c.req.raw);
+    const response = await c.env.ASSETS.fetch(c.req.raw);
+    // If route is a client-side SPA route (non-API GET returning 404), serve index.html
+    if (response.status === 404 && c.req.method === 'GET' && !c.req.path.startsWith('/api')) {
+      const url = new URL(c.req.url);
+      url.pathname = '/index.html';
+      return c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw));
+    }
+    return response;
   }
   return c.text('AMS (Attendance Management System) - Computer Community API Running', 200);
 });

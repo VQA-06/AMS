@@ -663,7 +663,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
 
       {isImportOpen && (
         <div className="modal-backdrop-full animate-in fade-in">
-          <div className="w-full max-w-4xl">
+          <div className="w-full max-w-4xl my-auto max-h-[92dvh] overflow-y-auto">
             <ImportWizard
               onSuccess={() => {
                 setIsImportOpen(false);

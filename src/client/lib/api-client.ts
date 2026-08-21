@@ -19,15 +19,15 @@ export interface FetchApiOptions extends RequestInit {
 
 /**
  * Enterprise-Grade Resilient HTTP Client
- * - Automatic 15s timeout with AbortController
+ * - Automatic 30s timeout with AbortController for mobile resilience
  * - Automatic retry with exponential backoff on transient network drops for GET requests
- * - Clear Indonesian network error descriptions
+ * - Clear, transparent error descriptions
  */
 export async function fetchApi<T = unknown>(
   url: string,
   options: FetchApiOptions = {}
 ): Promise<T> {
-  const { timeoutMs = 15000, retries = (options.method && options.method !== 'GET' ? 0 : 1), ...fetchOptions } = options;
+  const { timeoutMs = 30000, retries = (options.method && options.method !== 'GET' ? 0 : 1), ...fetchOptions } = options;
   const isGet = !fetchOptions.method || fetchOptions.method.toUpperCase() === 'GET';
 
   let attempt = 0;
@@ -71,19 +71,49 @@ export async function fetchApi<T = unknown>(
         return text as unknown as T;
       }
 
-      let json: ApiResponse<T>;
+      let json: ApiResponse<T> | null = null;
+      let rawText = '';
       try {
         json = await response.json();
       } catch {
-        throw new ApiError('Gagal memproses respons dari server.', 'NETWORK_ERROR');
+        try {
+          rawText = await response.text();
+        } catch {
+          // ignore
+        }
       }
 
-      if (!json.ok || !response.ok) {
-        const err = json.error || { message: 'Terjadi kesalahan sistem', code: 'UNKNOWN_ERROR' };
-        throw new ApiError(err.message, err.code, err.details);
+      if (!response.ok || !json?.ok) {
+        if (json?.error?.message) {
+          throw new ApiError(json.error.message, json.error.code || 'API_ERROR', json.error.details);
+        }
+
+        if (response.status === 401) {
+          throw new ApiError('Sesi login telah berakhir. Silakan login kembali.', 'UNAUTHORIZED');
+        }
+
+        if (response.status === 403) {
+          throw new ApiError('Anda tidak memiliki hak akses untuk aksi ini.', 'FORBIDDEN');
+        }
+
+        if (response.status === 404) {
+          throw new ApiError('Data atau endpoint tidak ditemukan (404).', 'NOT_FOUND');
+        }
+
+        if (response.status >= 500) {
+          throw new ApiError(
+            `Terjadi gangguan pada server backend (${response.status}: ${response.statusText || 'Internal Error'}).`,
+            'SERVER_ERROR'
+          );
+        }
+
+        throw new ApiError(
+          rawText || `Permintaan gagal dengan status ${response.status} (${response.statusText || 'Error'}).`,
+          'REQUEST_ERROR'
+        );
       }
 
-      return json.data as T;
+      return (json.data ?? json) as T;
     } catch (err: unknown) {
       clearTimeout(timeoutId);
 
@@ -107,21 +137,28 @@ export async function fetchApi<T = unknown>(
 
       if (isAbort) {
         throw new ApiError(
-          'Batas waktu permintaan habis (15 detik). Jaringan Anda mungkin lambat atau server sedang sibuk.',
+          'Batas waktu permintaan habis (30 detik). Jaringan Anda mungkin lambat atau server sedang sibuk.',
           'NETWORK_TIMEOUT'
         );
       }
 
-      if (isNetworkFail || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
         throw new ApiError(
           'Koneksi internet terputus. Silakan periksa jaringan Wi-Fi atau data seluler Anda.',
           'NETWORK_OFFLINE'
         );
       }
 
+      if (isNetworkFail) {
+        throw new ApiError(
+          'Gagal terhubung ke server. Periksa stabilitas koneksi internet Anda atau coba sesaat lagi.',
+          'NETWORK_ERROR'
+        );
+      }
+
       throw new ApiError(
         err instanceof Error ? err.message : 'Terjadi gangguan jaringan atau server.',
-        'NETWORK_ERROR'
+        'UNKNOWN_ERROR'
       );
     }
   }

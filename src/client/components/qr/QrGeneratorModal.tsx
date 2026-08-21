@@ -4,11 +4,11 @@ import {
   QrCode,
   Sparkles,
   Calendar,
-  Users,
-  Check,
   Building2,
+  Check,
+  Download,
   Printer,
-  ChevronRight,
+  Copy,
 } from 'lucide-react';
 import { Member, Event } from '@/shared/types';
 import { fetchApi } from '../../lib/api-client';
@@ -17,70 +17,92 @@ import { DigitalPassCard } from './DigitalPassCard';
 interface QrGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMember?: Member | null;
+  initialEventId?: string;
   preselectedMember?: Member | null;
   preselectedEvent?: Event | null;
-  members: Member[];
-  events: Event[];
-  divisions: string[];
+  members?: Member[];
+  events?: Event[];
+  divisions?: string[];
+  onSuccess?: () => void;
 }
 
 export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
   isOpen,
   onClose,
+  initialMember,
+  initialEventId,
   preselectedMember,
   preselectedEvent,
-  members,
-  events,
-  divisions,
+  members: propMembers,
+  events: propEvents,
+  divisions: propDivisions,
+  onSuccess,
 }) => {
+  const targetMember = preselectedMember || initialMember;
+  const targetEventId = preselectedEvent?.id || initialEventId;
+
+  const [members, setMembers] = useState<Member[]>(propMembers || []);
+  const [events, setEvents] = useState<Event[]>(propEvents || []);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [scope, setScope] = useState<'universal' | 'event'>('universal');
   const [selectedEventId, setSelectedEventId] = useState<string>('');
-  const [filterDivision, setFilterDivision] = useState<string>('');
-  const [durationDays, setDurationDays] = useState<number>(3);
   const [customExpiresAt, setCustomExpiresAt] = useState<string>('');
-
+  const [filterDivision, setFilterDivision] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [generatedTokens, setGeneratedTokens] = useState<Array<{
-    id: string;
-    jti: string;
-    member_id: string;
-    member_name: string;
-    member_external_id: string;
-    member_division: string | null;
-    qr_token: string;
-    scope: 'universal' | 'event';
-    expires_at: string;
-  }> | null>(null);
+
+  // Result state after creation
+  const [generatedTokens, setGeneratedTokens] = useState<any[] | null>(null);
 
   useEffect(() => {
-    if (preselectedMember) {
-      setSelectedMemberIds([preselectedMember.id]);
+    if (isOpen) {
+      loadData();
+      if (targetMember) {
+        setSelectedMemberIds([targetMember.id]);
+        if (targetMember.division) {
+          setFilterDivision(targetMember.division);
+        }
+      }
+      if (targetEventId) {
+        setScope('event');
+        setSelectedEventId(targetEventId);
+      }
     } else {
-      setSelectedMemberIds([]);
+      setGeneratedTokens(null);
+      setError(null);
     }
+  }, [isOpen, targetMember, targetEventId]);
 
-    if (preselectedEvent) {
-      setScope('event');
-      setSelectedEventId(preselectedEvent.id);
-    } else if (events.length > 0) {
-      setSelectedEventId(events[0].id);
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [membersRes, eventsRes] = await Promise.all([
+        fetchApi<{ members: Member[] }>('/api/members?status=active'),
+        fetchApi<{ events: Event[] }>('/api/events'),
+      ]);
+      setMembers(membersRes.members || []);
+      const activeEvents = (eventsRes.events || []).filter((e) => e.status !== 'archived');
+      setEvents(activeEvents);
+      if (activeEvents.length > 0 && !selectedEventId) {
+        setSelectedEventId(activeEvents[0].id);
+      }
+    } catch (err: unknown) {
+      console.error('Failed to load generator data:', err);
+    } finally {
+      setLoading(false);
     }
-
-    const defaultExp = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
-    setCustomExpiresAt(defaultExp);
-
-    setGeneratedTokens(null);
-    setError(null);
-  }, [preselectedMember, preselectedEvent, isOpen, events]);
+  };
 
   if (!isOpen) return null;
 
+  const divisions = Array.from(
+    new Set(members.map((m) => m.division).filter(Boolean))
+  ) as string[];
+
   const filteredMembers = members.filter((m) => {
-    if (m.status !== 'active') return false;
-    if (filterDivision && m.division !== filterDivision) return false;
-    return true;
+    if (!filterDivision) return true;
+    return m.division === filterDivision;
   });
 
   const toggleSelectMember = (id: string) => {
@@ -101,51 +123,35 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
 
   const handleGenerate = async () => {
     if (selectedMemberIds.length === 0) {
-      setError('Pilih minimal satu anggota untuk digenerate QR.');
+      setError('Pilih minimal satu anggota untuk membuat QR');
       return;
     }
 
     if (scope === 'event' && !selectedEventId) {
-      setError('Pilih kegiatan tujuan untuk tiket QR khusus event.');
+      setError('Pilih kegiatan untuk QR khusus event');
       return;
     }
 
-    setLoading(true);
-    setError(null);
-
-    const expiresAt =
-      scope === 'universal'
-        ? '2099-12-31T23:59:59.999Z'
-        : new Date(customExpiresAt || Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
-
     try {
-      const res = await fetchApi<{
-        total: number;
-        tokens: Array<{
-          id: string;
-          jti: string;
-          member_id: string;
-          member_name: string;
-          member_external_id: string;
-          member_division: string | null;
-          qr_token: string;
-          scope: 'universal' | 'event';
-          expires_at: string;
-        }>;
-      }>('/api/qr/generate', {
+      setLoading(true);
+      setError(null);
+
+      const payload = {
+        member_ids: selectedMemberIds,
+        scope,
+        event_id: scope === 'event' ? selectedEventId : null,
+        expires_at: scope === 'event' ? customExpiresAt || null : null,
+      };
+
+      const res = await fetchApi<{ tokens: any[] }>('/api/qr/batch', {
         method: 'POST',
-        body: JSON.stringify({
-          member_ids: selectedMemberIds,
-          scope,
-          event_id: scope === 'event' ? selectedEventId : null,
-          valid_from: new Date().toISOString(),
-          expires_at: expiresAt,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      setGeneratedTokens(res.tokens);
+      setGeneratedTokens(res.tokens || []);
+      onSuccess?.();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Gagal membuat QR token.';
+      const msg = err instanceof Error ? err.message : 'Gagal membuat QR token';
       setError(msg);
     } finally {
       setLoading(false);
@@ -156,18 +162,18 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
 
   return (
     <div className="modal-backdrop-full animate-in fade-in">
-      <div className="w-full max-w-2xl rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-6 overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-2xl rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[88vh] flex flex-col my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
+        <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
               <QrCode className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="font-heading font-bold text-lg text-white">
+            <div className="min-w-0">
+              <h3 className="font-heading font-bold text-base sm:text-lg text-white truncate">
                 {generatedTokens ? 'Tiket QR Berhasil Dibuat' : 'Generator Tiket QR Terenkripsi'}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
                 {generatedTokens
                   ? `Total ${generatedTokens.length} tiket QR siap didistribusikan`
                   : 'Buat token absensi JWE terenkripsi dengan masa aktif'}
@@ -175,22 +181,23 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800"
+            className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 shrink-0 transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-4 p-3 rounded-xl bg-rose-950/50 border border-rose-800/50 text-xs text-rose-300 shrink-0">
+          <div className="mt-3 p-3 rounded-xl bg-rose-950/50 border border-rose-800/50 text-xs text-rose-300 shrink-0">
             {error}
           </div>
         )}
 
         {/* Generated Tokens Display */}
         {generatedTokens ? (
-          <div className="flex-1 overflow-y-auto my-4 space-y-4 pr-1">
+          <div className="flex-1 overflow-y-auto my-3 sm:my-4 space-y-4 pr-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 justify-items-center">
               {generatedTokens.map((tok) => (
                 <DigitalPassCard
@@ -206,16 +213,18 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
               ))}
             </div>
 
-            <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 shrink-0">
+            <div className="pt-3 sm:pt-4 border-t border-slate-800 flex items-center justify-end gap-2.5 sm:gap-3 shrink-0">
               <button
+                type="button"
                 onClick={() => setGeneratedTokens(null)}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                className="px-4 py-2 sm:py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
               >
                 Buat QR Lain
               </button>
               <button
+                type="button"
                 onClick={onClose}
-                className="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20"
+                className="px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
               >
                 Selesai
               </button>
@@ -223,18 +232,18 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
           </div>
         ) : (
           /* Generator Configuration Form */
-          <div className="flex-1 overflow-y-auto my-4 space-y-4 pr-1">
+          <div className="flex-1 overflow-y-auto my-3 sm:my-4 space-y-3.5 sm:space-y-4 pr-1">
             {/* Scope Selection */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Pilih Tipe / Scope QR:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 <label
-                  className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                  className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border cursor-pointer transition-all ${
                     scope === 'universal'
-                      ? 'bg-sky-500/20 border-sky-500 text-white'
-                      : 'glass-panel border-slate-800 text-slate-400'
+                      ? 'bg-sky-500/20 border-sky-500 text-white shadow-sm'
+                      : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60'
                   }`}
                 >
                   <input
@@ -249,16 +258,16 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>QR Universal</span>
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-1">
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1">
                     Bisa digunakan di seluruh kegiatan yang mengizinkan QR Universal.
                   </p>
                 </label>
 
                 <label
-                  className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                  className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border cursor-pointer transition-all ${
                     scope === 'event'
-                      ? 'bg-sky-500/20 border-sky-500 text-white'
-                      : 'glass-panel border-slate-800 text-slate-400'
+                      ? 'bg-sky-500/20 border-sky-500 text-white shadow-sm'
+                      : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60'
                   }`}
                 >
                   <input
@@ -273,7 +282,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                     <Calendar className="w-3.5 h-3.5" />
                     <span>QR Khusus Event</span>
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-1">
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1">
                     Terikat ketat ke 1 kegiatan. Ditolak jika dipakai di kegiatan lain.
                   </p>
                 </label>
@@ -289,7 +298,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                 <select
                   value={selectedEventId}
                   onChange={(e) => setSelectedEventId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-500"
                 >
                   {events.map((ev) => (
                     <option key={ev.id} value={ev.id}>
@@ -306,23 +315,23 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                 Masa Berlaku QR:
               </label>
               {scope === 'universal' ? (
-                <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-xs text-emerald-400 font-medium flex items-center gap-2">
+                <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-xs text-emerald-400 font-medium flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Permanen / Seumur Hidup (Berlaku selama status keanggotaan aktif)</span>
+                  <span>Permanen / Seumur Hidup (Berlaku selama anggota aktif)</span>
                 </div>
               ) : (
                 <input
                   type="datetime-local"
                   value={customExpiresAt}
                   onChange={(e) => setCustomExpiresAt(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500 font-mono"
+                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-500 font-mono"
                 />
               )}
             </div>
 
             {/* Member Multi-Select with Division Filter */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-2">
                 <label className="text-xs font-semibold text-slate-300">
                   Pilih Anggota ({selectedMemberIds.length} dipilih):
                 </label>
@@ -331,7 +340,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                     <select
                       value={filterDivision}
                       onChange={(e) => setFilterDivision(e.target.value)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-300 focus:outline-none"
+                      className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] sm:text-xs text-slate-300 focus:outline-none"
                     >
                       <option value="">Semua Divisi</option>
                       {divisions.map((div, i) => (
@@ -344,29 +353,29 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                   <button
                     type="button"
                     onClick={handleSelectAllFiltered}
-                    className="text-xs font-semibold text-sky-400 hover:text-sky-300"
+                    className="text-[11px] sm:text-xs font-semibold text-sky-400 hover:text-sky-300"
                   >
                     Pilih Semua ({filteredMembers.length})
                   </button>
                 </div>
               </div>
 
-              <div className="glass-panel rounded-2xl border border-slate-800 max-h-48 overflow-y-auto p-2 space-y-1.5">
+              <div className="glass-panel rounded-xl sm:rounded-2xl border border-slate-800 max-h-40 sm:max-h-48 overflow-y-auto p-1.5 sm:p-2 space-y-1.5">
                 {filteredMembers.map((m) => {
                   const selected = selectedMemberIds.includes(m.id);
                   return (
                     <div
                       key={m.id}
                       onClick={() => toggleSelectMember(m.id)}
-                      className={`p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition-all text-xs ${
+                      className={`p-2 sm:p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition-all text-xs ${
                         selected
                           ? 'bg-sky-500/20 text-white border border-sky-500/40'
                           : 'hover:bg-slate-900/60 text-slate-300'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <div
-                          className={`w-4 h-4 rounded border flex items-center justify-center ${
+                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
                             selected
                               ? 'bg-sky-500 border-sky-400 text-slate-950'
                               : 'border-slate-600 bg-slate-900'
@@ -374,16 +383,16 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                         >
                           {selected && <Check className="w-3 h-3 stroke-[3]" />}
                         </div>
-                        <div>
-                          <p className="font-semibold text-slate-200">{m.name}</p>
-                          <p className="text-[11px] text-slate-400 font-mono">ID: {m.external_id}</p>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-200 truncate">{m.name}</p>
+                          <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate">ID: {m.external_id}</p>
                         </div>
                       </div>
 
                       {m.division && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/40 text-[10px] font-semibold">
+                        <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/40 text-[9px] sm:text-[10px] font-semibold shrink-0 ml-2">
                           <Building2 className="w-2.5 h-2.5" />
-                          <span>{m.division}</span>
+                          <span className="truncate max-w-[80px]">{m.division}</span>
                         </span>
                       )}
                     </div>
@@ -393,24 +402,25 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
             </div>
 
             {/* Footer Action */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800 shrink-0">
+            <div className="flex items-center justify-end gap-2.5 sm:gap-3 pt-3 sm:pt-4 border-t border-slate-800 shrink-0">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                className="px-4 py-2 sm:py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
               >
                 Batal
               </button>
               <button
+                type="button"
                 onClick={handleGenerate}
                 disabled={loading || selectedMemberIds.length === 0}
-                className="flex items-center gap-2 px-6 py-2.5 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
+                className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
               >
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-4 h-4 shrink-0" />
                 <span>
                   {loading
                     ? 'Membuat QR...'
-                    : `Generate QR (${selectedMemberIds.length} Anggota)`}
+                    : `Generate QR (${selectedMemberIds.length})`}
                 </span>
               </button>
             </div>

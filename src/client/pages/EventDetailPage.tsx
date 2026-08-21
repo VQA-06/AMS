@@ -1372,7 +1372,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
         <div className="modal-backdrop-full animate-in fade-in">
           <form
             onSubmit={handleManualSubmit}
-            className="w-full max-w-md rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-6 space-y-4"
+            className="w-full max-w-md rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 space-y-3.5 sm:space-y-4 my-auto max-h-[92dvh] overflow-y-auto"
           >
             <h3 className="font-heading font-bold text-lg text-white">Input Absensi Manual</h3>
             <p className="text-xs text-slate-400">
@@ -1446,7 +1446,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       {/* Promote Guest Modal */}
       {promotingGuest && (
         <div className="modal-backdrop-full animate-in fade-in">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 animate-in zoom-in-95 my-auto max-h-[92dvh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">

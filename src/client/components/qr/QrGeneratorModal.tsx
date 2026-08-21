@@ -234,7 +234,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
           </div>
         ) : (
           /* Generator Configuration Form */
-          <div className="flex-1 overflow-y-auto my-3 sm:my-4 space-y-3.5 sm:space-y-4 pr-1">
+          <div className="flex-1 overflow-y-auto overscroll-contain touch-auto my-3 sm:my-4 space-y-3.5 sm:space-y-4 pr-1">
             {/* Scope Selection */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">

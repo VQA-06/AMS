@@ -22,6 +22,9 @@
 .modal-backdrop-full {
   position: fixed;
   inset: 0;
+  width: 100dvw;
+  height: 100dvh;
+  max-height: 100dvh;
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -30,30 +33,14 @@
   background-color: rgba(2, 6, 23, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden; /* Backdrop does not scroll, inner modal card handles scrolling */
+  touch-action: none;
 }
 
 @media (min-width: 640px) {
   .modal-backdrop-full {
     padding: 1.5rem; /* 24px for tablet/desktop */
   }
-}
-
-/* Bleed blur pseudo-element to prevent mobile browser address-bar scroll gaps */
-.modal-backdrop-full::before {
-  content: '';
-  position: fixed;
-  top: -200px;
-  bottom: -200px;
-  left: -200px;
-  right: -200px;
-  background-color: rgba(2, 6, 23, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  z-index: -1;
-  pointer-events: none;
 }
 
 /* Smooth Scrolling & GPU Isolation */

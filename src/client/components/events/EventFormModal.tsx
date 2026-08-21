@@ -115,7 +115,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
           )}
 
           {/* Form Body - Smooth Independent Scrolling */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1 py-3 space-y-3.5 sm:space-y-4">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto overscroll-contain touch-auto pr-1 py-3 space-y-3.5 sm:space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
                 Nama Kegiatan <span className="text-rose-400">*</span>

@@ -134,7 +134,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
         )}
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1 py-3 space-y-3.5 sm:space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto overscroll-contain touch-auto pr-1 py-3 space-y-3.5 sm:space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">

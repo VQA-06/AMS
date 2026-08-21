@@ -110,4 +110,19 @@ describe('SPA Routing Fallback & Network Resilience Tests', () => {
       global.fetch = originalFetch;
     }
   });
+
+  it('should set compliant CORS headers matching the caller origin when credentials are used', async () => {
+    const res = await app.request(
+      '/api/health',
+      {
+        method: 'GET',
+        headers: { Origin: 'https://ams.humanone.workers.dev' },
+      },
+      {} as any
+    );
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe(
+      'https://ams.humanone.workers.dev'
+    );
+    expect(res.headers.get('Access-Control-Allow-Credentials')).toBe('true');
+  });
 });

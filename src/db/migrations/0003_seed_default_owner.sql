@@ -6,7 +6,7 @@ VALUES (
   'Owner AMS',
   'owner',
   'active',
-  '0563bd2c429b5e282dbadf3ed2d526bc:7eca3d71e4192ee2a16cf7bb376f6e2eb7bd443c90449687c69f17c02e72843d',
+  NULL,
   datetime('now'),
   datetime('now')
 );

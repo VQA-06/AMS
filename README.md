@@ -118,8 +118,8 @@ flowchart TD
 
 ### 2. Kloning Repositori & Pasang Dependensi
 ```bash
-git clone https://github.com/your-username/ams.git
-cd ams
+git clone https://github.com/VQA-06/AMS.git
+cd AMS
 npm install
 ```
 

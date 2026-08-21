@@ -94,11 +94,11 @@ export const App: React.FC = () => {
     if (!admin) return;
     try {
       const [mRes, eRes, dRes] = await Promise.all([
-        fetchApi<{ members: Member[]; total: number }>('/api/members?limit=500').catch(() => ({
+        fetchApi<{ members: Member[]; total: number }>('/api/members?limit=200').catch(() => ({
           members: [],
           total: 0,
         })),
-        fetchApi<{ events: Event[] }>('/api/events').catch(() => ({ events: [] })),
+        fetchApi<{ events: Event[] }>('/api/agenda').catch(() => ({ events: [] })),
         fetchApi<{ divisions: string[] }>('/api/members/divisions').catch(() => ({
           divisions: [],
         })),

@@ -80,7 +80,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
       setLoading(true);
       const [membersRes, eventsRes] = await Promise.all([
         fetchApi<{ members: Member[] }>('/api/members?status=active'),
-        fetchApi<{ events: Event[] }>('/api/events'),
+        fetchApi<{ events: Event[] }>('/api/agenda'),
       ]);
       setMembers(membersRes.members || []);
       const activeEvents = (eventsRes.events || []).filter((e) => e.status !== 'archived');

@@ -144,7 +144,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
         ).catch(() => ({ attendances: [], total: 0 })),
         fetchApi<{ tokens: QrToken[] }>(`/api/qr/event/${eventId}`).catch(() => ({ tokens: [] })),
         fetchApi<{ event: Event; total_scanned: number; total_tokens: number }>(
-          `/api/events/${eventId}/summary`
+          `/api/agenda/${eventId}/summary`
         ),
       ]);
 
@@ -250,7 +250,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
-          await fetchApi(`/api/events/${event.id}`, { method: 'DELETE' });
+          await fetchApi(`/api/agenda/${event.id}`, { method: 'DELETE' });
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           onRefresh?.();
           onBack();

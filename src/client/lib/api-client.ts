@@ -21,8 +21,9 @@ export interface FetchApiOptions extends RequestInit {
  * Enterprise-Grade Resilient HTTP Client
  * - Single-pass body stream read (eliminates TypeError: Already read)
  * - Automatic 30s timeout with AbortController
- * - Automatic retry with exponential backoff on transient network drops for GET requests
- * - Clear, transparent error descriptions
+ * - Automatic retry with exponential backoff on transient network drops
+ * - Multi-route auto-failover against browser adblockers (Brave Shields, uBlock Origin)
+ * - Clear, actionable error descriptions
  */
 export async function fetchApi<T = unknown>(
   url: string,
@@ -31,8 +32,9 @@ export async function fetchApi<T = unknown>(
   const { timeoutMs = 30000, retries = (options.method && options.method !== 'GET' ? 0 : 1), ...fetchOptions } = options;
   const isGet = !fetchOptions.method || fetchOptions.method.toUpperCase() === 'GET';
 
+  let currentUrl = url;
   let attempt = 0;
-  const maxAttempts = isGet ? Math.max(1, retries + 1) : 1;
+  const maxAttempts = Math.max(1, retries + 1);
 
   while (attempt < maxAttempts) {
     attempt++;
@@ -57,7 +59,7 @@ export async function fetchApi<T = unknown>(
         }
       }
 
-      const response = await fetch(url, {
+      const response = await fetch(currentUrl, {
         ...fetchOptions,
         headers,
         credentials: 'include',
@@ -136,11 +138,21 @@ export async function fetchApi<T = unknown>(
         (err.name === 'TypeError' ||
           err.message.includes('fetch') ||
           err.message.includes('Failed to fetch') ||
+          err.message.includes('net::ERR_BLOCKED_BY_CLIENT') ||
           err.message.includes('NetworkError'));
 
-      // If we have retries left for idempotent requests, backoff and retry
+      // Multi-route auto-failover against aggressive browser adblockers
+      if (isNetworkFail && currentUrl.includes('/api/agenda')) {
+        currentUrl = currentUrl.replace('/api/agenda', '/api/programs');
+      } else if (isNetworkFail && currentUrl.includes('/api/programs')) {
+        currentUrl = currentUrl.replace('/api/programs', '/api/activities');
+      } else if (isNetworkFail && currentUrl.includes('/api/events')) {
+        currentUrl = currentUrl.replace('/api/events', '/api/agenda');
+      }
+
+      // If we have retries left, backoff and retry with possible alternate route
       if (attempt < maxAttempts && (isAbort || isNetworkFail)) {
-        await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
+        await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
         continue;
       }
 
@@ -155,6 +167,13 @@ export async function fetchApi<T = unknown>(
         throw new ApiError(
           'Koneksi internet terputus. Silakan periksa jaringan Wi-Fi atau data seluler Anda.',
           'NETWORK_OFFLINE'
+        );
+      }
+
+      if (err instanceof Error && err.message.includes('ERR_BLOCKED_BY_CLIENT')) {
+        throw new ApiError(
+          'Permintaan diblokir oleh browser atau ekstensi AdBlocker (seperti Brave Shields / uBlock). Harap nonaktifkan proteksi atau whitelist domain ini jika fitur terganggu.',
+          'BLOCKED_BY_CLIENT'
         );
       }
 

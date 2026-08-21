@@ -45,7 +45,7 @@ export const MemberTrackerPage: React.FC = () => {
         fetchApi<{
           entries: MemberActivityEntry[];
           summary: MemberActivitySummary;
-        }>(`/api/attendances/activity-tracker?${params.toString()}`),
+        }>(`/api/attendances/recap/matrix?${params.toString()}`),
         fetchApi<{ divisions: string[] }>('/api/members/divisions').catch(() => ({ divisions: [] })),
       ]);
 

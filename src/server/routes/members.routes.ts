@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, Context } from 'hono';
 import Papa from 'papaparse';
 import { Env } from '../env';
 import { MemberRepository } from '../repositories/member.repo';
@@ -55,15 +55,19 @@ membersRoutes.get('/groups', authMiddleware, async (c) => {
   });
 });
 
-// GET /api/members/analytics/yearly-stats - Get yearly member growth stats
-membersRoutes.get('/analytics/yearly-stats', authMiddleware, async (c) => {
+// GET /stats/yearly-recap & /reports/yearly & /analytics/yearly-stats - Get yearly member growth stats
+const getYearlyStatsHandler = async (c: Context<{ Bindings: Env }>) => {
   const repo = new MemberRepository(c.env.DB);
   const stats = await repo.getYearlyStats();
   return c.json<ApiResponse>({
     ok: true,
     data: { stats },
   });
-});
+};
+membersRoutes.get('/stats/yearly-recap', authMiddleware, getYearlyStatsHandler);
+membersRoutes.get('/stats/yearly', authMiddleware, getYearlyStatsHandler);
+membersRoutes.get('/reports/yearly', authMiddleware, getYearlyStatsHandler);
+membersRoutes.get('/analytics/yearly-stats', authMiddleware, getYearlyStatsHandler);
 
 // GET /api/members/universal-tokens - Get or generate universal QR tokens for all active members (Bulk download/print)
 membersRoutes.get('/universal-tokens', authMiddleware, async (c) => {

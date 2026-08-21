@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, Context } from 'hono';
 import Papa from 'papaparse';
 import { Env } from '../env';
 import { AttendanceRepository } from '../repositories/attendance.repo';
@@ -214,8 +214,8 @@ attendanceRoutes.post('/event/:id/manual', authMiddleware, requireRole(['owner',
   });
 });
 
-// GET /api/attendances/activity-tracker - Member activity tracking statistics
-attendanceRoutes.get('/activity-tracker', authMiddleware, async (c) => {
+// GET /recap/matrix & /stats/matrix & /activity-tracker - Member activity tracking statistics
+const getMemberActivityStatsHandler = async (c: Context<{ Bindings: Env }>) => {
   const query = c.req.query();
   const repo = new AttendanceRepository(c.env.DB);
 
@@ -229,7 +229,11 @@ attendanceRoutes.get('/activity-tracker', authMiddleware, async (c) => {
     ok: true,
     data: result,
   });
-});
+};
+attendanceRoutes.get('/recap/matrix', authMiddleware, getMemberActivityStatsHandler);
+attendanceRoutes.get('/stats/matrix', authMiddleware, getMemberActivityStatsHandler);
+attendanceRoutes.get('/stats/tracker', authMiddleware, getMemberActivityStatsHandler);
+attendanceRoutes.get('/activity-tracker', authMiddleware, getMemberActivityStatsHandler);
 
 // POST /api/attendances/bulk-delete - Bulk delete attendance records
 attendanceRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'admin']), async (c) => {

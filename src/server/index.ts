@@ -46,7 +46,11 @@ app.get('/api/health', (c) => {
 // API Routes
 app.route('/api/auth', authRoutes);
 app.route('/api/members', membersRoutes);
-app.route('/api/events', eventsRoutes);
+// Enterprise multi-browser & adblock-immune routes (Brave Shields, uBlock, EasyPrivacy safe)
+app.route('/api/agenda', eventsRoutes);
+app.route('/api/programs', eventsRoutes);
+app.route('/api/activities', eventsRoutes);
+app.route('/api/events', eventsRoutes); // Backward-compatible alias
 app.route('/api/qr', qrRoutes);
 app.route('/api/scan', scanRoutes);
 app.route('/api/attendances', attendanceRoutes);

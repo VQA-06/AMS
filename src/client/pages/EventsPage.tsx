@@ -73,7 +73,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
   const loadEvents = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetchApi<{ events: Event[] }>('/api/events');
+      const res = await fetchApi<{ events: Event[] }>('/api/agenda');
       setEvents(res.events || []);
     } catch (err) {
       console.error('Failed to load events:', err);
@@ -136,7 +136,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
       onConfirm: async () => {
         try {
           setConfirmLoading(true);
-          await fetchApi('/api/events/bulk-close', {
+          await fetchApi('/api/agenda/bulk-close', {
             method: 'POST',
             body: JSON.stringify({ ids }),
           });
@@ -176,7 +176,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
       onConfirm: async () => {
         try {
           setConfirmLoading(true);
-          await fetchApi('/api/events/bulk-delete', {
+          await fetchApi('/api/agenda/bulk-delete', {
             method: 'POST',
             body: JSON.stringify({ ids }),
           });
@@ -217,12 +217,12 @@ export const EventsPage: React.FC<EventsPageProps> = ({
 
   const handleSaveEvent = async (data: EventInput) => {
     if (editingEvent) {
-      await fetchApi(`/api/events/${editingEvent.id}`, {
+      await fetchApi(`/api/agenda/${editingEvent.id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
     } else {
-      await fetchApi('/api/events', {
+      await fetchApi('/api/agenda', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -234,7 +234,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
 
   const handleActivate = async (id: string) => {
     try {
-      await fetchApi(`/api/events/${id}/activate`, { method: 'POST' });
+      await fetchApi(`/api/agenda/${id}/activate`, { method: 'POST' });
       await loadEvents();
       onRefreshGlobal?.();
       setAlertModal({
@@ -267,7 +267,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
-          await fetchApi(`/api/events/${id}/close`, { method: 'POST' });
+          await fetchApi(`/api/agenda/${id}/close`, { method: 'POST' });
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           await loadEvents();
           onRefreshGlobal?.();
@@ -306,7 +306,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
-          await fetchApi(`/api/events/${id}`, { method: 'DELETE' });
+          await fetchApi(`/api/agenda/${id}`, { method: 'DELETE' });
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           await loadEvents();
           onRefreshGlobal?.();

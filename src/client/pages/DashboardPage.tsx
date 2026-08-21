@@ -50,10 +50,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         const [mRes, dRes, eRes, tRes, topEvRes, yrRes] = await Promise.all([
           fetchApi<{ members: Member[]; total: number }>('/api/members?limit=1000'),
           fetchApi<{ divisions: string[] }>('/api/members/divisions'),
-          fetchApi<{ events: Event[] }>('/api/events'),
-          fetchApi<{ summary: MemberActivitySummary }>('/api/attendances/activity-tracker').catch(() => null),
-          fetchApi<{ events: TopEventStatItem[] }>('/api/events/analytics/top-attendance').catch(() => null),
-          fetchApi<{ stats: YearlyMemberStat[] }>('/api/members/analytics/yearly-stats').catch(() => null),
+          fetchApi<{ events: Event[] }>('/api/agenda'),
+          fetchApi<{ summary: MemberActivitySummary }>('/api/attendances/recap/matrix').catch(() => null),
+          fetchApi<{ events: TopEventStatItem[] }>('/api/agenda/reports/top-presence').catch(() => null),
+          fetchApi<{ stats: YearlyMemberStat[] }>('/api/members/stats/yearly-recap').catch(() => null),
         ]);
 
         const rawEvents = eRes?.events || [];

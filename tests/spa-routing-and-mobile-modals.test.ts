@@ -125,4 +125,28 @@ describe('SPA Routing Fallback & Network Resilience Tests', () => {
     );
     expect(res.headers.get('Access-Control-Allow-Credentials')).toBe('true');
   });
+
+  it('should route /api/agenda and /api/programs and /api/activities seamlessly to event routes', async () => {
+    const mockDbQuery = {
+      bind: () => mockDbQuery,
+      first: async () => ({ count: 1 }),
+      all: async () => ({ results: [] }),
+      run: async () => ({ success: true }),
+    };
+    const mockEnv = {
+      DB: {
+        prepare: () => mockDbQuery,
+      },
+    };
+
+    // Test unauthenticated 401 response on all adblock-immune alias mounts
+    const resAgenda = await app.request('/api/agenda', { method: 'GET' }, mockEnv as any);
+    expect(resAgenda.status).toBe(401);
+
+    const resPrograms = await app.request('/api/programs', { method: 'GET' }, mockEnv as any);
+    expect(resPrograms.status).toBe(401);
+
+    const resActivities = await app.request('/api/activities', { method: 'GET' }, mockEnv as any);
+    expect(resActivities.status).toBe(401);
+  });
 });

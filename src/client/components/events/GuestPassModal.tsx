@@ -51,7 +51,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
           };
         });
 
-        await fetchApi(`/api/events/${event.id}/guests/batch-names`, {
+        await fetchApi(`/api/agenda/${event.id}/guests/batch-names`, {
           method: 'POST',
           body: JSON.stringify({ items }),
         });
@@ -60,7 +60,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
           throw new Error('Jumlah batch harus antara 1 sampai 100.');
         }
 
-        await fetchApi(`/api/events/${event.id}/guests/batch`, {
+        await fetchApi(`/api/agenda/${event.id}/guests/batch`, {
           method: 'POST',
           body: JSON.stringify({
             count: batchCount,

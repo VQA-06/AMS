@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, Context } from 'hono';
 import { Env } from '../env';
 import { EventRepository } from '../repositories/event.repo';
 import { MemberRepository } from '../repositories/member.repo';
@@ -63,8 +63,8 @@ eventsRoutes.post('/', authMiddleware, requireRole(['owner', 'admin']), async (c
   });
 });
 
-// GET /api/events/analytics/top-attendance - Get attendance rankings
-eventsRoutes.get('/analytics/top-attendance', authMiddleware, async (c) => {
+// GET /reports/top-presence & /stats/top-presence & /analytics/top-attendance - Get attendance rankings
+const getTopAttendanceHandler = async (c: Context<{ Bindings: Env }>) => {
   const repo = new EventRepository(c.env.DB);
   const events = await repo.getTopAttendanceEvents();
 
@@ -72,7 +72,10 @@ eventsRoutes.get('/analytics/top-attendance', authMiddleware, async (c) => {
     ok: true,
     data: { events },
   });
-});
+};
+eventsRoutes.get('/reports/top-presence', authMiddleware, getTopAttendanceHandler);
+eventsRoutes.get('/stats/top-presence', authMiddleware, getTopAttendanceHandler);
+eventsRoutes.get('/analytics/top-attendance', authMiddleware, getTopAttendanceHandler);
 
 // GET /api/events/:id - Detail event
 eventsRoutes.get('/:id', authMiddleware, async (c) => {

@@ -66,10 +66,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       <div className="w-full max-w-md rounded-3xl glass-panel-elevated border border-slate-800 p-6 sm:p-8 shadow-2xl relative z-10 space-y-6 transition-all duration-300 ease-out">
         {/* Brand Header */}
         <div className="text-center space-y-1.5">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-400 to-blue-600 flex items-center justify-center text-white font-bold font-heading text-xl mx-auto shadow-lg shadow-sky-500/30">
-            AMS
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-b from-white via-slate-50 to-slate-100 p-2 flex items-center justify-center mx-auto shadow-xl shadow-sky-500/20 border border-white/50 ring-4 ring-white/10">
+            <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
           </div>
-          <h2 className="text-2xl font-bold font-heading bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold font-heading bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent pt-1">
             AMS
           </h2>
           <p className="text-xs font-semibold text-sky-400">

@@ -9,7 +9,7 @@ export interface IdCardRenderOptions {
   templateSrc?: string;
 }
 
-const TEMPLATE_URL = '/idcard-template.png';
+const TEMPLATE_URL = '/templates/idcard-template.png';
 const CANVAS_WIDTH = 957;
 const CANVAS_HEIGHT = 1506;
 

@@ -110,7 +110,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
               max-height: 85mm;
               border-radius: 0 !important;
               overflow: hidden;
-              background-image: url('/idcard-template.png');
+              background-image: url('/templates/idcard-template.png');
               background-size: cover;
               background-position: center;
               background-repeat: no-repeat;
@@ -283,7 +283,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
                 >
                   {/* Template Background Image */}
                   <img
-                    src="/idcard-template.png"
+                    src="/templates/idcard-template.png"
                     alt="Template ID Card"
                     className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                   />

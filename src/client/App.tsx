@@ -156,8 +156,8 @@ export const App: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-100">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-400 to-blue-600 flex items-center justify-center animate-pulse shadow-lg shadow-sky-500/20 text-white font-bold text-xl font-heading mb-4">
-          AMS
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-b from-white via-slate-50 to-slate-100 p-2 flex items-center justify-center animate-pulse shadow-xl shadow-sky-500/20 border border-white/50 ring-4 ring-white/10 mb-4">
+          <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
         </div>
         <p className="text-sm font-semibold text-slate-300">Memuat AMS (Attendance Management System)...</p>
       </div>

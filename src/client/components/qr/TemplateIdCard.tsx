@@ -116,7 +116,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
               max-height: 85mm;
               border-radius: 0 !important;
               overflow: hidden;
-              background-image: url('/idcard-template.png');
+              background-image: url('/templates/idcard-template.png');
               background-size: cover;
               background-position: center;
               background-repeat: no-repeat;
@@ -191,7 +191,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
       <div className="relative w-full aspect-[54/85] rounded-none overflow-hidden shadow-2xl border border-slate-700 bg-slate-900 select-none group">
         {/* Template Background Image */}
         <img
-          src="/idcard-template.png"
+          src="/templates/idcard-template.png"
           alt="ID Card Background"
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         />

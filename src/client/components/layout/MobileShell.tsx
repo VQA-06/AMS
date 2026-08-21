@@ -53,8 +53,8 @@ export const MobileShell: React.FC<MobileShellProps> = ({
       <aside className="hidden md:flex flex-col w-64 h-full shrink-0 glass-panel border-r border-slate-800 p-5 justify-between sticky top-0 z-30 bg-slate-950/95">
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-bold font-heading text-lg">
-              AMS
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-white via-slate-50 to-slate-100 p-1 flex items-center justify-center shadow-lg shadow-sky-500/10 border border-white/40 ring-1 ring-white/20 shrink-0">
+              <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h1 className="font-heading font-bold text-lg leading-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
@@ -113,8 +113,8 @@ export const MobileShell: React.FC<MobileShellProps> = ({
         {/* Mobile Top Header */}
         <header className="md:hidden bg-slate-900 border-b border-slate-800 sticky top-0 z-30 px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white font-bold font-heading text-xs shadow-md shadow-sky-500/20">
-              AMS
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-b from-white via-slate-50 to-slate-100 p-0.5 flex items-center justify-center shadow-md shadow-sky-500/10 border border-white/40 ring-1 ring-white/20 shrink-0">
+              <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h2 className="font-heading font-bold text-base leading-tight">AMS</h2>

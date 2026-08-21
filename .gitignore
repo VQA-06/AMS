@@ -11,6 +11,7 @@ build/
 # Cloudflare & Wrangler artifacts
 .wrangler/
 .mf/
+wrangler.toml
 
 # Local Environment Variables & Secrets
 .env

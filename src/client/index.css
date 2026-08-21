@@ -13,6 +13,9 @@
   h1, h2, h3, h4, h5, h6, .font-heading {
     font-family: 'Outfit', 'Inter', sans-serif;
   }
+  .font-oxanium {
+    font-family: 'Oxanium', 'Outfit', sans-serif;
+  }
 }
 
 /* Smooth Scrolling & GPU Isolation */

@@ -1,0 +1,273 @@
+import React, { useRef, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import {
+  Download,
+  Printer,
+  Copy,
+  Check,
+  Sparkles,
+  Loader2,
+  Share2,
+} from 'lucide-react';
+import { generateIdCardDataUrl, downloadIdCardImage } from '../../lib/idcard-canvas';
+
+export interface TemplateIdCardProps {
+  memberName: string;
+  qrToken: string;
+  memberExternalId?: string;
+  memberDivision?: string | null;
+  eventName?: string | null;
+  scope?: 'universal' | 'event';
+  expiresAt?: string;
+  showActions?: boolean;
+}
+
+export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
+  memberName,
+  qrToken,
+  memberExternalId,
+  memberDivision,
+  eventName,
+  scope = 'universal',
+  expiresAt,
+  showActions = true,
+}) => {
+  const [downloading, setDownloading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const qrWrapperRef = useRef<HTMLDivElement>(null);
+
+  const handleCopyToken = () => {
+    navigator.clipboard.writeText(qrToken);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadPng = async () => {
+    try {
+      setDownloading(true);
+      // Extract SVG QR Code from DOM and convert to offscreen image
+      const svgEl = qrWrapperRef.current?.querySelector('svg');
+      let qrImgElement: HTMLImageElement | undefined;
+
+      if (svgEl) {
+        const svgString = new XMLSerializer().serializeToString(svgEl);
+        const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+        qrImgElement = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = svgDataUrl;
+        });
+      }
+
+      const dataUrl = await generateIdCardDataUrl(
+        { name: memberName, qrToken },
+        qrImgElement
+      );
+
+      downloadIdCardImage(memberName, dataUrl);
+    } catch (err) {
+      console.error('Error generating ID card PNG:', err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handlePrintSingle = () => {
+    const svgEl = qrWrapperRef.current?.querySelector('svg');
+    const svgHtml = svgEl ? svgEl.outerHTML : '';
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>ID Card - ${memberName}</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+          <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@700;800&display=swap" rel="stylesheet" />
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 15mm;
+            }
+            * {
+              box-sizing: border-box;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              background: #ffffff;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 90vh;
+              font-family: 'Oxanium', sans-serif;
+            }
+            .id-card {
+              position: relative;
+              width: 54mm;
+              height: 85mm;
+              max-width: 54mm;
+              max-height: 85mm;
+              border-radius: 4mm;
+              overflow: hidden;
+              background-image: url('/idcard-template.png');
+              background-size: cover;
+              background-position: center;
+              background-repeat: no-repeat;
+              page-break-inside: avoid;
+              break-inside: avoid;
+              box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .qr-container {
+              position: absolute;
+              top: 26.5%;
+              left: 28.6%;
+              width: 35.5%;
+              height: 22.5%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .qr-container svg {
+              width: 100%;
+              height: 100%;
+              display: block;
+            }
+            .name-text {
+              position: absolute;
+              top: 60.8%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 85%;
+              text-align: center;
+              color: #ffffff;
+              font-family: 'Oxanium', sans-serif;
+              font-weight: 800;
+              font-size: 11pt;
+              line-height: 1.1;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            }
+          </style>
+        </head>
+        <body>
+          <div class="id-card">
+            <div class="qr-container">
+              ${svgHtml}
+            </div>
+            <div class="name-text">${memberName}</div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  return (
+    <div className="flex flex-col items-center w-full max-w-xs mx-auto animate-in zoom-in-95">
+      {/* Visual Template Card Preview */}
+      <div className="relative w-full aspect-[54/85] rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 bg-slate-900 select-none group">
+        {/* Template Background Image */}
+        <img
+          src="/idcard-template.png"
+          alt="ID Card Background"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        />
+
+        {/* QR Code Container on designated white box */}
+        <div
+          ref={qrWrapperRef}
+          className="absolute top-[26.5%] left-[28.6%] w-[35.5%] h-[22.5%] flex items-center justify-center pointer-events-auto"
+          title="QR Code Terenkripsi JWE"
+        >
+          <QRCodeSVG
+            value={qrToken}
+            size={135}
+            level="M"
+            includeMargin={false}
+            className="w-full h-full"
+          />
+        </div>
+
+        {/* Member Name with Oxanium ExtraBold */}
+        <div
+          className="absolute top-[60.8%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84%] text-center text-white font-oxanium font-extrabold text-base sm:text-lg tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] truncate pointer-events-none"
+          title={memberName}
+        >
+          {memberName}
+        </div>
+      </div>
+
+      {/* Meta Information Tag */}
+      <div className="w-full mt-3 flex items-center justify-between text-xs text-slate-400 font-mono px-1">
+        <span className="font-bold text-sky-400 truncate">
+          ID: {memberExternalId || 'AMS-MBR'}
+        </span>
+        {memberDivision && (
+          <span className="text-slate-300 font-medium truncate ml-2">
+            • {memberDivision}
+          </span>
+        )}
+      </div>
+
+      {/* Action Buttons */}
+      {showActions && (
+        <div className="grid grid-cols-3 gap-2 w-full mt-3">
+          <button
+            onClick={handleDownloadPng}
+            disabled={downloading}
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-sky-500/20 active:scale-95 disabled:opacity-50"
+            title="Unduh ID Card gambar PNG kualitas tinggi (54x85 mm)"
+          >
+            {downloading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5" />
+            )}
+            <span className="truncate">Unduh PNG</span>
+          </button>
+
+          <button
+            onClick={handlePrintSingle}
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all border border-slate-700 active:scale-95"
+            title="Cetak ID Card ukuran standar 54x85 mm"
+          >
+            <Printer className="w-3.5 h-3.5 text-sky-400" />
+            <span className="truncate">Cetak</span>
+          </button>
+
+          <button
+            onClick={handleCopyToken}
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-all border border-slate-800 active:scale-95"
+            title="Salin token QR"
+          >
+            {copied ? (
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 text-slate-400" />
+            )}
+            <span className="truncate">{copied ? 'Tersalin' : 'Token'}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};

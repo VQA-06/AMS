@@ -1,0 +1,18 @@
+# ==============================================================================
+# AMS (Attendance Management System) - Local Environment Variables (.dev.vars)
+# Duplicate this file as '.dev.vars' for local development with wrangler dev
+# ==============================================================================
+
+ENVIRONMENT="development"
+QR_ACTIVE_KID="k1"
+
+# 32-Byte Base64 Encoded Key for AES-256-GCM JWE QR Cryptography
+# Generate your own using: openssl rand -base64 32
+QR_KEY_K1="dGhpcy1pcy1hLTMyLWJ5dGUtZGV2LWtleS1mb3ItandlISE="
+
+# Stateless HMAC-SHA256 Session Secret (Minimum 32 characters)
+SESSION_SECRET="ams-dev-session-secret-key-32-chars-long"
+
+APP_ISSUER="https://absen.local"
+APP_AUDIENCE="ams"
+DEV_ADMIN_EMAIL="admin@absen.local"

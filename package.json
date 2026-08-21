@@ -1,0 +1,46 @@
+{
+  "name": "ams",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:worker": "wrangler dev",
+    "build:client": "vite build",
+    "build": "vite build",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:init:local": "wrangler d1 migrations apply DB --local",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "hono": "^4.6.12",
+    "html5-qrcode": "^2.3.8",
+    "jose": "^5.9.6",
+    "jsqr": "^1.4.0",
+    "lucide-react": "^0.460.0",
+    "papaparse": "^5.4.1",
+    "qr-scanner": "^1.4.2",
+    "qrcode.react": "^4.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260818.1",
+    "@types/node": "^22.9.0",
+    "@types/papaparse": "^5.3.15",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-basic-ssl": "^1.2.0",
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.5",
+    "wrangler": "^4.123.0"
+  }
+}

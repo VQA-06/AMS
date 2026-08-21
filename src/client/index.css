@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-overflow-scrolling: touch;
+    background-color: #020617;
+    color: #f8fafc;
+  }
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: 'Outfit', 'Inter', sans-serif;
+  }
+}
+
+/* Smooth Scrolling & GPU Isolation */
+* {
+  box-sizing: border-box;
+}
+
+/* Custom Scrollbars - Lightweight */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* GPU-Accelerated Laser Animations for Scanner */
+@keyframes laserSweepGpu {
+  0% {
+    transform: translateY(0px);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(220px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0px);
+    opacity: 0.8;
+  }
+}
+
+.scanner-laser {
+  will-change: transform;
+  transform: translateZ(0);
+  animation: laserSweepGpu 2s ease-in-out infinite;
+}
+
+/* GPU-Accelerated Toast Progress Animation (0x React Re-render) */
+@keyframes toastProgressKeyframe {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.animate-toast-progress {
+  will-change: width;
+  animation: toastProgressKeyframe 3.5s linear forwards;
+}
+
+/* High-Performance Lightweight Dark Cards (Zero GPU Blur Lag, No Overflow Clipping) */
+.glass-panel {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+}
+
+.glass-panel-elevated {
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+/* Safe area insets for modern mobile devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 1rem);
+}

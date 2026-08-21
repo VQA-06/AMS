@@ -640,7 +640,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
 
       {/* Individual Digital Pass Card View Modal */}
       {selectedPassData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in">
+        <div className="modal-backdrop-full animate-in fade-in">
           <DigitalPassCard
             tokenString={selectedPassData.tokenString}
             memberName={selectedPassData.memberName}
@@ -662,7 +662,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
       />
 
       {isImportOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+        <div className="modal-backdrop-full animate-in fade-in">
           <div className="w-full max-w-4xl">
             <ImportWizard
               onSuccess={() => {

@@ -127,7 +127,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
               display: flex;
               align-items: center;
               justify-content: center;
-              padding: 3.5%;
+              padding: 1.2%;
               box-sizing: border-box;
             }
             .qr-container svg {
@@ -213,7 +213,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in">
+    <div className="modal-backdrop-full animate-in fade-in">
       <div className="w-full max-w-5xl h-[92vh] rounded-3xl glass-panel-elevated border border-slate-700 shadow-2xl flex flex-col overflow-hidden">
         {/* Top Header & Action Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-slate-900/90 gap-3 shrink-0">
@@ -290,7 +290,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
 
                   {/* QR Code Container perfectly centered inside the 388x388 white box */}
                   <div
-                    className="absolute top-[26.494%] left-[30.094%] w-[40.543%] h-[25.764%] p-[3.5%] flex items-center justify-center pointer-events-auto"
+                    className="absolute top-[26.494%] left-[30.094%] w-[40.543%] h-[25.764%] p-[1.2%] flex items-center justify-center pointer-events-auto"
                     title="QR Token"
                   >
                     <QRCodeSVG

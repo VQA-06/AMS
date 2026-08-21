@@ -18,6 +18,24 @@
   }
 }
 
+/* Full-bleed Modal Backdrop Overlay (No top/bottom gaps on mobile) */
+.modal-backdrop-full {
+  position: fixed;
+  top: -120px;
+  bottom: -120px;
+  left: -120px;
+  right: -120px;
+  padding: 120px 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(2, 6, 23, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  overscroll-behavior: contain;
+}
+
 /* Smooth Scrolling & GPU Isolation */
 * {
   box-sizing: border-box;

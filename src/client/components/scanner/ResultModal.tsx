@@ -27,7 +27,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({ result, onDismiss }) =
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-opacity animate-in fade-in"
+      className="modal-backdrop-full transition-opacity animate-in fade-in"
       onClick={onDismiss}
     >
       <div

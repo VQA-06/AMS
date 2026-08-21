@@ -18,10 +18,10 @@ export const BOX_X = 288;
 export const BOX_Y = 399;
 export const BOX_SIZE = 388;
 
-// Symmetrical centered QR placement inside the 388x388 white box (with 19px padding on all sides)
-export const QR_SIZE = 350;
-export const QR_X = BOX_X + (BOX_SIZE - QR_SIZE) / 2; // 307
-export const QR_Y = BOX_Y + (BOX_SIZE - QR_SIZE) / 2; // 418
+// Symmetrical centered QR placement inside the 388x388 white box (tight slim ~7px padding)
+export const QR_SIZE = 374;
+export const QR_X = BOX_X + (BOX_SIZE - QR_SIZE) / 2; // 295
+export const QR_Y = BOX_Y + (BOX_SIZE - QR_SIZE) / 2; // 406
 
 // Name placement coordinates (Oxanium ExtraBold)
 export const NAME_CENTER_X = CANVAS_WIDTH / 2; // 478.5

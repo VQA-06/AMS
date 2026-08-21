@@ -53,22 +53,22 @@ describe('Official Template ID Card (54mm x 85mm) Engine Tests', () => {
     expect(size).toBeGreaterThanOrEqual(51); // Maintains minimum 17px equivalent
   });
 
-  it('should verify exact 388x388 solid white box coordinates and symmetrical QR placement', () => {
+  it('should verify exact 388x388 solid white box coordinates and symmetrical enlarged QR placement', () => {
     expect(BOX_X).toBe(288);
     expect(BOX_Y).toBe(399);
     expect(BOX_SIZE).toBe(388);
-    expect(QR_SIZE).toBe(350);
+    expect(QR_SIZE).toBe(374);
 
-    // Padding on all 4 sides must be perfectly equal (19px)
+    // Padding on all 4 sides must be perfectly equal and slim (7px)
     const paddingLeft = QR_X - BOX_X;
     const paddingRight = BOX_X + BOX_SIZE - (QR_X + QR_SIZE);
     const paddingTop = QR_Y - BOX_Y;
     const paddingBottom = BOX_Y + BOX_SIZE - (QR_Y + QR_SIZE);
 
-    expect(paddingLeft).toBe(19);
-    expect(paddingRight).toBe(19);
-    expect(paddingTop).toBe(19);
-    expect(paddingBottom).toBe(19);
+    expect(paddingLeft).toBe(7);
+    expect(paddingRight).toBe(7);
+    expect(paddingTop).toBe(7);
+    expect(paddingBottom).toBe(7);
 
     // Name position must be situated below the white box and above the 2026-2027 footer
     expect(NAME_CENTER_Y).toBeGreaterThan(BOX_Y + BOX_SIZE); // Below 787

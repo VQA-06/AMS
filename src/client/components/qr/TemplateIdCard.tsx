@@ -133,7 +133,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
               display: flex;
               align-items: center;
               justify-content: center;
-              padding: 3.5%;
+              padding: 1.2%;
               box-sizing: border-box;
             }
             .qr-container svg {
@@ -196,15 +196,15 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         />
 
-        {/* QR Code Container perfectly centered inside the 388x388 white box */}
+        {/* QR Code Container perfectly centered inside the 388x388 white box (enlarged with slim gap) */}
         <div
           ref={qrWrapperRef}
-          className="absolute top-[26.494%] left-[30.094%] w-[40.543%] h-[25.764%] p-[3.5%] flex items-center justify-center pointer-events-auto"
+          className="absolute top-[26.494%] left-[30.094%] w-[40.543%] h-[25.764%] p-[1.2%] flex items-center justify-center pointer-events-auto"
           title="QR Code Terenkripsi JWE"
         >
           <QRCodeSVG
             value={qrToken}
-            size={135}
+            size={145}
             level="M"
             includeMargin={false}
             className="w-full h-full"

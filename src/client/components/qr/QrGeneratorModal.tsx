@@ -155,7 +155,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
   const currentEvent = events.find((e) => e.id === selectedEventId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+    <div className="modal-backdrop-full animate-in fade-in">
       <div className="w-full max-w-2xl rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-6 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800 shrink-0">

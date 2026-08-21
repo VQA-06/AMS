@@ -1353,7 +1353,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
       {/* Individual Digital Pass Card View Modal */}
       {selectedTokenForCard && selectedTokenForCard.qr_token && !selectedTokenForCard.revoked_at && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in">
+        <div className="modal-backdrop-full animate-in fade-in">
           <DigitalPassCard
             tokenString={selectedTokenForCard.qr_token}
             memberName={selectedTokenForCard.member_name || 'Peserta'}
@@ -1369,7 +1369,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
       {/* Manual Attendance Modal */}
       {isManualModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+        <div className="modal-backdrop-full animate-in fade-in">
           <form
             onSubmit={handleManualSubmit}
             className="w-full max-w-md rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-6 space-y-4"
@@ -1445,7 +1445,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
       {/* Promote Guest Modal */}
       {promotingGuest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+        <div className="modal-backdrop-full animate-in fade-in">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">

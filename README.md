@@ -150,37 +150,86 @@ Buka browser di `http://localhost:5173`. Akun Default Owner akan otomatis diinis
 
 ## ☁️ Panduan Deployment ke Cloudflare
 
-### 1. Login ke Cloudflare Wrangler
+### 1. Autentikasi Akun Cloudflare ke Wrangler
+
+Terdapat dua cara untuk menghubungkan akun Cloudflare Anda ke Wrangler:
+
+#### A. Metode 1: Login Interaktif Web (OAuth) — Direkomendasikan untuk Komputer Lokal
+Jalankan perintah login di terminal:
 ```bash
 npx wrangler login
 ```
+Browser akan otomatis terbuka. Klik tombol **Allow** untuk memberikan izin akses Wrangler ke akun Cloudflare Anda.
 
-### 2. Buat Database Cloudflare D1 & KV
+#### B. Metode 2: API Token (Non-Interaktif / Server / CI/CD)
+Jika Anda menggunakan server VPS, Docker, atau GitHub Actions:
+1. Buka [Cloudflare Dashboard > My Profile > API Tokens](https://dash.cloudflare.com/profile/api-tokens).
+2. Klik **Create Token** > pilih template **Edit Cloudflare Workers** (atau buat *Custom Token*).
+3. Pastikan token memiliki izin (*permissions*) minimal:
+   - `Account` > `Cloudflare D1` > `Edit`
+   - `Account` > `Workers KV Storage` > `Edit`
+   - `Account` > `Workers Scripts` > `Edit`
+   - `Account` > `Account Settings` > `Read`
+   - `User` > `Memberships` > `Read`
+4. Set variabel environment di terminal Anda:
+   ```bash
+   export CLOUDFLARE_API_TOKEN="api-token-rahasia-anda"
+   export CLOUDFLARE_ACCOUNT_ID="account-id-anda"
+   ```
+
+#### C. Verifikasi Status Autentikasi
+Periksa apakah Wrangler sudah berhasil terhubung:
 ```bash
-# Buat database D1
+npx wrangler whoami
+```
+Perintah ini akan menampilkan email akun, nama akun, dan Account ID Anda.
+
+---
+
+### 2. Konfigurasi Database D1 & KV Remote
+
+#### A. Buat Database Cloudflare D1
+```bash
 npx wrangler d1 create ams-db
-
-# Buat KV Namespace (Opsional)
-npx wrangler kv:namespace create ams-kv
 ```
-Salin `database_id` dan `id` KV yang dihasilkan ke dalam file `wrangler.toml`.
-
-### 3. Jalankan Migrasi Database ke Cloudflare D1 Remote
-```bash
-npx wrangler d1 migrations apply ams-db --remote
+Catat output `database_id` yang diberikan, lalu perbarui nilai `database_id` di file `wrangler.toml`:
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "ams-db"
+database_id = "paste-database-id-anda-disini"
 ```
 
-### 4. Set Production Secrets
+#### B. Terapkan Migrasi Skema ke Database Remote
+Jalankan migrasi seluruh tabel dan indeks ke server Cloudflare D1:
 ```bash
+npm run db:migrate:remote
+```
+
+---
+
+### 3. Konfigurasi Kunci Rahasia Produksi (Secrets)
+
+Simpan variabel keamanan terenkripsi pada Cloudflare Workers:
+```bash
+# Set kunci enkripsi QR JWE AES-256-GCM (32-byte base64)
 npx wrangler secret put QR_KEY_K1
+
+# Set secret token sesi HMAC
 npx wrangler secret put SESSION_SECRET
 ```
 
-### 5. Build & Deploy
+---
+
+### 4. Build & Deploy dalam Satu Perintah
+
+Jalankan perintah deployment terintegrasi:
 ```bash
-npm run build
-npx wrangler deploy
+npm run deploy
 ```
+*Perintah di atas akan otomatis mengompilasi aset frontend Vite (`npm run build`) dan mempublikasikan Worker beserta static assets ke Cloudflare global network.*
+
+URL produksi aplikasi Anda (misal: `https://ams.<subdomain>.workers.dev`) akan langsung ditampilkan di terminal.
 
 ---
 

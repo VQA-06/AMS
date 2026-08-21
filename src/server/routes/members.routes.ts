@@ -35,10 +35,24 @@ membersRoutes.get('/', authMiddleware, async (c) => {
   });
 });
 
+// In-memory cache for static lookups (30s TTL)
+let cachedDivisions: { data: string[]; exp: number } | null = null;
+let cachedGroups: { data: string[]; exp: number } | null = null;
+
 // GET /api/members/divisions - Get distinct division list
 membersRoutes.get('/divisions', authMiddleware, async (c) => {
+  const now = Date.now();
+  if (cachedDivisions && cachedDivisions.exp > now) {
+    return c.json<ApiResponse>({
+      ok: true,
+      data: { divisions: cachedDivisions.data },
+    });
+  }
+
   const repo = new MemberRepository(c.env.DB);
   const divisions = await repo.getDivisions();
+  cachedDivisions = { data: divisions, exp: now + 30_000 };
+
   return c.json<ApiResponse>({
     ok: true,
     data: { divisions },
@@ -47,8 +61,18 @@ membersRoutes.get('/divisions', authMiddleware, async (c) => {
 
 // GET /api/members/groups - Get distinct group list
 membersRoutes.get('/groups', authMiddleware, async (c) => {
+  const now = Date.now();
+  if (cachedGroups && cachedGroups.exp > now) {
+    return c.json<ApiResponse>({
+      ok: true,
+      data: { groups: cachedGroups.data },
+    });
+  }
+
   const repo = new MemberRepository(c.env.DB);
   const groups = await repo.getGroups();
+  cachedGroups = { data: groups, exp: now + 30_000 };
+
   return c.json<ApiResponse>({
     ok: true,
     data: { groups },

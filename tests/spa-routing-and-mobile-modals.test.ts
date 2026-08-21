@@ -148,5 +148,43 @@ describe('SPA Routing Fallback & Network Resilience Tests', () => {
 
     const resActivities = await app.request('/api/activities', { method: 'GET' }, mockEnv as any);
     expect(resActivities.status).toBe(401);
+
+    // Verify /guests/batch and /guests/batch-names exist (not 404)
+    const resBatch = await app.request('/api/agenda/evt_123/guests/batch', { method: 'POST' }, mockEnv as any);
+    expect(resBatch.status).toBe(401); // 401 proves route exists and is caught by auth, not 404
+
+    const resBatchNames = await app.request('/api/agenda/evt_123/guests/batch-names', { method: 'POST' }, mockEnv as any);
+    expect(resBatchNames.status).toBe(401);
+  });
+
+  it('should deduplicate concurrent in-flight GET requests to the same URL in fetchApi', async () => {
+    let callCount = 0;
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async () => {
+        callCount++;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        return new Response(JSON.stringify({ ok: true, data: { status: 'healthy' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      };
+
+      const { fetchApi } = await import('../src/client/lib/api-client');
+      // Fire 3 simultaneous GET requests
+      const [res1, res2, res3] = await Promise.all([
+        fetchApi<{ status: string }>('/api/health'),
+        fetchApi<{ status: string }>('/api/health'),
+        fetchApi<{ status: string }>('/api/health'),
+      ]);
+
+      expect(res1.status).toBe('healthy');
+      expect(res2.status).toBe('healthy');
+      expect(res3.status).toBe('healthy');
+      // Only 1 real network fetch occurred!
+      expect(callCount).toBe(1);
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 });

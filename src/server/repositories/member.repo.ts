@@ -186,6 +186,45 @@ export class MemberRepository {
     return created;
   }
 
+  async createBatch(
+    membersData: Array<{
+      id: string;
+      external_id: string;
+      name: string;
+      email?: string | null;
+      phone?: string | null;
+      group_name?: string | null;
+      division?: string | null;
+      status?: Status;
+      metadata?: string;
+    }>
+  ): Promise<void> {
+    if (!membersData || membersData.length === 0) return;
+    const chunks = chunkArray(membersData, 50);
+
+    for (const chunk of chunks) {
+      const statements = chunk.map((m) => {
+        return this.db
+          .prepare(
+            `INSERT INTO members (id, external_id, name, email, phone, group_name, division, status, metadata, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
+          )
+          .bind(
+            m.id,
+            m.external_id,
+            m.name.trim(),
+            m.email ?? null,
+            m.phone ?? null,
+            m.group_name ?? null,
+            m.division ?? null,
+            m.status || 'active',
+            m.metadata || '{}'
+          );
+      });
+      await this.db.batch(statements);
+    }
+  }
+
   async update(
     id: string,
     data: Partial<{

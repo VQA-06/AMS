@@ -22,16 +22,13 @@ export class EventRepository {
     const res = await this.db
       .prepare(`
         SELECT e.*,
-               COUNT(DISTINCT a.id) as attendance_count,
-               COUNT(DISTINCT CASE WHEN a.session_type = 'CHECKIN' THEN a.id END) as checkin_count,
-               COUNT(DISTINCT CASE WHEN a.session_type = 'CHECKOUT' THEN a.id END) as checkout_count,
-               COUNT(DISTINCT CASE WHEN m.external_id LIKE 'GUEST-%' OR m.group_name LIKE 'Tamu:%' THEN a.id END) as guest_count,
-               COUNT(DISTINCT CASE WHEN m.external_id NOT LIKE 'GUEST-%' AND (m.group_name NOT LIKE 'Tamu:%' OR m.group_name IS NULL) THEN a.id END) as member_count
+               (SELECT COUNT(*) FROM attendances a WHERE a.event_id = e.id) as attendance_count,
+               (SELECT COUNT(*) FROM attendances a WHERE a.event_id = e.id AND a.session_type = 'CHECKIN') as checkin_count,
+               (SELECT COUNT(*) FROM attendances a WHERE a.event_id = e.id AND a.session_type = 'CHECKOUT') as checkout_count,
+               (SELECT COUNT(*) FROM attendances a JOIN members m ON a.member_id = m.id WHERE a.event_id = e.id AND (m.external_id LIKE 'GUEST-%' OR m.group_name LIKE 'Tamu:%')) as guest_count,
+               (SELECT COUNT(*) FROM attendances a JOIN members m ON a.member_id = m.id WHERE a.event_id = e.id AND m.external_id NOT LIKE 'GUEST-%' AND (m.group_name NOT LIKE 'Tamu:%' OR m.group_name IS NULL)) as member_count
         FROM events e
-        LEFT JOIN attendances a ON e.id = a.event_id
-        LEFT JOIN members m ON a.member_id = m.id
         ${whereClause}
-        GROUP BY e.id
         ORDER BY e.created_at DESC
       `)
       .bind(...params)

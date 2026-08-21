@@ -150,8 +150,8 @@ describe('Dashboard Charts & UI Enhancements Tests', () => {
 
       expect(mockDb.prepare).toHaveBeenCalled();
       const sqlQuery = mockDb.prepare.mock.calls[0][0];
-      expect(sqlQuery).toContain('COUNT(DISTINCT a.id) as attendance_count');
-      expect(sqlQuery).toContain('LEFT JOIN attendances a ON e.id = a.event_id');
+      expect(sqlQuery).toContain('attendance_count');
+      expect(sqlQuery).toContain('checkin_count');
       expect(events[0].attendance_count).toBe(5);
     });
   });

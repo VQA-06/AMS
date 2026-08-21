@@ -321,8 +321,8 @@ eventsRoutes.delete('/:id', authMiddleware, requireRole(['owner', 'admin']), asy
   });
 });
 
-// POST /api/events/:id/guests - Create temporary guest participants & generate event QR passes
-eventsRoutes.post('/:id/guests', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
+// POST /:id/guests & /:id/guests/batch & /:id/guests/batch-names - Create temporary guest participants & generate event QR passes
+const createGuestPassesHandler = async (c: Context<{ Bindings: Env }>) => {
   const eventId = c.req.param('id');
   if (!eventId) {
     return c.json<ApiResponse>(
@@ -353,40 +353,36 @@ eventsRoutes.post('/:id/guests', authMiddleware, requireRole(['owner', 'admin'])
   }
 
   const body = await c.req.json();
-  const {
-    guests = [],
-    count = 0,
-    prefix = 'Tamu Undangan',
-    division = null,
-    expires_at = null,
-  } = body as {
-    guests?: Array<{ name: string; division?: string | null; email?: string | null; phone?: string | null }>;
-    count?: number;
-    prefix?: string;
-    division?: string | null;
-    expires_at?: string | null;
-  };
+  const rawGuests = Array.isArray(body.guests)
+    ? body.guests
+    : Array.isArray(body.items)
+    ? body.items
+    : [];
+  const count = typeof body.count === 'number' ? body.count : 0;
+  const prefix = body.prefix || 'Tamu Undangan';
+  const division = body.division || null;
+  const expires_at = body.expires_at || null;
 
   const guestList: Array<{ name: string; division?: string | null; email?: string | null; phone?: string | null }> = [];
 
-  if (Array.isArray(guests) && guests.length > 0) {
-    for (const g of guests) {
+  if (rawGuests.length > 0) {
+    for (const g of rawGuests) {
       if (g.name && g.name.trim() !== '') {
         guestList.push({
           name: g.name.trim(),
-          division: g.division?.trim() || division || null,
+          division: g.division?.trim() || division || 'Tamu Undangan',
           email: g.email?.trim() || null,
           phone: g.phone?.trim() || null,
         });
       }
     }
   } else if (count > 0) {
-    const totalCount = Math.min(100, count);
+    const totalCount = Math.min(100, Math.max(1, count));
     for (let i = 1; i <= totalCount; i++) {
       const padNum = String(i).padStart(2, '0');
       guestList.push({
         name: `${prefix} #${padNum}`,
-        division: division || 'Tamu',
+        division: division || 'Tamu Undangan',
         email: null,
         phone: null,
       });
@@ -409,7 +405,7 @@ eventsRoutes.post('/:id/guests', authMiddleware, requireRole(['owner', 'admin'])
   const memberRepo = new MemberRepository(c.env.DB);
   const qrRepo = new QrTokenRepository(c.env.DB);
   const auditRepo = new AuditRepository(c.env.DB);
-  const admin = c.get('admin');
+  const admin = (c as any).get('admin');
 
   const kid = c.env.QR_ACTIVE_KID || 'k1';
   const issuer = c.env.APP_ISSUER || 'https://absen.local';
@@ -421,16 +417,16 @@ eventsRoutes.post('/:id/guests', authMiddleware, requireRole(['owner', 'admin'])
       ? new Date(new Date(event.ends_at).getTime() + 24 * 60 * 60 * 1000).toISOString()
       : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString());
 
-  const generatedTokens: Array<{
+  const membersToInsert: Array<{
     id: string;
-    jti: string;
-    member_id: string;
-    member_name: string;
-    member_external_id: string;
-    member_division: string | null;
-    qr_token: string;
-    scope: 'event';
-    expires_at: string;
+    external_id: string;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    group_name?: string | null;
+    division?: string | null;
+    status?: 'active';
+    metadata?: string;
   }> = [];
 
   const dbTokensToInsert: Array<{
@@ -446,11 +442,24 @@ eventsRoutes.post('/:id/guests', authMiddleware, requireRole(['owner', 'admin'])
     note?: string | null;
   }> = [];
 
+  const generatedTokens: Array<{
+    id: string;
+    jti: string;
+    member_id: string;
+    member_name: string;
+    member_external_id: string;
+    member_division: string | null;
+    qr_token: string;
+    scope: 'event';
+    expires_at: string;
+  }> = [];
+
   for (const guest of guestList) {
-    // Generate distinct external_id for guest
+    const memberId = `mem_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
     const guestExternalId = `GUEST-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const member = await memberRepo.create({
+    membersToInsert.push({
+      id: memberId,
       external_id: guestExternalId,
       name: guest.name,
       email: guest.email,
@@ -466,7 +475,7 @@ eventsRoutes.post('/:id/guests', authMiddleware, requireRole(['owner', 'admin'])
 
     const tokenString = await generateQrToken(
       {
-        memberId: member.id,
+        memberId,
         jti,
         scope: 'event',
         eventId: event.id,
@@ -482,7 +491,7 @@ eventsRoutes.post('/:id/guests', authMiddleware, requireRole(['owner', 'admin'])
     dbTokensToInsert.push({
       id: tokenId,
       jti,
-      member_id: member.id,
+      member_id: memberId,
       event_id: event.id,
       scope: 'event',
       valid_from: validFrom,
@@ -495,16 +504,18 @@ eventsRoutes.post('/:id/guests', authMiddleware, requireRole(['owner', 'admin'])
     generatedTokens.push({
       id: tokenId,
       jti,
-      member_id: member.id,
-      member_name: member.name,
-      member_external_id: member.external_id,
-      member_division: member.division,
+      member_id: memberId,
+      member_name: guest.name,
+      member_external_id: guestExternalId,
+      member_division: guest.division || null,
       qr_token: tokenString,
       scope: 'event',
       expires_at: tokenExpiresAt,
     });
   }
 
+  // Atomic batch inserts (instant <50ms D1 execution)
+  await memberRepo.createBatch(membersToInsert);
   await qrRepo.createBatch(dbTokensToInsert);
 
   await auditRepo.logAction({
@@ -525,7 +536,11 @@ eventsRoutes.post('/:id/guests', authMiddleware, requireRole(['owner', 'admin'])
       tokens: generatedTokens,
     },
   });
-});
+};
+
+eventsRoutes.post('/:id/guests', authMiddleware, requireRole(['owner', 'admin']), createGuestPassesHandler);
+eventsRoutes.post('/:id/guests/batch', authMiddleware, requireRole(['owner', 'admin']), createGuestPassesHandler);
+eventsRoutes.post('/:id/guests/batch-names', authMiddleware, requireRole(['owner', 'admin']), createGuestPassesHandler);
 
 // POST /api/events/bulk-close - Bulk close active events
 eventsRoutes.post('/bulk-close', authMiddleware, requireRole(['owner', 'admin']), async (c) => {

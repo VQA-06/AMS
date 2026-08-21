@@ -70,6 +70,8 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
   const handlePrintSingle = () => {
     const svgEl = qrWrapperRef.current?.querySelector('svg');
     const svgHtml = svgEl ? svgEl.outerHTML : '';
+    const nameLen = memberName.length;
+    const printFontSize = nameLen > 24 ? '8pt' : nameLen > 18 ? '9.5pt' : nameLen > 14 ? '10.5pt' : '11.5pt';
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -103,6 +105,8 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
               align-items: center;
               min-height: 90vh;
               font-family: 'Oxanium', sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             .id-card {
               position: relative;
@@ -110,7 +114,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
               height: 85mm;
               max-width: 54mm;
               max-height: 85mm;
-              border-radius: 4mm;
+              border-radius: 0 !important;
               overflow: hidden;
               background-image: url('/idcard-template.png');
               background-size: cover;
@@ -118,9 +122,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
               background-repeat: no-repeat;
               page-break-inside: avoid;
               break-inside: avoid;
-              box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
+              outline: 0.5px dashed rgba(100, 116, 139, 0.5);
             }
             .qr-container {
               position: absolute;
@@ -144,17 +146,20 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
               top: 60.8%;
               left: 50%;
               transform: translate(-50%, -50%);
-              width: 84%;
+              width: 94%;
               text-align: center;
               color: #ffffff;
               font-family: 'Oxanium', sans-serif;
               font-weight: 800;
-              font-size: 13.5pt;
-              line-height: 1.1;
-              white-space: nowrap;
+              font-size: ${printFontSize};
+              line-height: 1.15;
+              max-height: 2.3em;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              word-break: break-word;
               overflow: hidden;
-              text-overflow: ellipsis;
-              text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+              text-shadow: 0 1px 3px rgba(0,0,0,0.95);
             }
           </style>
         </head>
@@ -177,10 +182,13 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
     printWindow.document.close();
   };
 
+  const nameLen = memberName.length;
+  const textSizeClass = nameLen > 22 ? 'text-[15px]' : nameLen > 16 ? 'text-[17px]' : 'text-[19px] sm:text-[20px]';
+
   return (
     <div className="flex flex-col items-center w-full max-w-xs mx-auto animate-in zoom-in-95">
-      {/* Visual Template Card Preview (54mm x 85mm ratio) */}
-      <div className="relative w-full aspect-[54/85] rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 bg-slate-900 select-none group">
+      {/* Visual Template Card Preview (Square / Non-rounded 54mm x 85mm ratio) */}
+      <div className="relative w-full aspect-[54/85] rounded-none overflow-hidden shadow-2xl border border-slate-700 bg-slate-900 select-none group">
         {/* Template Background Image */}
         <img
           src="/idcard-template.png"
@@ -203,9 +211,9 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
           />
         </div>
 
-        {/* Member Name with Oxanium ExtraBold (Font size 17px - 20px) */}
+        {/* Member Name with Oxanium ExtraBold (17px - 20px, Full name without clipping) */}
         <div
-          className="absolute top-[60.8%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84%] text-center text-white font-oxanium font-extrabold text-[19px] sm:text-[20px] tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] truncate pointer-events-none"
+          className={`absolute top-[60.8%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] text-center text-white font-oxanium font-extrabold ${textSizeClass} tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] leading-tight pointer-events-none break-words`}
           title={memberName}
         >
           {memberName}

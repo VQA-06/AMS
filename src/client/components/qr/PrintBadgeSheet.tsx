@@ -46,13 +46,17 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
       .map((tok) => {
         const cardEl = document.getElementById(`badge-card-${tok.id}`);
         const svgHtml = cardEl?.querySelector('svg')?.outerHTML || '';
+        
+        // Dynamically compute print font size based on name length to prevent clipping
+        const nameLen = tok.member_name.length;
+        const printFontSize = nameLen > 24 ? '8pt' : nameLen > 18 ? '9.5pt' : nameLen > 14 ? '10.5pt' : '11.5pt';
 
         return `
           <div class="id-card">
             <div class="qr-container">
               ${svgHtml}
             </div>
-            <div class="name-text">${tok.member_name}</div>
+            <div class="name-text" style="font-size: ${printFontSize};">${tok.member_name}</div>
           </div>
         `;
       })
@@ -104,7 +108,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
               height: 85mm;
               max-width: 54mm;
               max-height: 85mm;
-              border-radius: 3.5mm;
+              border-radius: 0 !important;
               overflow: hidden;
               background-image: url('/idcard-template.png');
               background-size: cover;
@@ -112,8 +116,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
               background-repeat: no-repeat;
               page-break-inside: avoid;
               break-inside: avoid;
-              outline: 0.5px dashed rgba(100, 116, 139, 0.4);
-              outline-offset: 1px;
+              outline: 0.5px dashed rgba(100, 116, 139, 0.5);
             }
             .qr-container {
               position: absolute;
@@ -137,17 +140,19 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
               top: 60.8%;
               left: 50%;
               transform: translate(-50%, -50%);
-              width: 84%;
+              width: 94%;
               text-align: center;
               color: #ffffff;
               font-family: 'Oxanium', sans-serif;
               font-weight: 800;
-              font-size: 13.5pt;
-              line-height: 1.1;
-              white-space: nowrap;
+              line-height: 1.15;
+              max-height: 2.3em;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              word-break: break-word;
               overflow: hidden;
-              text-overflow: ellipsis;
-              text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+              text-shadow: 0 1px 3px rgba(0,0,0,0.95);
             }
           </style>
         </head>
@@ -218,7 +223,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
               <span>Cetak ID Card Resmi ({tokens.length} Kartu)</span>
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Ukuran fisik standar <strong className="text-sky-400 font-mono">54 mm × 85 mm</strong> (Grid A4 3×2 atau 3×3 per lembar dengan garis panduan potong).
+              Ukuran fisik standar <strong className="text-sky-400 font-mono">54 mm × 85 mm</strong> (Sudut persegi/kotak tanpa potongan elipsis).
             </p>
           </div>
 
@@ -266,42 +271,47 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
             id="printable-badge-area"
             className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center"
           >
-            {tokens.map((tok) => (
-              <div
-                key={tok.id}
-                id={`badge-card-${tok.id}`}
-                className="relative w-full max-w-[220px] aspect-[54/85] rounded-2xl overflow-hidden shadow-xl border border-slate-700/80 bg-slate-900 select-none group"
-              >
-                {/* Template Background Image */}
-                <img
-                  src="/idcard-template.png"
-                  alt="Template ID Card"
-                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                />
+            {tokens.map((tok) => {
+              const nameLen = tok.member_name.length;
+              const textSizeClass = nameLen > 22 ? 'text-[13px]' : nameLen > 16 ? 'text-[15px]' : 'text-[17px]';
 
-                {/* QR Code Container perfectly centered inside the 388x388 white box */}
+              return (
                 <div
-                  className="absolute top-[26.494%] left-[30.094%] w-[40.543%] h-[25.764%] p-[3.5%] flex items-center justify-center pointer-events-auto"
-                  title="QR Token"
+                  key={tok.id}
+                  id={`badge-card-${tok.id}`}
+                  className="relative w-full max-w-[220px] aspect-[54/85] rounded-none overflow-hidden shadow-xl border border-slate-700 bg-slate-900 select-none group"
                 >
-                  <QRCodeSVG
-                    value={tok.qr_token}
-                    size={110}
-                    level="M"
-                    includeMargin={false}
-                    className="w-full h-full"
+                  {/* Template Background Image */}
+                  <img
+                    src="/idcard-template.png"
+                    alt="Template ID Card"
+                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                   />
-                </div>
 
-                {/* Member Name with Oxanium ExtraBold (Font size 17px - 20px) */}
-                <div
-                  className="absolute top-[60.8%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84%] text-center text-white font-oxanium font-extrabold text-xs sm:text-sm tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] truncate pointer-events-none"
-                  title={tok.member_name}
-                >
-                  {tok.member_name}
+                  {/* QR Code Container perfectly centered inside the 388x388 white box */}
+                  <div
+                    className="absolute top-[26.494%] left-[30.094%] w-[40.543%] h-[25.764%] p-[3.5%] flex items-center justify-center pointer-events-auto"
+                    title="QR Token"
+                  >
+                    <QRCodeSVG
+                      value={tok.qr_token}
+                      size={110}
+                      level="M"
+                      includeMargin={false}
+                      className="w-full h-full"
+                    />
+                  </div>
+
+                  {/* Member Name in Oxanium ExtraBold (Full Name, No Ellipsis) */}
+                  <div
+                    className={`absolute top-[60.8%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] text-center text-white font-oxanium font-extrabold ${textSizeClass} tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] leading-tight pointer-events-none break-words`}
+                    title={tok.member_name}
+                  >
+                    {tok.member_name}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

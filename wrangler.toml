@@ -21,7 +21,7 @@ id = "ams-dev-kv-id"
 ENVIRONMENT = "development"
 QR_ACTIVE_KID = "k1"
 # 32-byte base64 random dev key for AES-256-GCM JWE
-QR_KEY_K1 = "dGhpcy1pcy1hLTMyLWJ5dGUtZGV2LWtleS1mb3ItandlISE="
+QR_KEY_K1 = "Cs0Ugc8R/Z7QAprW1w5jqKyh8/Wlw46XPjN2W5GeAKU="
 SESSION_SECRET = "ams-dev-session-secret-key-32-chars-long"
 APP_ISSUER = "https://absen.local"
 APP_AUDIENCE = "ams"

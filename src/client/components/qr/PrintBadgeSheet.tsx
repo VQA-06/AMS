@@ -5,7 +5,6 @@ import {
   Download,
   X,
   Loader2,
-  CheckCircle2,
   CreditCard,
 } from 'lucide-react';
 import { generateIdCardDataUrl, downloadIdCardImage } from '../../lib/idcard-canvas';
@@ -118,13 +117,15 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
             }
             .qr-container {
               position: absolute;
-              top: 26.5%;
-              left: 28.6%;
-              width: 35.5%;
-              height: 22.5%;
+              top: 26.494%;
+              left: 30.094%;
+              width: 40.543%;
+              height: 25.764%;
               display: flex;
               align-items: center;
               justify-content: center;
+              padding: 3.5%;
+              box-sizing: border-box;
             }
             .qr-container svg {
               width: 100%;
@@ -141,12 +142,12 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
               color: #ffffff;
               font-family: 'Oxanium', sans-serif;
               font-weight: 800;
-              font-size: 10.5pt;
+              font-size: 13.5pt;
               line-height: 1.1;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
-              text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+              text-shadow: 0 1px 3px rgba(0,0,0,0.9);
             }
           </style>
         </head>
@@ -197,7 +198,6 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
 
         downloadIdCardImage(tok.member_name, dataUrl);
         setDownloadProgress(Math.round(((i + 1) / tokens.length) * 100));
-        // Small delay to prevent browser download throttling
         await new Promise((r) => setTimeout(r, 200));
       }
     } catch (err) {
@@ -279,9 +279,9 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
                   className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                 />
 
-                {/* QR Code Container in white box */}
+                {/* QR Code Container perfectly centered inside the 388x388 white box */}
                 <div
-                  className="absolute top-[26.5%] left-[28.6%] w-[35.5%] h-[22.5%] flex items-center justify-center pointer-events-auto"
+                  className="absolute top-[26.494%] left-[30.094%] w-[40.543%] h-[25.764%] p-[3.5%] flex items-center justify-center pointer-events-auto"
                   title="QR Token"
                 >
                   <QRCodeSVG
@@ -293,9 +293,9 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
                   />
                 </div>
 
-                {/* Member Name in Oxanium ExtraBold */}
+                {/* Member Name with Oxanium ExtraBold (Font size 17px - 20px) */}
                 <div
-                  className="absolute top-[60.8%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84%] text-center text-white font-oxanium font-extrabold text-xs sm:text-sm tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] truncate pointer-events-none"
+                  className="absolute top-[60.8%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84%] text-center text-white font-oxanium font-extrabold text-xs sm:text-sm tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] truncate pointer-events-none"
                   title={tok.member_name}
                 >
                   {tok.member_name}

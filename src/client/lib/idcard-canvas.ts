@@ -13,18 +13,22 @@ const TEMPLATE_URL = '/idcard-template.png';
 const CANVAS_WIDTH = 957;
 const CANVAS_HEIGHT = 1506;
 
-// QR placement inside the template white box
-const QR_SIZE = 340;
-const QR_CENTER_X = 444;
-const QR_CENTER_Y = 592.5;
-const QR_X = QR_CENTER_X - QR_SIZE / 2; // 274
-const QR_Y = QR_CENTER_Y - QR_SIZE / 2; // 422.5
+// Exact solid white box coordinates in idcard-template.png (388 x 388 px)
+export const BOX_X = 288;
+export const BOX_Y = 399;
+export const BOX_SIZE = 388;
 
-// Name placement coordinates
-const NAME_CENTER_X = CANVAS_WIDTH / 2; // 478.5
-const NAME_CENTER_Y = 915;
-const MAX_NAME_WIDTH = 780;
-const BASE_FONT_SIZE = 54;
+// Symmetrical centered QR placement inside the 388x388 white box (with 19px padding on all sides)
+export const QR_SIZE = 350;
+export const QR_X = BOX_X + (BOX_SIZE - QR_SIZE) / 2; // 307
+export const QR_Y = BOX_Y + (BOX_SIZE - QR_SIZE) / 2; // 418
+
+// Name placement coordinates (Oxanium ExtraBold)
+export const NAME_CENTER_X = CANVAS_WIDTH / 2; // 478.5
+export const NAME_CENTER_Y = 915;
+export const MAX_NAME_WIDTH = 760;
+export const BASE_FONT_SIZE = 60; // Equivalent to 20px on display
+export const MIN_FONT_SIZE = 51;  // Equivalent to 17px on display
 
 let cachedTemplateImg: HTMLImageElement | null = null;
 
@@ -43,7 +47,7 @@ export async function preloadTemplateImage(src: string = TEMPLATE_URL): Promise<
       cachedTemplateImg = img;
       resolve(img);
     };
-    img.onerror = (err) => reject(new Error(`Gagal memuat template ID Card dari: ${src}`));
+    img.onerror = () => reject(new Error(`Gagal memuat template ID Card dari: ${src}`));
     img.src = src;
   });
 }
@@ -54,51 +58,21 @@ export async function preloadTemplateImage(src: string = TEMPLATE_URL): Promise<
 export async function ensureOxaniumFontLoaded(): Promise<void> {
   if (typeof document !== 'undefined' && 'fonts' in document) {
     try {
-      await document.fonts.load('800 54px Oxanium');
+      await document.fonts.load('800 60px Oxanium');
     } catch {
-      // Font load fallback
+      // Fallback
     }
   }
 }
 
 /**
- * Helper to render QR Code into an offscreen Image element via SVG
- */
-export async function generateQrImage(qrToken: string, size: number = QR_SIZE): Promise<HTMLImageElement> {
-  // Use client-side SVG generation for crisp scaling
-  const svgNamespace = 'http://www.w3.org/2000/svg';
-  const qrSvgEl = document.createElementNS(svgNamespace, 'svg');
-  
-  // We dynamically render QR code into SVG using simple canvas or SVG string
-  // Let's create an offscreen canvas with QRCodeCanvas or SVG data URI
-  const offscreenCanvas = document.createElement('canvas');
-  offscreenCanvas.width = size;
-  offscreenCanvas.height = size;
-  
-  // We can render SVG QR using Image object
-  // To avoid external bundle deps on canvas rendering, we render directly
-  return new Promise((resolve, reject) => {
-    // Find any rendered QRCodeSVG in DOM if exists, or generate via data URI
-    const svgData = `
-      <svg xmlns="${svgNamespace}" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-        <rect width="${size}" height="${size}" fill="#FFFFFF"/>
-      </svg>
-    `;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
-  });
-}
-
-/**
- * Calculate dynamic font size to ensure name fits within max bounds
+ * Calculate dynamic font size to ensure name fits within max bounds (min 17px equivalent / 51px canvas)
  */
 export function calculateNameFontSize(
   ctx: CanvasRenderingContext2D,
   name: string,
   baseSize: number = BASE_FONT_SIZE,
+  minSize: number = MIN_FONT_SIZE,
   maxWidth: number = MAX_NAME_WIDTH
 ): number {
   let size = baseSize;
@@ -106,7 +80,7 @@ export function calculateNameFontSize(
   let width = ctx.measureText(name).width;
 
   if (width > maxWidth) {
-    size = Math.max(30, Math.floor((maxWidth / width) * baseSize));
+    size = Math.max(minSize, Math.floor((maxWidth / width) * baseSize));
   }
   return size;
 }
@@ -132,12 +106,12 @@ export async function renderIdCardToCanvas(
   // 2. Draw Background Template
   ctx.drawImage(templateImg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  // 3. Draw QR Code in designated white box
+  // 3. Draw QR Code in designated white box with perfect symmetry
   if (qrImageElement) {
     ctx.drawImage(qrImageElement, QR_X, QR_Y, QR_SIZE, QR_SIZE);
   }
 
-  // 4. Draw Member Name
+  // 4. Draw Member Name with Oxanium ExtraBold (800)
   const fontSize = calculateNameFontSize(ctx, options.name);
   ctx.font = `800 ${fontSize}px 'Oxanium', 'Outfit', sans-serif`;
   ctx.fillStyle = '#FFFFFF';
@@ -145,10 +119,10 @@ export async function renderIdCardToCanvas(
   ctx.textBaseline = 'middle';
   
   // Subtle text shadow for high contrast definition
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
   ctx.shadowBlur = 8;
   ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 2;
+  ctx.shadowOffsetY = 3;
 
   ctx.fillText(options.name, NAME_CENTER_X, NAME_CENTER_Y);
 

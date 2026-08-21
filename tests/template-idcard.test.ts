@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { calculateNameFontSize } from '../src/client/lib/idcard-canvas';
+import {
+  calculateNameFontSize,
+  BOX_X,
+  BOX_Y,
+  BOX_SIZE,
+  QR_SIZE,
+  QR_X,
+  QR_Y,
+  BASE_FONT_SIZE,
+  MIN_FONT_SIZE,
+  NAME_CENTER_Y,
+} from '../src/client/lib/idcard-canvas';
 
 describe('Official Template ID Card (54mm x 85mm) Engine Tests', () => {
   it('should maintain accurate physical aspect ratio (54mm x 85mm)', () => {
@@ -15,62 +26,52 @@ describe('Official Template ID Card (54mm x 85mm) Engine Tests', () => {
     expect(delta).toBeLessThan(0.001); // 99.97% accuracy match
   });
 
-  it('should calculate base font size for normal length names', () => {
-    // Mock canvas 2D context
+  it('should calculate base font size (60px canvas / 20px display) for normal length names', () => {
     const mockCtx = {
       font: '',
       measureText: (text: string) => ({
-        width: text.length * 18, // ~200-300px for average name
+        width: text.length * 20, // ~200-300px for average name
       }),
     } as unknown as CanvasRenderingContext2D;
 
-    const size = calculateNameFontSize(mockCtx, 'Budi Santoso', 54, 780);
-    expect(size).toBe(54);
+    const size = calculateNameFontSize(mockCtx, 'Budi Santoso', 60, 51, 760);
+    expect(size).toBe(60);
   });
 
-  it('should auto-scale font size down for excessively long names without clipping', () => {
+  it('should auto-scale font size down for excessively long names without clipping (min 51px canvas / 17px display)', () => {
     const mockCtx = {
       font: '',
       measureText: (text: string) => ({
-        width: text.length * 28, // 1400px for 50 chars
+        width: text.length * 30, // 1500px for 50 chars
       }),
     } as unknown as CanvasRenderingContext2D;
 
     const longName = 'Muhammad Budi Santoso Pratama Kusuma Wardhana Al-Bantani';
-    const size = calculateNameFontSize(mockCtx, longName, 54, 780);
+    const size = calculateNameFontSize(mockCtx, longName, 60, 51, 760);
 
-    expect(size).toBeLessThan(54);
-    expect(size).toBeGreaterThanOrEqual(30); // Maintains minimum readable size
+    expect(size).toBeLessThan(60);
+    expect(size).toBeGreaterThanOrEqual(51); // Maintains minimum 17px equivalent
   });
 
-  it('should verify QR center and bounding coordinates within template box', () => {
-    const CANVAS_WIDTH = 957;
-    const CANVAS_HEIGHT = 1506;
+  it('should verify exact 388x388 solid white box coordinates and symmetrical QR placement', () => {
+    expect(BOX_X).toBe(288);
+    expect(BOX_Y).toBe(399);
+    expect(BOX_SIZE).toBe(388);
+    expect(QR_SIZE).toBe(350);
 
-    // Solid white box bounds found in idcard-template.png
-    const boxMinX = 213;
-    const boxMaxX = 675;
-    const boxMinY = 399;
-    const boxMaxY = 786;
+    // Padding on all 4 sides must be perfectly equal (19px)
+    const paddingLeft = QR_X - BOX_X;
+    const paddingRight = BOX_X + BOX_SIZE - (QR_X + QR_SIZE);
+    const paddingTop = QR_Y - BOX_Y;
+    const paddingBottom = BOX_Y + BOX_SIZE - (QR_Y + QR_SIZE);
 
-    const boxWidth = boxMaxX - boxMinX + 1; // 463
-    const boxHeight = boxMaxY - boxMinY + 1; // 388
-    const boxCenterX = (boxMinX + boxMaxX) / 2; // 444
-    const boxCenterY = (boxMinY + boxMaxY) / 2; // 592.5
-
-    const qrSize = 340;
-    const qrX = boxCenterX - qrSize / 2;
-    const qrY = boxCenterY - qrSize / 2;
-
-    // QR must fit completely inside the white box
-    expect(qrX).toBeGreaterThanOrEqual(boxMinX);
-    expect(qrX + qrSize).toBeLessThanOrEqual(boxMaxX);
-    expect(qrY).toBeGreaterThanOrEqual(boxMinY);
-    expect(qrY + qrSize).toBeLessThanOrEqual(boxMaxY);
+    expect(paddingLeft).toBe(19);
+    expect(paddingRight).toBe(19);
+    expect(paddingTop).toBe(19);
+    expect(paddingBottom).toBe(19);
 
     // Name position must be situated below the white box and above the 2026-2027 footer
-    const nameCenterY = 915;
-    expect(nameCenterY).toBeGreaterThan(boxMaxY); // Below QR box
-    expect(nameCenterY).toBeLessThan(1013); // Above "2026 - 2027"
+    expect(NAME_CENTER_Y).toBeGreaterThan(BOX_Y + BOX_SIZE); // Below 787
+    expect(NAME_CENTER_Y).toBeLessThan(1013); // Above 1013
   });
 });

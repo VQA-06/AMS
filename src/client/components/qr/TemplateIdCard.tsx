@@ -5,9 +5,7 @@ import {
   Printer,
   Copy,
   Check,
-  Sparkles,
   Loader2,
-  Share2,
 } from 'lucide-react';
 import { generateIdCardDataUrl, downloadIdCardImage } from '../../lib/idcard-canvas';
 
@@ -27,9 +25,6 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
   qrToken,
   memberExternalId,
   memberDivision,
-  eventName,
-  scope = 'universal',
-  expiresAt,
   showActions = true,
 }) => {
   const [downloading, setDownloading] = useState(false);
@@ -45,7 +40,6 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
   const handleDownloadPng = async () => {
     try {
       setDownloading(true);
-      // Extract SVG QR Code from DOM and convert to offscreen image
       const svgEl = qrWrapperRef.current?.querySelector('svg');
       let qrImgElement: HTMLImageElement | undefined;
 
@@ -130,13 +124,15 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
             }
             .qr-container {
               position: absolute;
-              top: 26.5%;
-              left: 28.6%;
-              width: 35.5%;
-              height: 22.5%;
+              top: 26.494%;
+              left: 30.094%;
+              width: 40.543%;
+              height: 25.764%;
               display: flex;
               align-items: center;
               justify-content: center;
+              padding: 3.5%;
+              box-sizing: border-box;
             }
             .qr-container svg {
               width: 100%;
@@ -148,17 +144,17 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
               top: 60.8%;
               left: 50%;
               transform: translate(-50%, -50%);
-              width: 85%;
+              width: 84%;
               text-align: center;
               color: #ffffff;
               font-family: 'Oxanium', sans-serif;
               font-weight: 800;
-              font-size: 11pt;
+              font-size: 13.5pt;
               line-height: 1.1;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
-              text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+              text-shadow: 0 1px 3px rgba(0,0,0,0.9);
             }
           </style>
         </head>
@@ -183,7 +179,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
 
   return (
     <div className="flex flex-col items-center w-full max-w-xs mx-auto animate-in zoom-in-95">
-      {/* Visual Template Card Preview */}
+      {/* Visual Template Card Preview (54mm x 85mm ratio) */}
       <div className="relative w-full aspect-[54/85] rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 bg-slate-900 select-none group">
         {/* Template Background Image */}
         <img
@@ -192,10 +188,10 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         />
 
-        {/* QR Code Container on designated white box */}
+        {/* QR Code Container perfectly centered inside the 388x388 white box */}
         <div
           ref={qrWrapperRef}
-          className="absolute top-[26.5%] left-[28.6%] w-[35.5%] h-[22.5%] flex items-center justify-center pointer-events-auto"
+          className="absolute top-[26.494%] left-[30.094%] w-[40.543%] h-[25.764%] p-[3.5%] flex items-center justify-center pointer-events-auto"
           title="QR Code Terenkripsi JWE"
         >
           <QRCodeSVG
@@ -207,9 +203,9 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
           />
         </div>
 
-        {/* Member Name with Oxanium ExtraBold */}
+        {/* Member Name with Oxanium ExtraBold (Font size 17px - 20px) */}
         <div
-          className="absolute top-[60.8%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84%] text-center text-white font-oxanium font-extrabold text-base sm:text-lg tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] truncate pointer-events-none"
+          className="absolute top-[60.8%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84%] text-center text-white font-oxanium font-extrabold text-[19px] sm:text-[20px] tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] truncate pointer-events-none"
           title={memberName}
         >
           {memberName}
@@ -228,43 +224,43 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
         )}
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons with Clean Typography */}
       {showActions && (
         <div className="grid grid-cols-3 gap-2 w-full mt-3">
           <button
             onClick={handleDownloadPng}
             disabled={downloading}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-sky-500/20 active:scale-95 disabled:opacity-50"
-            title="Unduh ID Card gambar PNG kualitas tinggi (54x85 mm)"
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-sky-500/20 active:scale-95 disabled:opacity-50 min-w-0"
+            title="Unduh ID Card gambar PNG HD"
           >
             {downloading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
             ) : (
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 shrink-0" />
             )}
-            <span className="truncate">Unduh PNG</span>
+            <span className="truncate">Unduh</span>
           </button>
 
           <button
             onClick={handlePrintSingle}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all border border-slate-700 active:scale-95"
-            title="Cetak ID Card ukuran standar 54x85 mm"
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all border border-slate-700 active:scale-95 min-w-0"
+            title="Cetak ID Card ukuran 54x85 mm"
           >
-            <Printer className="w-3.5 h-3.5 text-sky-400" />
+            <Printer className="w-3.5 h-3.5 text-sky-400 shrink-0" />
             <span className="truncate">Cetak</span>
           </button>
 
           <button
             onClick={handleCopyToken}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-all border border-slate-800 active:scale-95"
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-all border border-slate-800 active:scale-95 min-w-0"
             title="Salin token QR"
           >
             {copied ? (
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             ) : (
-              <Copy className="w-3.5 h-3.5 text-slate-400" />
+              <Copy className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             )}
-            <span className="truncate">{copied ? 'Tersalin' : 'Token'}</span>
+            <span className="truncate">{copied ? 'Tersalin' : 'Salin'}</span>
           </button>
         </div>
       )}

@@ -1,4 +1,5 @@
 import { Event, EventStatus, QrPolicy } from '@/shared/types';
+import { escapeLikePattern } from '../lib/sql-utils';
 
 export class EventRepository {
   constructor(private db: D1Database) {}
@@ -13,8 +14,9 @@ export class EventRepository {
     }
 
     if (options.search && options.search.trim() !== '') {
-      conditions.push('(e.name LIKE ? OR e.location_name LIKE ?)');
-      const s = `%${options.search.trim()}%`;
+      conditions.push('(e.name LIKE ? ESCAPE \'\\\' OR e.location_name LIKE ? ESCAPE \'\\\')');
+      const sanitized = escapeLikePattern(options.search.trim());
+      const s = `%${sanitized}%`;
       params.push(s, s);
     }
 

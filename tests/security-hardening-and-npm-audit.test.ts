@@ -104,16 +104,122 @@ describe('Security Hardening & Vulnerability Mitigation Tests', () => {
   });
 
   describe('Enterprise Security Headers Middleware', () => {
-    it('should include nosniff, DENY, and strict-origin headers on responses', async () => {
+    it('should include CSP, HSTS, COOP, CORP, nosniff, DENY, and strict-origin headers on responses', async () => {
       const app = new Hono();
       app.use('*', securityHeaders());
       app.get('/test', (c) => c.text('OK'));
 
       const res = await app.request('/test');
+      expect(res.headers.get('Content-Security-Policy')).toContain("default-src 'self'");
+      expect(res.headers.get('Strict-Transport-Security')).toContain('max-age=31536000');
+      expect(res.headers.get('Cross-Origin-Opener-Policy')).toBe('same-origin');
+      expect(res.headers.get('Cross-Origin-Resource-Policy')).toBe('same-origin');
       expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');
       expect(res.headers.get('X-Frame-Options')).toBe('DENY');
       expect(res.headers.get('Referrer-Policy')).toBe('strict-origin-when-cross-origin');
       expect(res.headers.get('Permissions-Policy')).toContain('camera=(self)');
+    });
+  });
+
+  describe('Sensitive Data Exposure Prevention (sanitizeAdmin)', () => {
+    it('should completely strip password_hash from admin objects', async () => {
+      const { sanitizeAdmin } = await import('../src/server/repositories/admin.repo');
+      const rawAdmin = {
+        id: 'adm_123',
+        email: 'owner@cc.id',
+        name: 'Super Owner',
+        role: 'owner',
+        status: 'active',
+        password_hash: 'pbkdf2$100000$saltsalt$hashhashhash',
+      };
+
+      const cleanAdmin = sanitizeAdmin(rawAdmin as any);
+      expect(cleanAdmin).not.toBeNull();
+      expect(cleanAdmin?.id).toBe('adm_123');
+      expect(cleanAdmin?.email).toBe('owner@cc.id');
+      expect('password_hash' in (cleanAdmin || {})).toBe(false);
+      expect((cleanAdmin as any).password_hash).toBeUndefined();
+    });
+  });
+
+  describe('SQL LIKE Wildcard Sanitization (escapeLikePattern)', () => {
+    it('should escape %, _, and \\ in user search queries', async () => {
+      const { escapeLikePattern } = await import('../src/server/lib/sql-utils');
+      expect(escapeLikePattern('100%')).toBe('100\\%');
+      expect(escapeLikePattern('user_name')).toBe('user\\_name');
+      expect(escapeLikePattern('path\\file')).toBe('path\\\\file');
+      expect(escapeLikePattern('normal search')).toBe('normal search');
+    });
+  });
+
+  describe('CORS Origin Whitelist Validation (isAllowedOrigin)', () => {
+    it('should allow legitimate domains and reject untrusted attacker origins', async () => {
+      const { isAllowedOrigin } = await import('../src/server/index');
+      // Allowed
+      expect(isAllowedOrigin(undefined)).toBe(true); // same-origin
+      expect(isAllowedOrigin('http://localhost:5173')).toBe(true);
+      expect(isAllowedOrigin('http://127.0.0.1:8787')).toBe(true);
+      expect(isAllowedOrigin('https://ams.humanone.workers.dev')).toBe(true);
+
+      // Blocked untrusted cross-origins
+      expect(isAllowedOrigin('https://evil-hacker.com')).toBe(false);
+      expect(isAllowedOrigin('https://phishing-site.xyz')).toBe(false);
+      expect(isAllowedOrigin('http://malicious.org')).toBe(false);
+    });
+  });
+
+  describe('Internal Database Error Sanitization (errorHandler)', () => {
+    it('should sanitize raw database query errors on 500 status in non-dev environment', async () => {
+      const { errorHandler } = await import('../src/server/middleware/error-handler');
+      const app = new Hono();
+      app.onError(errorHandler);
+      app.get('/trigger-500', () => {
+        throw new Error('D1_ERROR: near "SELECT": syntax error in table members columns password_hash');
+      });
+
+      const res = await app.request('/trigger-500', { method: 'GET' }, { ENVIRONMENT: 'production' } as any);
+      expect(res.status).toBe(500);
+      const json = (await res.json()) as any;
+      expect(json.ok).toBe(false);
+      // Raw SQLite schema and table names must NOT be leaked
+      expect(json.error.message).not.toContain('D1_ERROR');
+      expect(json.error.message).not.toContain('syntax error');
+      expect(json.error.message).toContain('Terjadi gangguan pada server');
+    });
+  });
+
+  describe('Header Spoofing Authentication Defense (authMiddleware)', () => {
+    it('should reject unverified cf-access-authenticated-user-email header without valid token', async () => {
+      const { authMiddleware } = await import('../src/server/middleware/auth');
+      const app = new Hono();
+      app.get('/protected', authMiddleware, (c) => c.json({ ok: true }));
+
+      const queryResult = {
+        first: async () => ({ count: 1, id: 'adm_1', email: 'owner@cc.id', role: 'owner', status: 'active' }),
+        all: async () => ({ results: [] }),
+        run: async () => ({ success: true }),
+      };
+      const mockDb = {
+        prepare: () => ({
+          ...queryResult,
+          bind: () => queryResult,
+        }),
+      };
+
+      // Attacker tries to spoof Cloudflare Access header without valid HMAC session cookie
+      const res = await app.request(
+        '/protected',
+        {
+          method: 'GET',
+          headers: { 'cf-access-authenticated-user-email': 'owner@cc.id' },
+        },
+        { DB: mockDb } as any
+      );
+
+      expect(res.status).toBe(401);
+      const json = (await res.json()) as any;
+      expect(json.ok).toBe(false);
+      expect(json.error.code).toBe('UNAUTHORIZED');
     });
   });
 });

@@ -1,4 +1,5 @@
 import { Attendance, SessionType, MemberActivityEntry, ActivityTier, MemberActivitySummary, Status } from '@/shared/types';
+import { escapeLikePattern } from '../lib/sql-utils';
 
 export interface AttendanceFilterOptions {
   event_id: string;
@@ -51,8 +52,9 @@ export class AttendanceRepository {
     }
 
     if (options.search && options.search.trim() !== '') {
-      const s = `%${options.search.trim()}%`;
-      conditions.push('(m.name LIKE ? OR m.external_id LIKE ?)');
+      const sanitized = escapeLikePattern(options.search.trim());
+      const s = `%${sanitized}%`;
+      conditions.push('(m.name LIKE ? ESCAPE \'\\\' OR m.external_id LIKE ? ESCAPE \'\\\')');
       params.push(s, s);
     }
 
@@ -279,8 +281,9 @@ export class AttendanceRepository {
     }
 
     if (options.search && options.search.trim() !== '') {
-      const s = `%${options.search.trim()}%`;
-      conditions.push('(m.name LIKE ? OR m.external_id LIKE ?)');
+      const sanitized = escapeLikePattern(options.search.trim());
+      const s = `%${sanitized}%`;
+      conditions.push('(m.name LIKE ? ESCAPE \'\\\' OR m.external_id LIKE ? ESCAPE \'\\\')');
       params.push(s, s);
     }
 

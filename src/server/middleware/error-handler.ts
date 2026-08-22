@@ -24,10 +24,8 @@ export function errorHandler(err: Error, c: Context) {
     );
   }
 
-  const message = err.message || 'Internal server error';
-  const code = (Object.values(ErrorCode) as string[]).includes(message)
-    ? message
-    : ErrorCode.INTERNAL_ERROR;
+  const isKnownErrorCode = (Object.values(ErrorCode) as string[]).includes(err.message);
+  const code = isKnownErrorCode ? err.message : ErrorCode.INTERNAL_ERROR;
 
   const status =
     code === ErrorCode.UNAUTHORIZED
@@ -44,12 +42,21 @@ export function errorHandler(err: Error, c: Context) {
       ? 500
       : 400;
 
+  // Never leak internal database query errors, table names, or raw exception traces in production
+  let responseMessage = err.message || 'Internal server error';
+  if (status === 500) {
+    const isDev = (c.env as any)?.ENVIRONMENT === 'development';
+    responseMessage = isDev && err.message
+      ? err.message
+      : 'Terjadi gangguan pada server backend. Silakan coba beberapa saat lagi.';
+  }
+
   return c.json<ApiResponse>(
     {
       ok: false,
       error: {
         code,
-        message,
+        message: responseMessage,
       },
     },
     status as any

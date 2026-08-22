@@ -1,5 +1,17 @@
 import { Admin, Role, Status } from '@/shared/types';
 
+/**
+ * Strips sensitive fields such as password_hash before returning admin data to client or storing in context.
+ */
+export function sanitizeAdmin<T extends Partial<Admin>>(admin: T | null | undefined): T | null {
+  if (!admin) return null;
+  const copy = { ...admin };
+  if ('password_hash' in copy) {
+    delete (copy as any).password_hash;
+  }
+  return copy;
+}
+
 export class AdminRepository {
   constructor(private db: D1Database) {}
 

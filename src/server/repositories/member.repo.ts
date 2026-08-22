@@ -1,5 +1,6 @@
 import { Member, Status } from '@/shared/types';
 import { chunkArray } from '../lib/d1-utils';
+import { escapeLikePattern } from '../lib/sql-utils';
 
 export interface MemberFilterOptions {
   search?: string;
@@ -45,8 +46,9 @@ export class MemberRepository {
     }
 
     if (options.search && options.search.trim() !== '') {
-      const s = `%${options.search.trim()}%`;
-      conditions.push('(name LIKE ? OR external_id LIKE ? OR email LIKE ? OR phone LIKE ?)');
+      const sanitized = escapeLikePattern(options.search.trim());
+      const s = `%${sanitized}%`;
+      conditions.push('(name LIKE ? ESCAPE \'\\\' OR external_id LIKE ? ESCAPE \'\\\' OR email LIKE ? ESCAPE \'\\\' OR phone LIKE ? ESCAPE \'\\\')');
       params.push(s, s, s, s);
     }
 

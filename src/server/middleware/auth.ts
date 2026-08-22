@@ -1,7 +1,7 @@
 import { Context, Next } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { Env } from '../env';
-import { AdminRepository } from '../repositories/admin.repo';
+import { AdminRepository, sanitizeAdmin } from '../repositories/admin.repo';
 import { MemberRepository } from '../repositories/member.repo';
 import { memorySessionStore } from '../routes/auth.routes';
 import { Admin, ApiResponse, Role } from '@/shared/types';
@@ -48,30 +48,13 @@ export async function authMiddleware(c: Context<{ Bindings: Env; Variables: { ad
       }
     }
 
-    c.set('admin', admin);
+    const sanitized = sanitizeAdmin(admin);
+    if (!sanitized) return false;
+    c.set('admin', sanitized as Admin);
     return true;
   };
 
-  // 1. Check Cloudflare Access Header
-  const cfEmail = c.req.header('cf-access-authenticated-user-email');
-  if (cfEmail) {
-    const now = Date.now();
-    const cached = inMemoryAdminCache.get(cfEmail);
-    if (cached && cached.expiresAt > now && cached.admin.status === 'active') {
-      c.set('admin', cached.admin);
-      return next();
-    }
-
-    const admin = await adminRepo.findByEmail(cfEmail);
-    if (await validateAndSetAdmin(admin)) {
-      if (admin) {
-        inMemoryAdminCache.set(cfEmail, { admin, expiresAt: now + 60_000 });
-      }
-      return next();
-    }
-  }
-
-  // 2. Check Session Cookie or Authorization Header
+  // 1. Authenticate via Cryptographic Session Token (Cookie or Authorization Header)
   const sessionToken =
     getCookie(c, 'absen_session') ||
     c.req.header('authorization')?.replace(/^Bearer\s+/i, '');

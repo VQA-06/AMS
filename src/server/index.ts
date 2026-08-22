@@ -17,13 +17,30 @@ const app = new Hono<{ Bindings: Env }>();
 // Middlewares
 app.use('*', logger());
 app.use('*', securityHeaders());
+// Helper for validating trusted CORS origins
+export function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) return true; // same-origin or non-browser requests
+  try {
+    const url = new URL(origin);
+    const host = url.hostname;
+    // Allow local development and test environments
+    if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') return true;
+    // Allow Cloudflare Workers deployment domains
+    if (host === 'ams.humanone.workers.dev' || host.endsWith('.workers.dev') || host.endsWith('.pages.dev')) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 app.use(
   '*',
   cors({
-    origin: (origin) => origin || '',
+    origin: (origin) => (isAllowedOrigin(origin) ? (origin || '*') : ''),
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'cf-access-authenticated-user-email'],
+    allowHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
+    maxAge: 86400,
   })
 );
 

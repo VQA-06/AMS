@@ -73,7 +73,8 @@ export const EventsPage: React.FC<EventsPageProps> = ({
 
   const loadEvents = useCallback(async (force = false) => {
     try {
-      const res = await fetchCached<{ events: Event[] }>('/api/agenda', { forceRefresh: force });
+      setLoading(true);
+      const res = await fetchCached<{ events: Event[] }>('/api/agenda', { forceRefresh: force, ttlMs: 30_000 });
       setEvents(res.events || []);
     } catch (err) {
       console.error('Failed to load events:', err);
@@ -383,6 +384,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
       {/* Event List */}
       <EventList
         events={events}
+        loading={loading}
         canManage={isManager}
         selectedIds={selectedEventIds}
         onToggleSelect={handleToggleSelect}

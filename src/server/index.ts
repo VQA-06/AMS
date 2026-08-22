@@ -77,10 +77,27 @@ app.route('/api/audit', auditRoutes);
 
 // Fallback for static assets and Single Page Application (SPA) HTML5 History routing
 app.all('*', async (c) => {
+  // If request is targeting an API route that does not exist, return JSON 404
+  if (c.req.path.startsWith('/api')) {
+    return c.json(
+      {
+        ok: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'API endpoint tidak ditemukan.',
+        },
+      },
+      404
+    );
+  }
+
   if (c.env.ASSETS) {
     const response = await c.env.ASSETS.fetch(c.req.raw);
-    // If route is a client-side SPA route (non-API GET returning 404), serve index.html
-    if (response.status === 404 && c.req.method === 'GET' && !c.req.path.startsWith('/api')) {
+    // If route is a client-side SPA route (non-API GET returning 404 or redirect), serve index.html
+    if (
+      c.req.method === 'GET' &&
+      (response.status === 404 || response.status === 301 || response.status === 302)
+    ) {
       const url = new URL(c.req.url);
       url.pathname = '/index.html';
       return c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw));

@@ -17,6 +17,7 @@ import {
 import { Member, QrToken } from '@/shared/types';
 import { MemberInput } from '@/shared/schemas/member.schema';
 import { fetchApi } from '../lib/api-client';
+import { fetchCached, invalidateCache } from '../lib/swr-client';
 import { useAuth } from '../hooks/useAuth';
 import { canManageMembers, canExportData, canGenerateQR } from '../lib/permissions';
 import { MemberList } from '../components/members/MemberList';
@@ -113,7 +114,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
   const [bulkPrintTokens, setBulkPrintTokens] = useState<PrintableToken[]>([]);
   const [bulkLoading, setBulkLoading] = useState<boolean>(false);
 
-  const loadMembers = useCallback(async () => {
+  const loadMembers = useCallback(async (opts?: { forceRefresh?: boolean }) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -122,7 +123,11 @@ export const MembersPage: React.FC<MembersPageProps> = ({
       if (selectedStatus && selectedStatus !== 'all') params.set('status', selectedStatus);
       params.set('limit', '100');
 
-      const res = await fetchApi<{ members: Member[]; total: number }>(`/api/members?${params.toString()}`);
+      const url = `/api/members?${params.toString()}`;
+      const res = await fetchCached<{ members: Member[]; total: number }>(url, {
+        forceRefresh: opts?.forceRefresh,
+        ttlMs: 30_000,
+      });
       setMembers(res.members || []);
       setTotal(res.total || 0);
     } catch (err) {
@@ -132,11 +137,11 @@ export const MembersPage: React.FC<MembersPageProps> = ({
     }
   }, [search, selectedDivision, selectedStatus]);
 
-  const loadOptions = async () => {
+  const loadOptions = async (opts?: { forceRefresh?: boolean }) => {
     try {
       const [divRes, grpRes] = await Promise.all([
-        fetchApi<{ divisions: string[] }>('/api/members/divisions'),
-        fetchApi<{ groups: string[] }>('/api/members/groups'),
+        fetchCached<{ divisions: string[] }>('/api/members/divisions', { forceRefresh: opts?.forceRefresh }),
+        fetchCached<{ groups: string[] }>('/api/members/groups', { forceRefresh: opts?.forceRefresh }),
       ]);
       setDivisions(divRes.divisions || []);
       setGroups(grpRes.groups || []);
@@ -170,8 +175,10 @@ export const MembersPage: React.FC<MembersPageProps> = ({
         body: JSON.stringify(data),
       });
     }
-    await loadMembers();
-    await loadOptions();
+    invalidateCache('/api/members');
+    invalidateCache('/api/attendances');
+    await loadMembers({ forceRefresh: true });
+    await loadOptions({ forceRefresh: true });
     onRefreshGlobal?.();
   };
 
@@ -194,8 +201,10 @@ export const MembersPage: React.FC<MembersPageProps> = ({
             method: 'PATCH',
             body: JSON.stringify({ status: 'inactive' }),
           });
+          invalidateCache('/api/members');
+          invalidateCache('/api/attendances');
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
-          await loadMembers();
+          await loadMembers({ forceRefresh: true });
           onRefreshGlobal?.();
           setAlertModal({
             isOpen: true,
@@ -233,9 +242,11 @@ export const MembersPage: React.FC<MembersPageProps> = ({
         setConfirmLoading(true);
         try {
           await fetchApi(`/api/members/${id}`, { method: 'DELETE' });
+          invalidateCache('/api/members');
+          invalidateCache('/api/attendances');
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
-          await loadMembers();
-          await loadOptions();
+          await loadMembers({ forceRefresh: true });
+          await loadOptions({ forceRefresh: true });
           onRefreshGlobal?.();
           setAlertModal({
             isOpen: true,
@@ -379,9 +390,11 @@ export const MembersPage: React.FC<MembersPageProps> = ({
             method: 'POST',
             body: JSON.stringify({ ids }),
           });
+          invalidateCache('/api/members');
+          invalidateCache('/api/attendances');
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           setSelectedMemberIds(new Set());
-          await loadMembers();
+          await loadMembers({ forceRefresh: true });
           onRefreshGlobal?.();
         } catch (err) {
           setAlertModal({
@@ -419,9 +432,12 @@ export const MembersPage: React.FC<MembersPageProps> = ({
             method: 'POST',
             body: JSON.stringify({ ids }),
           });
+          invalidateCache('/api/members');
+          invalidateCache('/api/attendances');
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           setSelectedMemberIds(new Set());
-          await loadMembers();
+          await loadMembers({ forceRefresh: true });
+          await loadOptions({ forceRefresh: true });
           onRefreshGlobal?.();
         } catch (err) {
           setAlertModal({
@@ -525,10 +541,10 @@ export const MembersPage: React.FC<MembersPageProps> = ({
 
               <button
                 onClick={() => setIsImportOpen(true)}
-                className="flex items-center gap-2 px-3.5 py-2.5 glass-panel text-slate-200 hover:text-white font-semibold text-xs rounded-xl transition-colors shadow"
+                className="flex items-center gap-2 px-3.5 py-2.5 glass-panel text-slate-200 hover:text-white font-bold text-xs rounded-xl transition-all shadow"
               >
                 <Upload className="w-4 h-4 text-sky-400" />
-                <span>Import CSV</span>
+                <span>Impor CSV / Excel</span>
               </button>
             </>
           )}
@@ -536,47 +552,48 @@ export const MembersPage: React.FC<MembersPageProps> = ({
           {canExport && (
             <button
               onClick={handleExportCsv}
-              className="flex items-center gap-2 px-3.5 py-2.5 glass-panel text-slate-200 hover:text-white font-semibold text-xs rounded-xl transition-colors shadow"
+              className="flex items-center gap-2 px-3.5 py-2.5 glass-panel text-slate-200 hover:text-white font-bold text-xs rounded-xl transition-all shadow"
+              title="Ekspor CSV Anggota"
             >
-              <Download className="w-4 h-4 text-slate-400" />
-              <span>Export</span>
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>Ekspor CSV</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="glass-panel-elevated rounded-2xl p-4 border border-slate-800 flex flex-col md:flex-row gap-3 items-center justify-between">
-        {/* Search */}
-        <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+      {/* Filter & Search Bar */}
+      <div className="glass-panel p-3 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-3 border border-slate-800">
+        <div className="relative w-full md:w-96">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
+            placeholder="Cari berdasarkan nama, ID, email, atau no HP..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama, ID, email..."
-            className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+            className="w-full bg-slate-950/60 border border-slate-800/80 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
           />
         </div>
 
-        {/* Division & Status Filters */}
-        <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
+        <div className="flex items-center gap-2 w-full md:w-auto flex-wrap sm:flex-nowrap">
+          {/* Division Filter */}
           <div className="flex items-center gap-1.5 glass-panel px-3 py-1.5 rounded-xl text-xs w-full sm:w-auto">
-            <Building2 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <select
               value={selectedDivision}
               onChange={(e) => setSelectedDivision(e.target.value)}
               className="bg-transparent text-slate-200 focus:outline-none text-xs w-full"
             >
               <option value="" className="bg-slate-900">Semua Divisi</option>
-              {divisions.map((div, i) => (
-                <option key={i} value={div} className="bg-slate-900">
-                  Divisi: {div}
+              {divisions.map((div) => (
+                <option key={div} value={div} className="bg-slate-900">
+                  {div}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Status Filter */}
           <div className="flex items-center gap-1.5 glass-panel px-3 py-1.5 rounded-xl text-xs w-full sm:w-auto">
             <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <select
@@ -591,7 +608,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
           </div>
 
           <button
-            onClick={loadMembers}
+            onClick={() => loadMembers({ forceRefresh: true })}
             className="p-2 glass-panel text-slate-400 hover:text-white rounded-xl transition-colors"
             title="Refresh"
           >
@@ -603,6 +620,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
       {/* Member List */}
       <MemberList
         members={members}
+        loading={loading}
         canManage={isManager}
         selectedIds={selectedMemberIds}
         onToggleSelect={handleToggleSelect}
@@ -671,8 +689,10 @@ export const MembersPage: React.FC<MembersPageProps> = ({
               <ImportWizard
                 onSuccess={() => {
                   setIsImportOpen(false);
-                  loadMembers();
-                  loadOptions();
+                  invalidateCache('/api/members');
+                  invalidateCache('/api/attendances');
+                  loadMembers({ forceRefresh: true });
+                  loadOptions({ forceRefresh: true });
                   onRefreshGlobal?.();
                 }}
                 onCancel={() => setIsImportOpen(false)}

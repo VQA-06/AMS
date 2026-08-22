@@ -13,10 +13,11 @@ import { ErrorPage } from './pages/ErrorPage';
 import { QrGeneratorModal } from './components/qr/QrGeneratorModal';
 import { OfflineBanner } from './components/common/OfflineBanner';
 import { fetchApi } from './lib/api-client';
+import { fetchCached } from './lib/swr-client';
 import { Member, Event } from '@/shared/types';
 
 // Helper to parse path from current URL
-function parseRoute(pathname: string, searchStr?: string): { tab: TabKey; eventId: string | null; isLogin: boolean } {
+export function parseRoute(pathname: string, searchStr?: string): { tab: TabKey; eventId: string | null; isLogin: boolean } {
   const cleanPath = pathname.replace(/\/+$/, '') || '/';
   const urlParams = new URLSearchParams(searchStr || (typeof window !== 'undefined' ? window.location.search : ''));
 
@@ -94,12 +95,12 @@ export const App: React.FC = () => {
     if (!admin) return;
     try {
       const [mRes, eRes, dRes] = await Promise.all([
-        fetchApi<{ members: Member[]; total: number }>('/api/members?limit=200').catch(() => ({
+        fetchCached<{ members: Member[]; total: number }>('/api/members?limit=200', { ttlMs: 30_000 }).catch(() => ({
           members: [],
           total: 0,
         })),
-        fetchApi<{ events: Event[] }>('/api/agenda').catch(() => ({ events: [] })),
-        fetchApi<{ divisions: string[] }>('/api/members/divisions').catch(() => ({
+        fetchCached<{ events: Event[] }>('/api/agenda', { ttlMs: 30_000 }).catch(() => ({ events: [] })),
+        fetchCached<{ divisions: string[] }>('/api/members/divisions', { ttlMs: 30_000 }).catch(() => ({
           divisions: [],
         })),
       ]);
@@ -134,7 +135,7 @@ export const App: React.FC = () => {
     loadGlobalData();
   }, [loadGlobalData]);
 
-  // Auth Guard Routing Effects
+  // Auth Guard Routing Effects - Preserves exact subpage route on refresh
   useEffect(() => {
     if (!loading) {
       if (!admin) {
@@ -148,6 +149,9 @@ export const App: React.FC = () => {
         if (window.location.pathname === '/login') {
           window.history.replaceState(null, '', '/dashboard');
           setCurrentRoute(parseRoute('/dashboard'));
+        } else {
+          // If on a subpage like /events, /members, /scanner, /tracker, ensure route state is preserved
+          setCurrentRoute(parseRoute(window.location.pathname, window.location.search));
         }
       }
     }

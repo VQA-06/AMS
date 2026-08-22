@@ -11,9 +11,11 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Member } from '@/shared/types';
+import { SkeletonMemberList } from '../ui/Skeleton';
 
 interface MemberListProps {
   members: Member[];
+  loading?: boolean;
   onEdit: (member: Member) => void;
   onDeactivate: (id: string) => void;
   onDelete: (id: string, name: string) => void;
@@ -28,6 +30,7 @@ interface MemberListProps {
 
 export const MemberList: React.FC<MemberListProps> = ({
   members,
+  loading = false,
   onEdit,
   onDeactivate,
   onDelete,
@@ -39,9 +42,14 @@ export const MemberList: React.FC<MemberListProps> = ({
   onToggleSelectAll,
   isAllSelected = false,
 }) => {
+  // Show smooth skeleton shimmer placeholders while data is fetching
+  if (loading) {
+    return <SkeletonMemberList rows={8} />;
+  }
+
   if (members.length === 0) {
     return (
-      <div className="glass-panel rounded-3xl p-10 text-center border border-slate-800">
+      <div className="glass-panel rounded-3xl p-10 text-center border border-slate-800 animate-in fade-in duration-200">
         <User className="w-12 h-12 text-slate-600 mx-auto mb-3" />
         <h4 className="text-base font-bold text-slate-300">Belum ada anggota yang terdaftar</h4>
         <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">

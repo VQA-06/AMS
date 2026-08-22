@@ -13,9 +13,11 @@ import {
   QrCode,
 } from 'lucide-react';
 import { Event } from '@/shared/types';
+import { SkeletonEventList } from '../ui/Skeleton';
 
 interface EventListProps {
   events: Event[];
+  loading?: boolean;
   onSelectEvent: (event: Event) => void;
   onScanEvent?: (event: Event) => void;
   onEditEvent: (event: Event) => void;
@@ -29,6 +31,7 @@ interface EventListProps {
 
 export const EventList: React.FC<EventListProps> = ({
   events,
+  loading = false,
   onSelectEvent,
   onScanEvent,
   onEditEvent,
@@ -39,9 +42,14 @@ export const EventList: React.FC<EventListProps> = ({
   selectedIds,
   onToggleSelect,
 }) => {
+  // Show smooth skeleton shimmer placeholders while events are loading
+  if (loading) {
+    return <SkeletonEventList count={4} />;
+  }
+
   if (events.length === 0) {
     return (
-      <div className="glass-panel rounded-3xl p-10 text-center border border-slate-800">
+      <div className="glass-panel rounded-3xl p-10 text-center border border-slate-800 animate-in fade-in duration-200">
         <Calendar className="w-12 h-12 text-slate-600 mx-auto mb-3" />
         <h4 className="text-base font-bold text-slate-300">Belum ada kegiatan yang dibuat</h4>
         <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">

@@ -119,3 +119,26 @@
 .pt-safe {
   padding-top: env(safe-area-inset-top, 1rem);
 }
+
+/* GPU-Accelerated Skeleton Shimmer Animations */
+@keyframes skeletonShimmerKeyframe {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.6) 25%,
+    rgba(51, 65, 85, 0.85) 50%,
+    rgba(30, 41, 59, 0.6) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmerKeyframe 1.6s ease-in-out infinite;
+  will-change: background-position;
+}
+

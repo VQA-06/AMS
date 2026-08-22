@@ -2,17 +2,21 @@
  * Cloudflare Edge Cache Engine with Tag-Based Granular Invalidation
  * - Integrates with Cloudflare Workers caches.default API
  * - Provides selective tag invalidation (e.g. invalidate 'agenda' without touching 'members')
- * - Falls back cleanly to memory map in non-Cloudflare/testing environments
+ * - Stores serializable plain payloads to prevent cross-request I/O runtime restrictions
+ * - Safely handles absolute/relative URLs to prevent "TypeError: Invalid URL"
  */
 
-interface CacheItem {
-  response: Response;
+interface SerializedCacheItem {
+  bodyText: string;
+  status: number;
+  statusText: string;
+  headers: [string, string][];
   expiresAt: number;
   tags: string[];
 }
 
-// In-Memory fallback for test and dev environments
-const memoryCache = new Map<string, CacheItem>();
+// In-Memory fallback for test and dev environments (stores serializable data, NOT live Response streams)
+const memoryCache = new Map<string, SerializedCacheItem>();
 const tagToUrls = new Map<string, Set<string>>();
 
 /**
@@ -42,7 +46,9 @@ function getCloudflareCache(): any {
   return null;
 }
 
-// Normalizes URL cache key so localhost / domain prefix is consistent
+/**
+ * Normalizes URL cache key so localhost / domain prefix is consistent
+ */
 export function getNormalizedCacheKey(url: string): string {
   try {
     if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -56,12 +62,29 @@ export function getNormalizedCacheKey(url: string): string {
 }
 
 /**
+ * Ensures an absolute URL string for Cloudflare Cache API
+ */
+export function toAbsoluteUrls(target: string): string[] {
+  if (target.startsWith('http://') || target.startsWith('https://')) {
+    return [target];
+  }
+
+  const cleanPath = target.startsWith('/') ? target : `/${target}`;
+  return [
+    `https://ams.humanone.workers.dev${cleanPath}`,
+    `https://absen.local${cleanPath}`,
+    `http://localhost${cleanPath}`,
+    `http://127.0.0.1:8787${cleanPath}`,
+  ];
+}
+
+/**
  * Matches a request in Edge Cache
  */
 export async function matchEdgeCache(rawUrl: string): Promise<Response | null> {
   const url = getNormalizedCacheKey(rawUrl);
   const cfCache = getCloudflareCache();
-  if (cfCache) {
+  if (cfCache && typeof cfCache.match === 'function') {
     try {
       const matched = await cfCache.match(rawUrl);
       if (matched) {
@@ -76,7 +99,12 @@ export async function matchEdgeCache(rawUrl: string): Promise<Response | null> {
   const mem = memoryCache.get(url);
   if (mem) {
     if (Date.now() < mem.expiresAt) {
-      return mem.response.clone();
+      // Construct a fresh Response in the current request context (avoids cross-request I/O stream locks)
+      return new Response(mem.bodyText, {
+        status: mem.status,
+        statusText: mem.statusText,
+        headers: new Headers(mem.headers),
+      });
     }
     // Expired
     memoryCache.delete(url);
@@ -110,17 +138,21 @@ export async function putEdgeCache(
     // If stream is empty or unreadable
   }
 
-  const clonedForCache = new Response(bodyText, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
+  // Serializable headers array
+  const headersArray: [string, string][] = [];
+  headers.forEach((val, key) => headersArray.push([key, val]));
 
   const execCtx = getSafeExecutionContext(executionCtx);
   const cfCache = getCloudflareCache();
-  if (cfCache) {
+  if (cfCache && typeof cfCache.put === 'function') {
     try {
-      const putPromise = cfCache.put(rawUrl, clonedForCache.clone());
+      const clonedForCache = new Response(bodyText, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+
+      const putPromise = cfCache.put(rawUrl, clonedForCache);
       if (execCtx && typeof execCtx.waitUntil === 'function') {
         execCtx.waitUntil(putPromise);
       } else {
@@ -131,15 +163,20 @@ export async function putEdgeCache(
     }
   }
 
-  // Record into tag registry and memory cache
+  // Record both rawUrl and normalized path into tag registry
   const cleanTag = tag || 'global';
   if (!tagToUrls.has(cleanTag)) {
     tagToUrls.set(cleanTag, new Set());
   }
+  tagToUrls.get(cleanTag)!.add(rawUrl);
   tagToUrls.get(cleanTag)!.add(url);
 
+  // Store serializable item in memoryCache (safe across requests)
   memoryCache.set(url, {
-    response: clonedForCache,
+    bodyText,
+    status: response.status,
+    statusText: response.statusText,
+    headers: headersArray,
     expiresAt: Date.now() + ttlSeconds * 1000,
     tags: [cleanTag],
   });
@@ -153,27 +190,41 @@ export async function invalidateEdgeCache(tagsOrUrls: string | string[], executi
   const targets = Array.isArray(tagsOrUrls) ? tagsOrUrls : [tagsOrUrls];
   const execCtx = getSafeExecutionContext(executionCtx);
   const cfCache = getCloudflareCache();
-  const urlsToDelete = new Set<string>();
+  const memoryKeysToDelete = new Set<string>();
+  const cfUrlsToDelete = new Set<string>();
 
   for (const target of targets) {
     // 1. Check if target is a registered tag
     if (tagToUrls.has(target)) {
       const urls = tagToUrls.get(target)!;
-      urls.forEach((u) => urlsToDelete.add(u));
+      urls.forEach((u) => {
+        memoryKeysToDelete.add(getNormalizedCacheKey(u));
+        toAbsoluteUrls(u).forEach((absUrl) => cfUrlsToDelete.add(absUrl));
+      });
       tagToUrls.delete(target);
     }
 
     // 2. Check if target matches URL keys directly or as a prefix
     for (const urlKey of memoryCache.keys()) {
       if (urlKey.includes(target)) {
-        urlsToDelete.add(urlKey);
+        memoryKeysToDelete.add(urlKey);
+        toAbsoluteUrls(urlKey).forEach((absUrl) => cfUrlsToDelete.add(absUrl));
       }
     }
+
+    // 3. Add direct target as potential URLs
+    toAbsoluteUrls(target).forEach((absUrl) => cfUrlsToDelete.add(absUrl));
+    memoryKeysToDelete.add(getNormalizedCacheKey(target));
   }
 
-  for (const url of urlsToDelete) {
-    memoryCache.delete(url);
-    if (cfCache) {
+  // Clear memory cache entries
+  for (const key of memoryKeysToDelete) {
+    memoryCache.delete(key);
+  }
+
+  // Clear Cloudflare edge cache entries using valid absolute URLs
+  if (cfCache && typeof cfCache.delete === 'function') {
+    for (const url of cfUrlsToDelete) {
       try {
         const deletePromise = cfCache.delete(url);
         if (execCtx && typeof execCtx.waitUntil === 'function') {
@@ -182,7 +233,7 @@ export async function invalidateEdgeCache(tagsOrUrls: string | string[], executi
           await deletePromise;
         }
       } catch {
-        // Ignore cache delete failures in non-standard runtimes
+        // Safe fallback - never throw or break request flow
       }
     }
   }

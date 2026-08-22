@@ -20,6 +20,8 @@ import { TabKey } from '../components/layout/MobileShell';
 import { TopEventsChart, TopEventStatItem } from '../components/dashboard/TopEventsChart';
 import { MembersYearlyChart, YearlyMemberStat } from '../components/dashboard/MembersYearlyChart';
 
+import { SkeletonEventList, Skeleton } from '../components/ui/Skeleton';
+
 interface DashboardPageProps {
   onNavigate: (tab: TabKey) => void;
   onNavigateToEvent?: (eventId: string) => void;
@@ -214,8 +216,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </button>
           </div>
 
-          {activeEvents.length === 0 ? (
-            <div className="glass-panel rounded-3xl p-8 text-center border border-slate-800">
+          {loading ? (
+            <SkeletonEventList count={2} />
+          ) : activeEvents.length === 0 ? (
+            <div className="glass-panel rounded-3xl p-8 text-center border border-slate-800 animate-in fade-in duration-200">
               <Calendar className="w-10 h-10 text-slate-600 mx-auto mb-2" />
               <p className="text-sm font-semibold text-slate-300">Tidak ada kegiatan aktif saat ini</p>
               <button

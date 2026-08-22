@@ -72,9 +72,6 @@ export function toAbsoluteUrls(target: string): string[] {
   const cleanPath = target.startsWith('/') ? target : `/${target}`;
   return [
     `https://ams.humanone.workers.dev${cleanPath}`,
-    `https://absen.local${cleanPath}`,
-    `http://localhost${cleanPath}`,
-    `http://127.0.0.1:8787${cleanPath}`,
   ];
 }
 
@@ -152,7 +149,7 @@ export async function putEdgeCache(
         headers,
       });
 
-      const putPromise = cfCache.put(rawUrl, clonedForCache);
+      const putPromise = cfCache.put(rawUrl, clonedForCache).catch(() => false);
       if (execCtx && typeof execCtx.waitUntil === 'function') {
         execCtx.waitUntil(putPromise);
       } else {
@@ -222,15 +219,15 @@ export async function invalidateEdgeCache(tagsOrUrls: string | string[], executi
     memoryCache.delete(key);
   }
 
-  // Clear Cloudflare edge cache entries using valid absolute URLs
+  // Clear Cloudflare edge cache entries safely with catch handlers (prevents unhandled rejection logs)
   if (cfCache && typeof cfCache.delete === 'function') {
     for (const url of cfUrlsToDelete) {
       try {
-        const deletePromise = cfCache.delete(url);
+        const safeDeletePromise = cfCache.delete(url).catch(() => false);
         if (execCtx && typeof execCtx.waitUntil === 'function') {
-          execCtx.waitUntil(deletePromise);
+          execCtx.waitUntil(safeDeletePromise);
         } else {
-          await deletePromise;
+          await safeDeletePromise;
         }
       } catch {
         // Safe fallback - never throw or break request flow

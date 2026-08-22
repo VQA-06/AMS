@@ -5,6 +5,8 @@ import { MemberRepository } from '../repositories/member.repo';
 import { QrTokenRepository } from '../repositories/qr.repo';
 import { AuditRepository } from '../repositories/audit.repo';
 import { authMiddleware, requireRole } from '../middleware/auth';
+import { edgeCache } from '../middleware/edge-cache';
+import { invalidateEdgeCache } from '../lib/edge-cache';
 import { eventSchema, eventUpdateSchema } from '@/shared/schemas/event.schema';
 import { generateQrToken } from '../crypto/qr-crypto';
 import { ApiResponse, Event } from '@/shared/types';
@@ -13,7 +15,7 @@ import { ErrorCode } from '@/shared/constants/error-codes';
 const eventsRoutes = new Hono<{ Bindings: Env }>();
 
 // GET /api/events - List events
-eventsRoutes.get('/', authMiddleware, async (c) => {
+eventsRoutes.get('/', authMiddleware, edgeCache({ ttlSeconds: 15, tag: 'agenda' }), async (c) => {
   const query = c.req.query();
   const repo = new EventRepository(c.env.DB);
 
@@ -57,6 +59,8 @@ eventsRoutes.post('/', authMiddleware, requireRole(['owner', 'admin']), async (c
     meta: { name: created.name, qr_policy: created.qr_policy },
   });
 
+  await invalidateEdgeCache('agenda', (c as any).executionCtx);
+
   return c.json<ApiResponse>({
     ok: true,
     data: { event: created },
@@ -73,9 +77,9 @@ const getTopAttendanceHandler = async (c: Context<{ Bindings: Env }>) => {
     data: { events },
   });
 };
-eventsRoutes.get('/reports/top-presence', authMiddleware, getTopAttendanceHandler);
-eventsRoutes.get('/stats/top-presence', authMiddleware, getTopAttendanceHandler);
-eventsRoutes.get('/analytics/top-attendance', authMiddleware, getTopAttendanceHandler);
+eventsRoutes.get('/reports/top-presence', authMiddleware, edgeCache({ ttlSeconds: 15, tag: 'agenda' }), getTopAttendanceHandler);
+eventsRoutes.get('/stats/top-presence', authMiddleware, edgeCache({ ttlSeconds: 15, tag: 'agenda' }), getTopAttendanceHandler);
+eventsRoutes.get('/analytics/top-attendance', authMiddleware, edgeCache({ ttlSeconds: 15, tag: 'agenda' }), getTopAttendanceHandler);
 
 // GET /api/events/:id - Detail event
 eventsRoutes.get('/:id', authMiddleware, async (c) => {
@@ -216,6 +220,8 @@ eventsRoutes.patch('/:id', authMiddleware, requireRole(['owner', 'admin']), asyn
     meta: { changes: input },
   });
 
+  await invalidateEdgeCache('agenda', (c as any).executionCtx);
+
   return c.json<ApiResponse>({
     ok: true,
     data: { event: updated },
@@ -241,6 +247,8 @@ eventsRoutes.post('/:id/activate', authMiddleware, requireRole(['owner', 'admin'
   const repo = new EventRepository(c.env.DB);
   const updated = await repo.update(id, { status: 'active' });
 
+  await invalidateEdgeCache('agenda', (c as any).executionCtx);
+
   return c.json<ApiResponse>({
     ok: true,
     data: { event: updated },
@@ -265,6 +273,8 @@ eventsRoutes.post('/:id/close', authMiddleware, requireRole(['owner', 'admin']),
 
   const repo = new EventRepository(c.env.DB);
   const updated = await repo.update(id, { status: 'closed' });
+
+  await invalidateEdgeCache('agenda', (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -314,6 +324,8 @@ eventsRoutes.delete('/:id', authMiddleware, requireRole(['owner', 'admin']), asy
     entity_id: id,
     meta: { name: existing.name },
   });
+
+  await invalidateEdgeCache('agenda', (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -529,6 +541,8 @@ const createGuestPassesHandler = async (c: Context<{ Bindings: Env }>) => {
     },
   });
 
+  await invalidateEdgeCache(['agenda', 'members'], (c as any).executionCtx);
+
   return c.json<ApiResponse>({
     ok: true,
     data: {
@@ -569,6 +583,8 @@ eventsRoutes.post('/bulk-close', authMiddleware, requireRole(['owner', 'admin'])
     meta: { count: ids.length, ids },
   });
 
+  await invalidateEdgeCache('agenda', (c as any).executionCtx);
+
   return c.json<ApiResponse>({
     ok: true,
     data: { count: ids.length, message: `Berhasil menutup ${ids.length} kegiatan.` },
@@ -600,6 +616,8 @@ eventsRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'admin']
     entity_type: 'event',
     meta: { count: ids.length, ids },
   });
+
+  await invalidateEdgeCache(['agenda', 'members'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,

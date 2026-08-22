@@ -6,6 +6,8 @@ import { AdminRepository } from '../repositories/admin.repo';
 import { QrTokenRepository } from '../repositories/qr.repo';
 import { AuditRepository } from '../repositories/audit.repo';
 import { authMiddleware, requireRole } from '../middleware/auth';
+import { edgeCache } from '../middleware/edge-cache';
+import { invalidateEdgeCache } from '../lib/edge-cache';
 import { memberSchema, memberUpdateSchema, memberImportRowSchema } from '@/shared/schemas/member.schema';
 import { generateQrToken } from '../crypto/qr-crypto';
 import { ApiResponse, Member, QrToken } from '@/shared/types';
@@ -35,24 +37,10 @@ membersRoutes.get('/', authMiddleware, async (c) => {
   });
 });
 
-// In-memory cache for static lookups (30s TTL)
-let cachedDivisions: { data: string[]; exp: number } | null = null;
-let cachedGroups: { data: string[]; exp: number } | null = null;
-
 // GET /api/members/divisions - Get distinct division list
-membersRoutes.get('/divisions', authMiddleware, async (c) => {
-  c.header('Cache-Control', 'private, max-age=15, stale-while-revalidate=45');
-  const now = Date.now();
-  if (cachedDivisions && cachedDivisions.exp > now) {
-    return c.json<ApiResponse>({
-      ok: true,
-      data: { divisions: cachedDivisions.data },
-    });
-  }
-
+membersRoutes.get('/divisions', authMiddleware, edgeCache({ ttlSeconds: 60, tag: 'members' }), async (c) => {
   const repo = new MemberRepository(c.env.DB);
   const divisions = await repo.getDivisions();
-  cachedDivisions = { data: divisions, exp: now + 30_000 };
 
   return c.json<ApiResponse>({
     ok: true,
@@ -61,19 +49,9 @@ membersRoutes.get('/divisions', authMiddleware, async (c) => {
 });
 
 // GET /api/members/groups - Get distinct group list
-membersRoutes.get('/groups', authMiddleware, async (c) => {
-  c.header('Cache-Control', 'private, max-age=15, stale-while-revalidate=45');
-  const now = Date.now();
-  if (cachedGroups && cachedGroups.exp > now) {
-    return c.json<ApiResponse>({
-      ok: true,
-      data: { groups: cachedGroups.data },
-    });
-  }
-
+membersRoutes.get('/groups', authMiddleware, edgeCache({ ttlSeconds: 60, tag: 'members' }), async (c) => {
   const repo = new MemberRepository(c.env.DB);
   const groups = await repo.getGroups();
-  cachedGroups = { data: groups, exp: now + 30_000 };
 
   return c.json<ApiResponse>({
     ok: true,
@@ -82,8 +60,7 @@ membersRoutes.get('/groups', authMiddleware, async (c) => {
 });
 
 // GET /api/members/stats/summary - Fast aggregate metric for dashboard widgets (<2ms)
-membersRoutes.get('/stats/summary', authMiddleware, async (c) => {
-  c.header('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+membersRoutes.get('/stats/summary', authMiddleware, edgeCache({ ttlSeconds: 15, tag: 'members' }), async (c) => {
   const repo = new MemberRepository(c.env.DB);
   const summary = await repo.getMemberStatsSummary();
   return c.json<ApiResponse>({
@@ -94,7 +71,6 @@ membersRoutes.get('/stats/summary', authMiddleware, async (c) => {
 
 // GET /stats/yearly-recap & /reports/yearly & /analytics/yearly-stats - Get yearly member growth stats
 const getYearlyStatsHandler = async (c: Context<{ Bindings: Env }>) => {
-  c.header('Cache-Control', 'private, max-age=15, stale-while-revalidate=45');
   const repo = new MemberRepository(c.env.DB);
   const stats = await repo.getYearlyStats();
   return c.json<ApiResponse>({
@@ -102,10 +78,10 @@ const getYearlyStatsHandler = async (c: Context<{ Bindings: Env }>) => {
     data: { stats },
   });
 };
-membersRoutes.get('/stats/yearly-recap', authMiddleware, getYearlyStatsHandler);
-membersRoutes.get('/stats/yearly', authMiddleware, getYearlyStatsHandler);
-membersRoutes.get('/reports/yearly', authMiddleware, getYearlyStatsHandler);
-membersRoutes.get('/analytics/yearly-stats', authMiddleware, getYearlyStatsHandler);
+membersRoutes.get('/stats/yearly-recap', authMiddleware, edgeCache({ ttlSeconds: 60, tag: 'members' }), getYearlyStatsHandler);
+membersRoutes.get('/stats/yearly', authMiddleware, edgeCache({ ttlSeconds: 60, tag: 'members' }), getYearlyStatsHandler);
+membersRoutes.get('/reports/yearly', authMiddleware, edgeCache({ ttlSeconds: 60, tag: 'members' }), getYearlyStatsHandler);
+membersRoutes.get('/analytics/yearly-stats', authMiddleware, edgeCache({ ttlSeconds: 60, tag: 'members' }), getYearlyStatsHandler);
 
 // GET /api/members/universal-tokens - Get or generate universal QR tokens for all active members (Bulk download/print)
 membersRoutes.get('/universal-tokens', authMiddleware, async (c) => {
@@ -345,6 +321,8 @@ membersRoutes.post('/', authMiddleware, requireRole(['owner', 'admin']), async (
     meta: { external_id: created.external_id, name: created.name, division: created.division },
   });
 
+  await invalidateEdgeCache('members', (c as any).executionCtx);
+
   return c.json<ApiResponse>({
     ok: true,
     data: { member: created },
@@ -406,10 +384,25 @@ membersRoutes.patch('/:id', authMiddleware, requireRole(['owner', 'admin']), asy
   }
 
   const body = await c.req.json();
-  const input = memberUpdateSchema.parse(body);
+  const parsed = memberUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: 'Data anggota tidak valid.',
+          details: parsed.error.format(),
+        },
+      },
+      400
+    );
+  }
 
+  const input = parsed.data;
   const repo = new MemberRepository(c.env.DB);
   const existing = await repo.findById(id);
+
   if (!existing) {
     return c.json<ApiResponse>(
       {
@@ -423,7 +416,8 @@ membersRoutes.patch('/:id', authMiddleware, requireRole(['owner', 'admin']), asy
     );
   }
 
-  if (input.external_id && input.external_id !== existing.external_id) {
+  // Check unique external_id if changing
+  if (input.external_id && input.external_id.trim() !== '' && input.external_id !== existing.external_id) {
     const duplicate = await repo.findByExternalId(input.external_id);
     if (duplicate) {
       return c.json<ApiResponse>(
@@ -465,6 +459,8 @@ membersRoutes.patch('/:id', authMiddleware, requireRole(['owner', 'admin']), asy
     entity_id: id,
     meta: { changes: input },
   });
+
+  await invalidateEdgeCache('members', (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -518,6 +514,8 @@ membersRoutes.delete('/:id', authMiddleware, requireRole(['owner', 'admin']), as
     entity_id: id,
     meta: { external_id: existing.external_id, name: existing.name },
   });
+
+  await invalidateEdgeCache('members', (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -660,6 +658,8 @@ membersRoutes.post('/import', authMiddleware, requireRole(['owner', 'admin']), a
     meta: { total: rows.length, created, updated, skipped, failed, mode },
   });
 
+  await invalidateEdgeCache('members', (c as any).executionCtx);
+
   return c.json<ApiResponse>({
     ok: true,
     data: {
@@ -739,6 +739,8 @@ membersRoutes.post('/cleanup-guests', authMiddleware, requireRole(['owner', 'adm
     },
   });
 
+  await invalidateEdgeCache('members', (c as any).executionCtx);
+
   return c.json<ApiResponse>({
     ok: true,
     data: {
@@ -775,6 +777,8 @@ membersRoutes.post('/bulk-deactivate', authMiddleware, requireRole(['owner', 'ad
     meta: { count: ids.length, ids },
   });
 
+  await invalidateEdgeCache('members', (c as any).executionCtx);
+
   return c.json<ApiResponse>({
     ok: true,
     data: { count: ids.length, message: `Berhasil menonaktifkan ${ids.length} anggota.` },
@@ -809,6 +813,8 @@ membersRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'admin'
     entity_type: 'member',
     meta: { count: ids.length, ids },
   });
+
+  await invalidateEdgeCache('members', (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,

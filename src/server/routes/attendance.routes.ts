@@ -6,6 +6,8 @@ import { MemberRepository } from '../repositories/member.repo';
 import { EventRepository } from '../repositories/event.repo';
 import { AuditRepository } from '../repositories/audit.repo';
 import { authMiddleware, requireRole } from '../middleware/auth';
+import { edgeCache } from '../middleware/edge-cache';
+import { invalidateEdgeCache } from '../lib/edge-cache';
 import { manualAttendanceSchema } from '@/shared/schemas/scan.schema';
 import { ApiResponse } from '@/shared/types';
 import { ErrorCode } from '@/shared/constants/error-codes';
@@ -91,8 +93,8 @@ attendanceRoutes.get('/export', authMiddleware, requireRole(['owner', 'admin', '
   });
 });
 
-// POST /api/attendances/event/:id/manual - Manual attendance override
-attendanceRoutes.post('/event/:id/manual', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
+// POST /api/attendances/event/:id/manual - Record manual attendance (Fallback)
+attendanceRoutes.post('/event/:id/manual', authMiddleware, requireRole(['owner', 'admin', 'operator']), async (c) => {
   const eventId = c.req.param('id');
   if (!eventId) {
     return c.json<ApiResponse>(
@@ -108,12 +110,25 @@ attendanceRoutes.post('/event/:id/manual', authMiddleware, requireRole(['owner',
   }
 
   const body = await c.req.json();
-  const input = manualAttendanceSchema.parse(body);
+  const parsed = manualAttendanceSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: 'Data input manual presensi tidak valid.',
+          details: parsed.error.format(),
+        },
+      },
+      400
+    );
+  }
 
+  const input = parsed.data;
   const eventRepo = new EventRepository(c.env.DB);
   const memberRepo = new MemberRepository(c.env.DB);
   const attendanceRepo = new AttendanceRepository(c.env.DB);
-  const auditRepo = new AuditRepository(c.env.DB);
 
   const event = await eventRepo.findById(eventId);
   if (!event) {
@@ -184,18 +199,23 @@ attendanceRoutes.post('/event/:id/manual', authMiddleware, requireRole(['owner',
     reason: input.reason,
   });
 
+  const auditRepo = new AuditRepository(c.env.DB);
   await auditRepo.logAction({
-    admin_id: admin.id,
-    action: 'MANUAL_ATTENDANCE',
+    admin_id: admin?.id,
+    action: 'RECORD_MANUAL_ATTENDANCE',
     entity_type: 'attendance',
     entity_id: attendanceId,
     meta: {
       event_id: eventId,
+      event_name: event.name,
       member_id: member.id,
-      reason: input.reason,
+      member_name: member.name,
       session_type: input.session_type,
+      notes: input.reason,
     },
   });
+
+  await invalidateEdgeCache(['attendance', 'agenda'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -230,10 +250,10 @@ const getMemberActivityStatsHandler = async (c: Context<{ Bindings: Env }>) => {
     data: result,
   });
 };
-attendanceRoutes.get('/recap/matrix', authMiddleware, getMemberActivityStatsHandler);
-attendanceRoutes.get('/stats/matrix', authMiddleware, getMemberActivityStatsHandler);
-attendanceRoutes.get('/stats/tracker', authMiddleware, getMemberActivityStatsHandler);
-attendanceRoutes.get('/activity-tracker', authMiddleware, getMemberActivityStatsHandler);
+attendanceRoutes.get('/recap/matrix', authMiddleware, edgeCache({ ttlSeconds: 5, tag: 'attendance' }), getMemberActivityStatsHandler);
+attendanceRoutes.get('/stats/matrix', authMiddleware, edgeCache({ ttlSeconds: 5, tag: 'attendance' }), getMemberActivityStatsHandler);
+attendanceRoutes.get('/stats/tracker', authMiddleware, edgeCache({ ttlSeconds: 5, tag: 'attendance' }), getMemberActivityStatsHandler);
+attendanceRoutes.get('/activity-tracker', authMiddleware, edgeCache({ ttlSeconds: 5, tag: 'attendance' }), getMemberActivityStatsHandler);
 
 // POST /api/attendances/bulk-delete - Bulk delete attendance records
 attendanceRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
@@ -252,6 +272,8 @@ attendanceRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'adm
     .prepare(`DELETE FROM attendances WHERE id IN (${placeholders})`)
     .bind(...ids)
     .run();
+
+  await invalidateEdgeCache(['attendance', 'agenda'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,

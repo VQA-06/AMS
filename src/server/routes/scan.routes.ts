@@ -6,6 +6,7 @@ import { QrTokenRepository } from '../repositories/qr.repo';
 import { AttendanceRepository } from '../repositories/attendance.repo';
 import { AuditRepository } from '../repositories/audit.repo';
 import { authMiddleware, requireRole } from '../middleware/auth';
+import { invalidateEdgeCache } from '../lib/edge-cache';
 import { createRateLimiter } from '../middleware/rate-limit';
 import { scanRequestSchema } from '@/shared/schemas/scan.schema';
 import { verifyQrToken } from '../crypto/qr-crypto';
@@ -341,6 +342,8 @@ scanRoutes.post(
         operatorId: admin?.id,
         tokenJti: decrypted.jti,
       });
+
+      await invalidateEdgeCache(['attendance', 'agenda'], (c as any).executionCtx);
     } catch (err: unknown) {
       console.error('Atomic scan batch error:', err);
       const isDuplicate =

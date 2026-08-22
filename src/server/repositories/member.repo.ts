@@ -145,6 +145,27 @@ export class MemberRepository {
     return (res.results ?? []).map((r) => r.group_name);
   }
 
+  async getMemberStatsSummary(): Promise<{ total: number; active: number; inactive: number }> {
+    const res = await this.db
+      .prepare(`
+        SELECT 
+          COUNT(*) as total,
+          COUNT(CASE WHEN status = 'active' THEN 1 END) as active,
+          COUNT(CASE WHEN status = 'inactive' THEN 1 END) as inactive
+        FROM members
+        WHERE (group_name NOT LIKE 'Tamu:%' OR group_name IS NULL)
+          AND external_id NOT LIKE 'GUEST-%'
+          AND (metadata NOT LIKE '%"temporary":true%' AND metadata NOT LIKE '%"temporary": true%' OR metadata IS NULL)
+      `)
+      .first<{ total: number; active: number; inactive: number }>();
+
+    return {
+      total: res?.total ?? 0,
+      active: res?.active ?? 0,
+      inactive: res?.inactive ?? 0,
+    };
+  }
+
   async create(data: {
     external_id?: string;
     name: string;

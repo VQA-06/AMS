@@ -4,6 +4,7 @@ import { logger } from 'hono/logger';
 import { Env } from './env';
 import { errorHandler } from './middleware/error-handler';
 import { securityHeaders } from './middleware/security-headers';
+import { etagMiddleware } from './middleware/etag';
 import { authRoutes } from './routes/auth.routes';
 import { membersRoutes } from './routes/members.routes';
 import { eventsRoutes } from './routes/events.routes';
@@ -43,6 +44,7 @@ app.use(
     maxAge: 86400,
   })
 );
+app.use('/api/*', etagMiddleware());
 
 // Global Error Handler
 app.onError(errorHandler);

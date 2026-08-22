@@ -134,4 +134,63 @@ describe('Reliability, Concurrency & Network Resiliency Tests', () => {
       expect(tokenUpdateSql).toContain('max_uses IS NULL OR uses_count < max_uses');
     });
   });
+
+  describe('Client-Side SWR Cache Engine (swr-client)', () => {
+    it('should serve cached data immediately in 0ms and invalidate on mutation', async () => {
+      const { fetchCached, invalidateCache } = await import('../src/client/lib/swr-client');
+      let fetchCalls = 0;
+      globalThis.fetch = vi.fn().mockImplementation(() => {
+        fetchCalls++;
+        return Promise.resolve({
+          ok: true,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({ ok: true, data: { items: ['A', 'B'] } }),
+        });
+      });
+
+      // 1. First call (cold fetch)
+      const data1 = await fetchCached<{ items: string[] }>('/api/test-swr', { ttlMs: 10_000 });
+      expect(data1.items).toEqual(['A', 'B']);
+      expect(fetchCalls).toBe(1);
+
+      // 2. Second call within TTL (0ms instant cache)
+      const data2 = await fetchCached<{ items: string[] }>('/api/test-swr', { ttlMs: 10_000 });
+      expect(data2.items).toEqual(['A', 'B']);
+      expect(fetchCalls).toBe(1); // No new network fetch!
+
+      // 3. Invalidate cache after mutation
+      invalidateCache('/api/test-swr');
+
+      // 4. Third call after invalidation (triggers fresh fetch)
+      const data3 = await fetchCached<{ items: string[] }>('/api/test-swr', { ttlMs: 10_000 });
+      expect(data3.items).toEqual(['A', 'B']);
+      expect(fetchCalls).toBe(2);
+    });
+  });
+
+  describe('Server ETag & 304 Not Modified Middleware', () => {
+    it('should attach ETag header and return 304 when If-None-Match matches', async () => {
+      const { Hono } = await import('hono');
+      const { etagMiddleware } = await import('../src/server/middleware/etag');
+
+      const app = new Hono();
+      app.use('*', etagMiddleware());
+      app.get('/api/cached-data', (c) => c.json({ ok: true, data: { count: 42 } }));
+
+      // First request (200 OK with ETag)
+      const res1 = await app.request('/api/cached-data');
+      expect(res1.status).toBe(200);
+      const etag = res1.headers.get('ETag');
+      expect(etag).toBeDefined();
+      expect(etag).toContain('W/"');
+
+      // Second request with If-None-Match (304 Not Modified)
+      const res2 = await app.request('/api/cached-data', {
+        headers: { 'If-None-Match': etag! },
+      });
+      expect(res2.status).toBe(304);
+      const body = await res2.text();
+      expect(body).toBe('');
+    });
+  });
 });

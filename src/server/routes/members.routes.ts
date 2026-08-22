@@ -41,6 +41,7 @@ let cachedGroups: { data: string[]; exp: number } | null = null;
 
 // GET /api/members/divisions - Get distinct division list
 membersRoutes.get('/divisions', authMiddleware, async (c) => {
+  c.header('Cache-Control', 'private, max-age=15, stale-while-revalidate=45');
   const now = Date.now();
   if (cachedDivisions && cachedDivisions.exp > now) {
     return c.json<ApiResponse>({
@@ -61,6 +62,7 @@ membersRoutes.get('/divisions', authMiddleware, async (c) => {
 
 // GET /api/members/groups - Get distinct group list
 membersRoutes.get('/groups', authMiddleware, async (c) => {
+  c.header('Cache-Control', 'private, max-age=15, stale-while-revalidate=45');
   const now = Date.now();
   if (cachedGroups && cachedGroups.exp > now) {
     return c.json<ApiResponse>({
@@ -79,8 +81,20 @@ membersRoutes.get('/groups', authMiddleware, async (c) => {
   });
 });
 
+// GET /api/members/stats/summary - Fast aggregate metric for dashboard widgets (<2ms)
+membersRoutes.get('/stats/summary', authMiddleware, async (c) => {
+  c.header('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+  const repo = new MemberRepository(c.env.DB);
+  const summary = await repo.getMemberStatsSummary();
+  return c.json<ApiResponse>({
+    ok: true,
+    data: summary,
+  });
+});
+
 // GET /stats/yearly-recap & /reports/yearly & /analytics/yearly-stats - Get yearly member growth stats
 const getYearlyStatsHandler = async (c: Context<{ Bindings: Env }>) => {
+  c.header('Cache-Control', 'private, max-age=15, stale-while-revalidate=45');
   const repo = new MemberRepository(c.env.DB);
   const stats = await repo.getYearlyStats();
   return c.json<ApiResponse>({

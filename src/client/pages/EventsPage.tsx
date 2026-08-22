@@ -3,6 +3,7 @@ import { Calendar, Plus, RefreshCw } from 'lucide-react';
 import { Event } from '@/shared/types';
 import { EventInput } from '@/shared/schemas/event.schema';
 import { fetchApi } from '../lib/api-client';
+import { fetchCached, invalidateCache } from '../lib/swr-client';
 import { useAuth } from '../hooks/useAuth';
 import { canManageEvents } from '../lib/permissions';
 import { EventList } from '../components/events/EventList';
@@ -70,10 +71,9 @@ export const EventsPage: React.FC<EventsPageProps> = ({
     type: 'error',
   });
 
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async (force = false) => {
     try {
-      setLoading(true);
-      const res = await fetchApi<{ events: Event[] }>('/api/agenda');
+      const res = await fetchCached<{ events: Event[] }>('/api/agenda', { forceRefresh: force });
       setEvents(res.events || []);
     } catch (err) {
       console.error('Failed to load events:', err);
@@ -140,9 +140,10 @@ export const EventsPage: React.FC<EventsPageProps> = ({
             method: 'POST',
             body: JSON.stringify({ ids }),
           });
+          invalidateCache('/api/agenda');
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           setSelectedEventIds(new Set());
-          await loadEvents();
+          await loadEvents(true);
           onRefreshGlobal?.();
         } catch (err) {
           setAlertModal({
@@ -180,9 +181,10 @@ export const EventsPage: React.FC<EventsPageProps> = ({
             method: 'POST',
             body: JSON.stringify({ ids }),
           });
+          invalidateCache('/api/agenda');
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           setSelectedEventIds(new Set());
-          await loadEvents();
+          await loadEvents(true);
           onRefreshGlobal?.();
         } catch (err) {
           setAlertModal({
@@ -227,7 +229,8 @@ export const EventsPage: React.FC<EventsPageProps> = ({
         body: JSON.stringify(data),
       });
     }
-    await loadEvents();
+    invalidateCache('/api/agenda');
+    await loadEvents(true);
     onEventCreated?.();
     onRefreshGlobal?.();
   };
@@ -235,7 +238,8 @@ export const EventsPage: React.FC<EventsPageProps> = ({
   const handleActivate = async (id: string) => {
     try {
       await fetchApi(`/api/agenda/${id}/activate`, { method: 'POST' });
-      await loadEvents();
+      invalidateCache('/api/agenda');
+      await loadEvents(true);
       onRefreshGlobal?.();
       setAlertModal({
         isOpen: true,
@@ -268,8 +272,9 @@ export const EventsPage: React.FC<EventsPageProps> = ({
         setConfirmLoading(true);
         try {
           await fetchApi(`/api/agenda/${id}/close`, { method: 'POST' });
+          invalidateCache('/api/agenda');
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
-          await loadEvents();
+          await loadEvents(true);
           onRefreshGlobal?.();
           setAlertModal({
             isOpen: true,
@@ -307,8 +312,9 @@ export const EventsPage: React.FC<EventsPageProps> = ({
         setConfirmLoading(true);
         try {
           await fetchApi(`/api/agenda/${id}`, { method: 'DELETE' });
+          invalidateCache('/api/agenda');
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
-          await loadEvents();
+          await loadEvents(true);
           onRefreshGlobal?.();
           setAlertModal({
             isOpen: true,
@@ -365,7 +371,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
             </button>
           )}
           <button
-            onClick={loadEvents}
+            onClick={() => loadEvents(true)}
             className="p-2.5 glass-panel text-slate-400 hover:text-white rounded-xl transition-colors"
             title="Refresh"
           >

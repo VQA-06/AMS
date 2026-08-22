@@ -14,8 +14,8 @@ import {
   UserCheck,
   UserX,
 } from 'lucide-react';
-import { fetchApi } from '../lib/api-client';
-import { Member, Event, MemberActivitySummary } from '@/shared/types';
+import { fetchCached } from '../lib/swr-client';
+import { Event, MemberActivitySummary } from '@/shared/types';
 import { TabKey } from '../components/layout/MobileShell';
 import { TopEventsChart, TopEventStatItem } from '../components/dashboard/TopEventsChart';
 import { MembersYearlyChart, YearlyMemberStat } from '../components/dashboard/MembersYearlyChart';
@@ -35,7 +35,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onOpenAddMember,
   onOpenCreateEvent,
 }) => {
-  const [members, setMembers] = useState<Member[]>([]);
+  const [memberStats, setMemberStats] = useState<{ total: number; active: number; inactive: number }>({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
   const [divisions, setDivisions] = useState<string[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [topEvents, setTopEvents] = useState<TopEventStatItem[]>([]);
@@ -46,18 +50,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   useEffect(() => {
     async function loadData() {
       try {
-        setLoading(true);
-        const [mRes, dRes, eRes, tRes, topEvRes, yrRes] = await Promise.all([
-          fetchApi<{ members: Member[]; total: number }>('/api/members?limit=1000'),
-          fetchApi<{ divisions: string[] }>('/api/members/divisions'),
-          fetchApi<{ events: Event[] }>('/api/agenda'),
-          fetchApi<{ summary: MemberActivitySummary }>('/api/attendances/recap/matrix').catch(() => null),
-          fetchApi<{ events: TopEventStatItem[] }>('/api/agenda/reports/top-presence').catch(() => null),
-          fetchApi<{ stats: YearlyMemberStat[] }>('/api/members/stats/yearly-recap').catch(() => null),
+        const [mSummary, dRes, eRes, tRes, topEvRes, yrRes] = await Promise.all([
+          fetchCached<{ total: number; active: number; inactive: number }>('/api/members/stats/summary').catch(
+            () => ({ total: 0, active: 0, inactive: 0 })
+          ),
+          fetchCached<{ divisions: string[] }>('/api/members/divisions').catch(() => ({ divisions: [] })),
+          fetchCached<{ events: Event[] }>('/api/agenda').catch(() => ({ events: [] })),
+          fetchCached<{ summary: MemberActivitySummary }>('/api/attendances/recap/matrix').catch(() => null),
+          fetchCached<{ events: TopEventStatItem[] }>('/api/agenda/reports/top-presence').catch(() => null),
+          fetchCached<{ stats: YearlyMemberStat[] }>('/api/members/stats/yearly-recap').catch(() => null),
         ]);
 
         const rawEvents = eRes?.events || [];
-        setMembers(mRes?.members || []);
+        setMemberStats(mSummary || { total: 0, active: 0, inactive: 0 });
         setDivisions(dRes?.divisions || []);
         setEvents(rawEvents);
         if (tRes && tRes.summary) {
@@ -100,14 +105,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   }, []);
 
   const activeEvents = events.filter((e) => e.status === 'active');
-  const activeMembers = members.filter((m) => m.status === 'active');
-
-  // Count members per division
-  const divisionCounts: Record<string, number> = {};
-  members.forEach((m) => {
-    const div = m.division || 'Tanpa Divisi';
-    divisionCounts[div] = (divisionCounts[div] || 0) + 1;
-  });
 
   return (
     <div className="space-y-6 animate-in fade-in pb-4">
@@ -150,8 +147,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <div className="md:col-span-2">
           <MembersYearlyChart
             stats={yearlyStats}
-            totalActiveMembers={activeMembers.length}
-            totalAllMembers={members.length}
+            totalActiveMembers={memberStats.active}
+            totalAllMembers={memberStats.total}
             loading={loading}
           />
         </div>

@@ -95,7 +95,7 @@ membersRoutes.get('/universal-tokens', authMiddleware, async (c) => {
   });
 
   const kid = c.env.QR_ACTIVE_KID || 'k1';
-  const issuer = c.env.APP_ISSUER || 'https://absen.local';
+  const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
   const audience = c.env.APP_AUDIENCE || 'ams';
   const validFrom = new Date().toISOString();
   // Universal Member QR is perpetual (valid as long as member is active)
@@ -203,7 +203,7 @@ membersRoutes.get('/:id/universal-qr', authMiddleware, async (c) => {
   );
 
   const kid = c.env.QR_ACTIVE_KID || 'k1';
-  const issuer = c.env.APP_ISSUER || 'https://absen.local';
+  const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
   const audience = c.env.APP_AUDIENCE || 'ams';
   const validFrom = new Date().toISOString();
   // Universal Member QR is perpetual (valid as long as member is active)
@@ -838,7 +838,7 @@ membersRoutes.post('/bulk-tokens', authMiddleware, async (c) => {
   const members = await memberRepo.findByIds(ids);
 
   const kid = c.env.QR_ACTIVE_KID || 'k1';
-  const issuer = c.env.APP_ISSUER || 'https://absen.local';
+  const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
   const audience = c.env.APP_AUDIENCE || 'ams';
   const validFrom = new Date().toISOString();
   const defaultExp = '2099-12-31T23:59:59.999Z';
@@ -974,7 +974,7 @@ membersRoutes.post(
     const validFrom = new Date().toISOString();
     const defaultExp = '2099-12-31T23:59:59.999Z';
     const kid = c.env.QR_ACTIVE_KID || 'k1';
-    const issuer = c.env.APP_ISSUER || 'https://absen.local';
+    const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
     const audience = c.env.APP_AUDIENCE || 'ams';
 
     let tokenId: string;
@@ -1077,7 +1077,7 @@ membersRoutes.post(
     const validFrom = new Date().toISOString();
     const defaultExp = '2099-12-31T23:59:59.999Z';
     const kid = c.env.QR_ACTIVE_KID || 'k1';
-    const issuer = c.env.APP_ISSUER || 'https://absen.local';
+    const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
     const audience = c.env.APP_AUDIENCE || 'ams';
 
     const { count, promoted } = await repo.bulkPromoteGuests(ids, division);

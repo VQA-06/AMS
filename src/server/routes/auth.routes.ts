@@ -149,8 +149,17 @@ authRoutes.post('/login-qr', authRateLimiter({ maxAttempts: 10, windowMs: 15 * 6
   // Decrypt and verify QR Token
   let decrypted;
   try {
+    const trustedIssuers = c.env.TRUSTED_ISSUERS
+      ? c.env.TRUSTED_ISSUERS.split(',').map((s) => s.trim())
+      : [
+          c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id',
+          'https://ams.ccunbaja.web.id',
+          'https://ams.humanone.workers.dev',
+          'https://absen.local',
+        ];
+
     decrypted = await verifyQrToken(input.qr, {
-      expectedIssuer: c.env.APP_ISSUER || 'https://absen.local',
+      expectedIssuer: trustedIssuers,
       expectedAudience: c.env.APP_AUDIENCE || 'ams',
       env: c.env as any,
     });

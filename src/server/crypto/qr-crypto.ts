@@ -129,7 +129,7 @@ export async function generateQrToken(
 export async function verifyQrToken(
   token: string,
   options: {
-    expectedIssuer: string;
+    expectedIssuer: string | string[];
     expectedAudience: string;
     env: Record<string, unknown>;
   }

@@ -9,6 +9,9 @@ export interface Env {
   SESSION_SECRET?: string;
   APP_ISSUER?: string;
   APP_AUDIENCE?: string;
+  APP_DOMAIN?: string;
+  ALLOWED_ORIGINS?: string;
+  TRUSTED_ISSUERS?: string;
   DEV_ADMIN_EMAIL?: string;
   [key: string]: unknown;
 }

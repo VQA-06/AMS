@@ -420,7 +420,7 @@ const createGuestPassesHandler = async (c: Context<{ Bindings: Env }>) => {
   const admin = (c as any).get('admin');
 
   const kid = c.env.QR_ACTIVE_KID || 'k1';
-  const issuer = c.env.APP_ISSUER || 'https://absen.local';
+  const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
   const audience = c.env.APP_AUDIENCE || 'ams';
   const validFrom = new Date().toISOString();
   const tokenExpiresAt =

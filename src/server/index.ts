@@ -18,32 +18,63 @@ const app = new Hono<{ Bindings: Env }>();
 // Middlewares
 app.use('*', logger());
 app.use('*', securityHeaders());
-// Helper for validating trusted CORS origins
-export function isAllowedOrigin(origin: string | undefined): boolean {
+// Helper for validating trusted CORS origins dynamically
+export function isAllowedOrigin(origin: string | undefined, env?: Partial<Env>): boolean {
   if (!origin) return true; // same-origin or non-browser requests
   try {
     const url = new URL(origin);
     const host = url.hostname;
     // Allow local development and test environments
     if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') return true;
-    // Allow Cloudflare Workers deployment domains
-    if (host === 'ams.humanone.workers.dev' || host.endsWith('.workers.dev') || host.endsWith('.pages.dev')) return true;
+
+    // Check dynamically configured ALLOWED_ORIGINS from env
+    if (env?.ALLOWED_ORIGINS) {
+      const allowedList = env.ALLOWED_ORIGINS.split(',').map((item) => item.trim());
+      for (const allowed of allowedList) {
+        try {
+          if (new URL(allowed).hostname === host) return true;
+        } catch {
+          if (allowed === host) return true;
+        }
+      }
+    }
+
+    // Check APP_DOMAIN or APP_ISSUER from env
+    if (env?.APP_DOMAIN && (host === env.APP_DOMAIN || host.endsWith(`.${env.APP_DOMAIN}`))) return true;
+    if (env?.APP_ISSUER) {
+      try {
+        if (new URL(env.APP_ISSUER).hostname === host) return true;
+      } catch {
+        // Ignore malformed issuer URL
+      }
+    }
+
+    // Default trusted domains & Cloudflare platform domains
+    if (
+      host === 'ams.ccunbaja.web.id' ||
+      host.endsWith('.ccunbaja.web.id') ||
+      host === 'ams.humanone.workers.dev' ||
+      host.endsWith('.workers.dev') ||
+      host.endsWith('.pages.dev')
+    ) {
+      return true;
+    }
     return false;
   } catch {
     return false;
   }
 }
 
-app.use(
-  '*',
-  cors({
-    origin: (origin) => (isAllowedOrigin(origin) ? (origin || '*') : ''),
+app.use('*', async (c, next) => {
+  const corsMiddleware = cors({
+    origin: (origin) => (isAllowedOrigin(origin, c.env) ? (origin || '*') : ''),
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
     maxAge: 86400,
-  })
-);
+  });
+  return corsMiddleware(c, next);
+});
 app.use('/api/*', etagMiddleware());
 
 // Global Error Handler

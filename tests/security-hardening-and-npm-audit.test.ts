@@ -159,7 +159,9 @@ describe('Security Hardening & Vulnerability Mitigation Tests', () => {
       expect(isAllowedOrigin(undefined)).toBe(true); // same-origin
       expect(isAllowedOrigin('http://localhost:5173')).toBe(true);
       expect(isAllowedOrigin('http://127.0.0.1:8787')).toBe(true);
+      expect(isAllowedOrigin('https://ams.ccunbaja.web.id')).toBe(true);
       expect(isAllowedOrigin('https://ams.humanone.workers.dev')).toBe(true);
+      expect(isAllowedOrigin('https://custom-partner.org', { ALLOWED_ORIGINS: 'https://custom-partner.org' })).toBe(true);
 
       // Blocked untrusted cross-origins
       expect(isAllowedOrigin('https://evil-hacker.com')).toBe(false);

@@ -64,15 +64,19 @@ export function getNormalizedCacheKey(url: string): string {
 /**
  * Ensures an absolute URL string for Cloudflare Cache API
  */
-export function toAbsoluteUrls(target: string): string[] {
+export function toAbsoluteUrls(target: string, baseOrigin?: string): string[] {
   if (target.startsWith('http://') || target.startsWith('https://')) {
     return [target];
   }
 
   const cleanPath = target.startsWith('/') ? target : `/${target}`;
-  return [
-    `https://ams.humanone.workers.dev${cleanPath}`,
-  ];
+  const primaryDomain = (baseOrigin || 'https://ams.ccunbaja.web.id').replace(/\/+$/, '');
+  const urls = [`${primaryDomain}${cleanPath}`];
+
+  if (!primaryDomain.includes('ams.humanone.workers.dev')) {
+    urls.push(`https://ams.humanone.workers.dev${cleanPath}`);
+  }
+  return urls;
 }
 
 /**

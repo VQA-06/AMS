@@ -91,7 +91,7 @@ describe('SPA Routing Preservation on Refresh & Edge Invalidation Resilience', (
     it('should safely invalidate relative path targets without throwing TypeError: Invalid URL', async () => {
       const relativePath1 = '/api/agenda/reports/top-presence';
       const relativePath2 = '/api/agenda';
-      const fullUrl = 'https://ams.humanone.workers.dev/api/agenda/reports/top-presence';
+      const fullUrl = 'https://ams.ccunbaja.web.id/api/agenda/reports/top-presence';
 
       const mockResponse = new Response(JSON.stringify({ ok: true, events: [{ id: '1', name: 'Workshop' }] }), {
         status: 200,

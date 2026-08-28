@@ -54,7 +54,7 @@ qrRoutes.post('/generate', authMiddleware, requireRole(['owner', 'admin']), asyn
 
   const admin = c.get('admin');
   const kid = c.env.QR_ACTIVE_KID || 'k1';
-  const issuer = c.env.APP_ISSUER || 'https://absen.local';
+  const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
   const audience = c.env.APP_AUDIENCE || 'ams';
 
   const generatedTokens: Array<{
@@ -169,7 +169,7 @@ qrRoutes.get('/event/:id', authMiddleware, async (c) => {
   const tokens = await repo.listByEvent(eventId);
 
   const kid = c.env.QR_ACTIVE_KID || 'k1';
-  const issuer = c.env.APP_ISSUER || 'https://absen.local';
+  const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
   const audience = c.env.APP_AUDIENCE || 'ams';
 
   const tokensWithJwe: QrToken[] = await Promise.all(
@@ -227,7 +227,7 @@ qrRoutes.get('/member/:id', authMiddleware, async (c) => {
   const tokens = await repo.listByMember(memberId);
 
   const kid = c.env.QR_ACTIVE_KID || 'k1';
-  const issuer = c.env.APP_ISSUER || 'https://absen.local';
+  const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
   const audience = c.env.APP_AUDIENCE || 'ams';
 
   const tokensWithJwe: QrToken[] = await Promise.all(

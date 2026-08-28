@@ -116,12 +116,12 @@ describe('SPA Routing Fallback & Network Resilience Tests', () => {
       '/api/health',
       {
         method: 'GET',
-        headers: { Origin: 'https://ams.humanone.workers.dev' },
+        headers: { Origin: 'https://ams.ccunbaja.web.id' },
       },
       {} as any
     );
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe(
-      'https://ams.humanone.workers.dev'
+      'https://ams.ccunbaja.web.id'
     );
     expect(res.headers.get('Access-Control-Allow-Credentials')).toBe('true');
   });

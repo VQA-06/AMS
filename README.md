@@ -283,13 +283,21 @@ npx wrangler secret put SESSION_SECRET
 ```
 
 #### C. Konfigurasi Variabel Publik di `wrangler.toml`
-Pastikan variabel publik di bawah `[vars]` pada `wrangler.toml` telah dikonfigurasi:
+Pastikan variabel publik di bawah `[vars]` pada `wrangler.toml` telah dikonfigurasi terpusat:
 ```toml
 [vars]
 ENVIRONMENT = "production"
 QR_ACTIVE_KID = "k1"
-APP_ISSUER = "https://ams.humanone.workers.dev"  # Domain resmi worker / kustom Anda
+APP_DOMAIN = "ams.ccunbaja.web.id"
+APP_ISSUER = "https://ams.ccunbaja.web.id"
 APP_AUDIENCE = "ams"
+ALLOWED_ORIGINS = "https://ams.ccunbaja.web.id,https://ams.humanone.workers.dev"
+TRUSTED_ISSUERS = "https://ams.ccunbaja.web.id,https://ams.humanone.workers.dev,https://absen.local"
+
+# Custom Domain Routing
+routes = [
+  { pattern = "ams.ccunbaja.web.id", custom_domain = true }
+]
 ```
 
 ---
@@ -302,7 +310,7 @@ npm run deploy
 ```
 *Perintah di atas akan otomatis mengompilasi aset frontend Vite (`npm run build`), memetakan routing SPA (`not_found_handling = "single-page-application"`), dan mempublikasikan Worker ke Cloudflare global network.*
 
-URL produksi aplikasi Anda (misal: `https://ams.<subdomain>.workers.dev`) akan langsung ditampilkan di terminal.
+Aplikasi Anda akan langsung dapat diakses melalui custom domain resmi: **`https://ams.ccunbaja.web.id`**.
 
 ---
 

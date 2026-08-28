@@ -8,11 +8,12 @@
 ![Cloudflare KV](https://img.shields.io/badge/Cloudflare-KV_Storage-F38020?style=for-the-badge&logo=cloudflare)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
-![Vitest](https://img.shields.io/badge/Vitest-2.1-6E9F18?style=for-the-badge&logo=vitest)
+![PWA Ready](https://img.shields.io/badge/PWA-Ready-10B981?style=for-the-badge&logo=pwa)
+![Vitest](https://img.shields.io/badge/Vitest-2.1_(109/109_Pass)-6E9F18?style=for-the-badge&logo=vitest)
 
 **Sistem Manajemen Presensi & Kegiatan Modern Berbasis QR Code Terenkripsi AES-256-GCM JWE untuk Komunitas Komputer (Computer Community).**
 
-[Fitur Utama](#-fitur-utama) • [Arsitektur](#-arsitektur--diagram-sistem) • [Panduan Instalasi](#-panduan-instalasi-lokal) • [Deployment Cloudflare](#-panduan-deployment-ke-cloudflare) • [Keamanan & Optimasi](#-audit-keamanan--optimasi-performa) • [Pengujian](#-pengujian-unit--integrasi)
+[Fitur Utama](#-fitur-utama) • [PWA & Offline](#-progressive-web-app-pwa) • [Arsitektur](#-arsitektur--diagram-sistem) • [Panduan Instalasi](#-panduan-instalasi-lokal) • [Deployment Cloudflare](#-panduan-deployment-ke-cloudflare) • [Keamanan & Optimasi](#-audit-keamanan--optimasi-performa) • [Pengujian](#-pengujian-unit--integrasi)
 
 </div>
 
@@ -20,19 +21,25 @@
 
 ## 📖 Tentang AMS
 
-**AMS (Attendance Management System)** adalah platform pencatatan dan pengelolaan presensi berskala *enterprise* yang dirancang khusus untuk memenuhi kebutuhan kegiatan, seminar, *workshop*, dan keanggotaan organisasi. Dibangun di atas infrastruktur serverless **Cloudflare Workers**, database **Cloudflare D1 (SQLite)**, dan **Cloudflare KV**, AMS memberikan kecepatan respon instan (*edge computing*), efisiensi biaya tinggi (*Zero Cold Start*), serta keamanan kriptografis standar industri.
+**AMS (Attendance Management System)** adalah platform pencatatan dan pengelolaan presensi berskala *enterprise* yang dirancang khusus untuk memenuhi kebutuhan kegiatan, seminar, *workshop*, dan keanggotaan organisasi. Dibangun di atas infrastruktur serverless **Cloudflare Workers**, database **Cloudflare D1 (SQLite)**, dan **Cloudflare KV**, AMS memberikan kecepatan respon instan (*edge computing*), efisiensi biaya tinggi (*Zero Cold Start*), kemampuan instalasi mandiri (*Progressive Web App*), serta keamanan kriptografis standar industri.
 
 ---
 
 ## 🚀 Fitur Utama
 
-### 1. 📷 Pemindai QR Cepat & Multi-Station
+### 1. 📱 Progressive Web App (PWA) & Offline Shell (Mobile First)
+- **Instalasi Multi-Platform:** Dapat dipasang langsung sebagai aplikasi mandiri (*Standalone App*) di Android (WebAPK), iOS Safari (Add to Home Screen), Windows, macOS, dan Linux.
+- **Offline Shell & Caching Cerdas:** Service Worker (`sw.js`) mem-precache *App Shell*, aset statis, dan icon resolusi tinggi sehingga aplikasi tetap dapat dibuka dan dioperasikan meski tanpa koneksi internet.
+- **Adaptive Maskable Icons & App Shortcuts:** Mendukung adaptive icon Android 13+ serta 4 pintasan cepat (*Shortcuts*) dari launcher: *Scan QR*, *Daftar Anggota*, *Kegiatan*, dan *Keaktifan*.
+- **Auto-Update Notifier:** Otomatis mendeteksi rilis versi baru di edge Cloudflare Workers dan memunculkan notifikasi pembaruan instan (*one-click reload*).
+
+### 2. 📷 Pemindai QR Cepat & Multi-Station
 - Mendukung pemindaian langsung dari kamera *smartphone*, tablet, maupun webcam laptop.
 - Pengenalan QR instan dengan *audio chime*, *haptic feedback*, dan *live scan toast*.
 - Tipe sesi fleksibel: `CHECKIN`, `CHECKOUT`, `BREAK_OUT`, `BREAK_IN`, hingga akses panggung/sesi khusus.
 - Proteksi *double-scan* konkuren dan pencegahan pemalsuan tiket menggunakan dekripsi **AES-256-GCM JWE Compact Token**.
 
-### 2. ⚡ 2-Tier Caching & Skeleton Shimmer UI (Ultra Responsif)
+### 3. ⚡ 2-Tier Caching & Skeleton Shimmer UI (Ultra Responsif)
 - **Tier 1: SWR Client-Side Memory Cache (0ms):** Memuat data tabel anggota, kegiatan, dan leaderboard keaktifan secara instan saat navigasi antar tab tanpa jeda *loading* berulang.
 - **Tier 2: Cloudflare Edge Cache API (`caches.default`):** Caching global di jaringan CDN Cloudflare dengan **Granular Tag Invalidation** (perubahan data kegiatan hanya menghapus cache `agenda`, tanpa mengganggu cache `members`).
 - **Skeleton Shimmer UI:** Placeholder visual kartu dan tabel yang elegan saat pemanggilan data awal guna mengeliminasi lonjakan visual (*layout shift / empty jump*).

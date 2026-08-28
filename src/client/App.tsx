@@ -12,6 +12,7 @@ import { MemberTrackerPage } from './pages/MemberTrackerPage';
 import { ErrorPage } from './pages/ErrorPage';
 import { QrGeneratorModal } from './components/qr/QrGeneratorModal';
 import { OfflineBanner } from './components/common/OfflineBanner';
+import { PwaInstallBanner } from './components/pwa/PwaInstallBanner';
 import { fetchApi } from './lib/api-client';
 import { fetchCached } from './lib/swr-client';
 import { Member, Event } from '@/shared/types';
@@ -294,6 +295,9 @@ export const App: React.FC = () => {
         events={events}
         divisions={divisions}
       />
+
+      {/* Mobile-First PWA Installation Banner & Update Prompt */}
+      <PwaInstallBanner />
     </MobileShell>
   );
 };

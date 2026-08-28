@@ -93,7 +93,31 @@ app.all('*', async (c) => {
 
   if (c.env.ASSETS) {
     const response = await c.env.ASSETS.fetch(c.req.raw);
-    // If route is a client-side SPA route (non-API GET returning 404 or redirect), serve index.html
+
+    // 1. Service Worker: Must NEVER be cached with long TTL on Cloudflare CDN
+    if (c.req.path === '/sw.js') {
+      const headers = new Headers(response.headers);
+      headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+      headers.set('Content-Type', 'text/javascript');
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
+
+    // 2. Web App Manifest MIME type
+    if (c.req.path === '/manifest.webmanifest') {
+      const headers = new Headers(response.headers);
+      headers.set('Content-Type', 'application/manifest+json');
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
+
+    // 3. If route is a client-side SPA route (non-API GET returning 404 or redirect), serve index.html
     if (
       c.req.method === 'GET' &&
       (response.status === 404 || response.status === 301 || response.status === 302)

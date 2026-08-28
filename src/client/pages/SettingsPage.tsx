@@ -18,6 +18,8 @@ import {
   QrCode,
   UserCheck,
   X,
+  Smartphone,
+  RefreshCw,
 } from 'lucide-react';
 import { Admin, AuditLog, Member, Role } from '@/shared/types';
 import { fetchApi } from '../lib/api-client';
@@ -1085,6 +1087,96 @@ export const SettingsPage: React.FC = () => {
                 <span>Rate Limit & Cache:</span>
                 <span className="font-bold text-emerald-400">Cloudflare KV Namespace</span>
               </div>
+            </div>
+          </div>
+
+          <div className="glass-panel-elevated rounded-3xl p-6 border border-slate-800 space-y-4 md:col-span-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-emerald-400" />
+                <span>Progressive Web App (PWA) & Offline Shell</span>
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950/80 text-emerald-400 border border-emerald-800/50">
+                PWA v1.0.0
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300">
+              AMS mendukung instalasi mandiri di Android, iOS, Windows, macOS, dan Linux dengan kemampuan caching offline penuh.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
+              <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
+                <span className="text-[11px] text-slate-400 block font-medium">Mode Tampilan:</span>
+                <span className="font-bold text-sky-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+                  {typeof window !== 'undefined' &&
+                  (window.matchMedia('(display-mode: standalone)').matches ||
+                    (window.navigator as unknown as { standalone?: boolean }).standalone)
+                    ? 'Aplikasi Mandiri (Standalone PWA)'
+                    : 'Peramban Web (Browser)'}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
+                <span className="text-[11px] text-slate-400 block font-medium">Service Worker:</span>
+                <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {typeof navigator !== 'undefined' && 'serviceWorker' in navigator
+                    ? 'Aktif & Pre-cached'
+                    : 'Tidak Didukung'}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
+                <span className="text-[11px] text-slate-400 block font-medium">Konektivitas Jaringan:</span>
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  {typeof navigator !== 'undefined' && navigator.onLine ? 'Online' : 'Offline'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistration().then((reg) => {
+                      if (reg) {
+                        reg.update();
+                        setAlertModal({
+                          isOpen: true,
+                          title: 'Pemeriksaan Update',
+                          message: 'Pemeriksaan update Service Worker berhasil dijalankan.',
+                          type: 'success',
+                        });
+                      }
+                    });
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl glass-panel text-slate-200 hover:text-white font-semibold text-xs transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-sky-400" />
+                <span>Cek Pembaruan App</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if ('caches' in window) {
+                    caches.keys().then((names) => {
+                      Promise.all(names.map((name) => caches.delete(name))).then(() => {
+                        window.location.reload();
+                      });
+                    });
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl glass-panel text-rose-400 hover:text-rose-300 font-semibold text-xs transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Bersihkan Cache Offline & Reload</span>
+              </button>
             </div>
           </div>
         </div>

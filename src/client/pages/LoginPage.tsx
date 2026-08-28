@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { LogIn, ShieldCheck, AlertCircle, Eye, EyeOff, KeyRound, Mail, QrCode, Sparkles } from 'lucide-react';
+import { LogIn, ShieldCheck, AlertCircle, Eye, EyeOff, KeyRound, Mail, QrCode, Sparkles, Smartphone, Download } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { usePwaInstall } from '../hooks/usePwaInstall';
 import { feedback } from '../lib/audio-haptic';
 import { CameraViewfinder } from '../components/scanner/CameraViewfinder';
+import { IosInstallGuideModal } from '../components/pwa/IosInstallGuideModal';
 
 interface LoginPageProps {
   onLoginSuccess?: () => void;
@@ -10,6 +12,10 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const { login, loginWithQr } = useAuth();
+  const { isInstallable, isInstalled, isIos, isNativePromptReady, installApp } = usePwaInstall();
+  const [showIosModal, setShowIosModal] = useState<boolean>(false);
+  const [installing, setInstalling] = useState<boolean>(false);
+
   const [loginMode, setLoginMode] = useState<'password' | 'qr'>('password');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -17,6 +23,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [qrStatus, setQrStatus] = useState<string | null>(null);
+
+  const handlePwaInstall = async () => {
+    if (isIos) {
+      setShowIosModal(true);
+      return;
+    }
+    if (isNativePromptReady) {
+      setInstalling(true);
+      try {
+        await installApp();
+      } finally {
+        setInstalling(false);
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,11 +225,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </div>
         )}
 
-        <div className="pt-4 border-t border-slate-800 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5">
+        {/* Quick PWA Install Button on Login Screen */}
+        {!isInstalled && isInstallable && (
+          <div className="pt-3 border-t border-slate-800/80">
+            <button
+              type="button"
+              onClick={handlePwaInstall}
+              disabled={installing}
+              className="w-full py-2.5 px-3 rounded-2xl glass-panel text-slate-300 hover:text-white hover:bg-slate-900/80 border border-sky-500/20 text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-98 shadow-sm"
+            >
+              <Smartphone className="w-4 h-4 text-sky-400" />
+              <span>{installing ? 'Memproses...' : 'Pasang Aplikasi AMS di Perangkat'}</span>
+              <Download className="w-3.5 h-3.5 text-sky-400" />
+            </button>
+          </div>
+        )}
+
+        <div className="pt-3 border-t border-slate-800 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5">
           <ShieldCheck className="w-4 h-4 text-sky-400" />
           <span>Computer Community • Database-Secured Authentication</span>
         </div>
       </div>
+
+      {/* iOS Safari Guide Modal */}
+      <IosInstallGuideModal isOpen={showIosModal} onClose={() => setShowIosModal(false)} />
     </div>
   );
 };

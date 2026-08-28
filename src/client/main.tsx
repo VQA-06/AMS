@@ -17,11 +17,10 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
 
 // Register PWA Service Worker for offline shell and background caching
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator && process.env.NODE_ENV !== 'test') {
-  window.addEventListener('load', () => {
+  const registerSw = () => {
     navigator.serviceWorker
       .register('/sw.js')
       .then((reg) => {
-        // Check for updates periodically
         reg.onupdatefound = () => {
           const installingWorker = reg.installing;
           if (installingWorker) {
@@ -36,6 +35,12 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator && process.env
       .catch((err) => {
         console.warn('[AMS PWA] Service Worker registration failed:', err);
       });
-  });
+  };
+
+  if (document.readyState === 'complete') {
+    registerSw();
+  } else {
+    window.addEventListener('load', registerSw);
+  }
 }
 

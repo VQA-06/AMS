@@ -170,7 +170,12 @@ export const App: React.FC = () => {
   }
 
   if (!admin) {
-    return <LoginPage onLoginSuccess={() => navigate('/dashboard')} />;
+    return (
+      <>
+        <PwaInstallBanner />
+        <LoginPage onLoginSuccess={() => navigate('/dashboard')} />
+      </>
+    );
   }
 
   const handleGenerateQrForMember = (member: Member) => {

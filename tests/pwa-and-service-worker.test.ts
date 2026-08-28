@@ -12,7 +12,7 @@ describe('Progressive Web App (PWA) & Service Worker Tests', () => {
       expect(fs.existsSync(manifestPath)).toBe(true);
 
       const content = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-      expect(content.name).toBe('AMS — Attendance Management System');
+      expect(content.name).toBe('AMS | Computer Community');
       expect(content.short_name).toBe('AMS');
       expect(content.start_url).toBe('/');
       expect(content.display).toBe('standalone');

@@ -27,7 +27,7 @@ export const IosInstallGuideModal: React.FC<IosInstallGuideModalProps> = ({ isOp
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-b from-white via-slate-50 to-slate-100 p-1.5 mx-auto flex items-center justify-center shadow-lg shadow-sky-500/20 ring-2 ring-white/20">
               <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
             </div>
-            <h3 className="text-lg font-bold font-heading text-white">Pasang AMS di iPhone / iPad</h3>
+            <h3 className="text-base font-bold font-heading text-white">Pasang AMS | Computer Community di iOS</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
               Dapatkan pengalaman aplikasi mandiri (*full screen*), pemindai QR lebih cepat, dan akses instan tanpa bilah browser.
             </p>

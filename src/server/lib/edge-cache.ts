@@ -61,6 +61,36 @@ export function getNormalizedCacheKey(url: string): string {
   }
 }
 
+// Standard tag expansions for comprehensive cross-alias and sub-route cache purging
+const TAG_PATH_EXPANSIONS: Record<string, string[]> = {
+  agenda: [
+    '/api/agenda',
+    '/api/events',
+    '/api/programs',
+    '/api/activities',
+    '/api/agenda/reports/top-presence',
+    '/api/agenda/stats/top-presence',
+    '/api/agenda/analytics/top-attendance',
+  ],
+  members: [
+    '/api/members',
+    '/api/members/divisions',
+    '/api/members/groups',
+    '/api/members/stats/summary',
+    '/api/members/stats/yearly-recap',
+    '/api/members/stats/yearly',
+    '/api/members/reports/yearly',
+    '/api/members/analytics/yearly-stats',
+  ],
+  attendance: [
+    '/api/attendances',
+    '/api/attendances/recap/matrix',
+    '/api/attendances/stats/matrix',
+    '/api/attendances/stats/tracker',
+    '/api/attendances/activity-tracker',
+  ],
+};
+
 /**
  * Ensures an absolute URL string for Cloudflare Cache API
  */
@@ -129,7 +159,10 @@ export async function putEdgeCache(
 
   const url = getNormalizedCacheKey(rawUrl);
   const headers = new Headers(response.headers);
-  headers.set('Cache-Control', `public, max-age=${ttlSeconds}, s-maxage=${ttlSeconds}`);
+  // Guarantee browser HTTP cache never holds stale mutable API data
+  headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  headers.set('Pragma', 'no-cache');
+  headers.set('Expires', '0');
   headers.set('X-AMS-Edge-Cache', 'HIT');
 
   let bodyText = '';
@@ -147,10 +180,12 @@ export async function putEdgeCache(
   const cfCache = getCloudflareCache();
   if (cfCache && typeof cfCache.put === 'function') {
     try {
+      const cacheHeaders = new Headers(headers);
+      cacheHeaders.set('Cache-Control', `max-age=${ttlSeconds}`);
       const clonedForCache = new Response(bodyText, {
         status: response.status,
         statusText: response.statusText,
-        headers,
+        headers: cacheHeaders,
       });
 
       const putPromise = cfCache.put(rawUrl, clonedForCache).catch(() => false);
@@ -195,7 +230,14 @@ export async function invalidateEdgeCache(tagsOrUrls: string | string[], executi
   const cfUrlsToDelete = new Set<string>();
 
   for (const target of targets) {
-    // 1. Check if target is a registered tag
+    // 1. Expand known tag to full path aliases
+    const tagExpansions = TAG_PATH_EXPANSIONS[target] || [];
+    for (const expPath of tagExpansions) {
+      memoryKeysToDelete.add(expPath);
+      toAbsoluteUrls(expPath).forEach((absUrl) => cfUrlsToDelete.add(absUrl));
+    }
+
+    // 2. Check if target is a registered tag in memory
     if (tagToUrls.has(target)) {
       const urls = tagToUrls.get(target)!;
       urls.forEach((u) => {
@@ -205,7 +247,7 @@ export async function invalidateEdgeCache(tagsOrUrls: string | string[], executi
       tagToUrls.delete(target);
     }
 
-    // 2. Check if target matches URL keys directly or as a prefix
+    // 3. Check if target matches URL keys directly or as a prefix
     for (const urlKey of memoryCache.keys()) {
       if (urlKey.includes(target)) {
         memoryKeysToDelete.add(urlKey);
@@ -213,7 +255,7 @@ export async function invalidateEdgeCache(tagsOrUrls: string | string[], executi
       }
     }
 
-    // 3. Add direct target as potential URLs
+    // 4. Add direct target as potential URLs
     toAbsoluteUrls(target).forEach((absUrl) => cfUrlsToDelete.add(absUrl));
     memoryKeysToDelete.add(getNormalizedCacheKey(target));
   }

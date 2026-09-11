@@ -10,27 +10,108 @@ interface CacheEntry<T = unknown> {
 const cache = new Map<string, CacheEntry<any>>();
 const listeners = new Map<string, Set<(data: any) => void>>();
 
+// BroadcastChannel for instant cross-tab state synchronization
+const syncChannel: BroadcastChannel | null =
+  typeof window !== 'undefined' && 'BroadcastChannel' in window
+    ? new BroadcastChannel('ams_cache_sync')
+    : null;
+
+// Domain correlation map for cross-dependent entity purging
+const DOMAIN_EXPANSIONS: Record<string, string[]> = {
+  agenda: ['/api/agenda', '/api/events', '/api/programs', '/api/activities', 'reports/top-presence', 'stats/top-presence'],
+  events: ['/api/agenda', '/api/events', '/api/programs', '/api/activities', 'reports/top-presence', 'stats/top-presence'],
+  members: ['/api/members', 'divisions', 'groups', 'stats/summary', 'stats/yearly', 'reports/yearly', 'recap/matrix'],
+  attendance: ['/api/attendances', 'recap/matrix', 'stats/matrix', 'reports/top-presence', 'activity-tracker'],
+  attendances: ['/api/attendances', 'recap/matrix', 'stats/matrix', 'reports/top-presence', 'activity-tracker'],
+};
+
 /**
- * Invalidates cached URLs matching a string prefix or RegExp.
- * Call this after write operations (POST, PUT, DELETE) to refresh data views.
+ * Invalidates cached URLs matching a string prefix, tag, or RegExp.
+ * Notifies all active component listeners, sends purge message to Service Worker,
+ * and broadcasts to all other open tabs in real-time.
  */
-export function invalidateCache(pattern?: string | RegExp): void {
+export function invalidateCache(pattern?: string | RegExp, broadcast = true): void {
   if (!pattern) {
     cache.clear();
     listeners.forEach((set) => set.forEach((fn) => fn(null)));
-    return;
-  }
+  } else {
+    // Collect all search terms including domain expansions
+    const patternsToPurge: (string | RegExp)[] = [pattern];
+    if (typeof pattern === 'string') {
+      const cleanKey = pattern.replace(/^\/api\//, '').split(/[/?]/)[0].toLowerCase();
+      if (DOMAIN_EXPANSIONS[cleanKey]) {
+        patternsToPurge.push(...DOMAIN_EXPANSIONS[cleanKey]);
+      }
+    }
 
-  for (const key of cache.keys()) {
-    const shouldInvalidate =
-      typeof pattern === 'string'
-        ? key.startsWith(pattern) || key.includes(pattern)
-        : pattern.test(key);
+    for (const key of Array.from(cache.keys())) {
+      const shouldInvalidate = patternsToPurge.some((p) =>
+        typeof p === 'string'
+          ? key.startsWith(p) || key.includes(p)
+          : p.test(key)
+      );
 
-    if (shouldInvalidate) {
-      cache.delete(key);
+      if (shouldInvalidate) {
+        cache.delete(key);
+        const set = listeners.get(key);
+        if (set) {
+          set.forEach((fn) => fn(null));
+        }
+      }
     }
   }
+
+  // Purge Service Worker CacheStorage
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    try {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'INVALIDATE_API_CACHE',
+        pattern: typeof pattern === 'string' ? pattern : undefined,
+      });
+    } catch {
+      // Safe fallback
+    }
+  }
+
+  // Cross-tab broadcast
+  if (broadcast && syncChannel) {
+    try {
+      syncChannel.postMessage({
+        type: 'INVALIDATE_CACHE',
+        pattern: typeof pattern === 'string' ? pattern : undefined,
+      });
+    } catch {
+      // Safe fallback
+    }
+  }
+}
+
+// Listen to cross-tab invalidation broadcasts
+if (syncChannel) {
+  syncChannel.onmessage = (event) => {
+    if (event.data && event.data.type === 'INVALIDATE_CACHE') {
+      invalidateCache(event.data.pattern, false);
+    }
+  };
+}
+
+// Automatically listen to mutations from api-client.ts and invalidate cache
+if (typeof window !== 'undefined') {
+  window.addEventListener('ams:data-mutated', (e: Event) => {
+    const customEvent = e as CustomEvent<{ url: string; method: string }>;
+    if (customEvent.detail && customEvent.detail.url) {
+      const url = customEvent.detail.url;
+      if (url.includes('/agenda') || url.includes('/events') || url.includes('/programs') || url.includes('/activities')) {
+        invalidateCache('agenda');
+      } else if (url.includes('/members')) {
+        invalidateCache('members');
+      } else if (url.includes('/attendances') || url.includes('/scan')) {
+        invalidateCache('attendance');
+      } else {
+        invalidateCache(url);
+      }
+    }
+  });
 }
 
 /**
@@ -129,8 +210,13 @@ export function useCachedQuery<T = unknown>(
       listeners.set(url, new Set());
     }
     const updateHandler = (freshData: any) => {
-      if (isMounted.current && freshData !== null) {
-        setData(freshData as T);
+      if (isMounted.current) {
+        if (freshData !== null) {
+          setData(freshData as T);
+        } else {
+          // Automatic instant revalidation upon cache invalidation signal
+          refetch(true);
+        }
       }
     };
     listeners.get(url)!.add(updateHandler);

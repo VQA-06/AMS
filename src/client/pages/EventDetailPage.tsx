@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Event, Attendance, QrToken, Member, SessionType } from '@/shared/types';
 import { fetchApi } from '../lib/api-client';
+import { invalidateCache } from '../lib/swr-client';
 import { useAuth } from '../hooks/useAuth';
 import { canManageEvents, canExportData, canGenerateQR } from '../lib/permissions';
 import { QrGeneratorModal } from '../components/qr/QrGeneratorModal';
@@ -251,6 +252,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
         setConfirmLoading(true);
         try {
           await fetchApi(`/api/agenda/${event.id}`, { method: 'DELETE' });
+          invalidateCache('/api/agenda');
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           onRefresh?.();
           onBack();

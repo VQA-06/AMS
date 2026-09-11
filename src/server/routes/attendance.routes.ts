@@ -215,7 +215,7 @@ attendanceRoutes.post('/event/:id/manual', authMiddleware, requireRole(['owner',
     },
   });
 
-  await invalidateEdgeCache(['attendance', 'agenda'], (c as any).executionCtx);
+  await invalidateEdgeCache(['attendance', 'agenda', 'members'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -273,7 +273,7 @@ attendanceRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'adm
     .bind(...ids)
     .run();
 
-  await invalidateEdgeCache(['attendance', 'agenda'], (c as any).executionCtx);
+  await invalidateEdgeCache(['attendance', 'agenda', 'members'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,

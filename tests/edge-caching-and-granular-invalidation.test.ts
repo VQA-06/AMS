@@ -125,5 +125,54 @@ describe('Edge Caching & Granular Targeted Invalidation Tests', () => {
       expect(res2.status).toBe(304);
       expect(await res2.text()).toBe('');
     });
+
+    it('should set strict anti-browser-cache headers (no-cache, no-store) on both HIT and fresh responses', async () => {
+      const app = new Hono();
+      app.get('/api/live-data', edgeCache({ ttlSeconds: 15, tag: 'agenda' }), (c) => {
+        return c.json({ ok: true, data: { time: Date.now() } });
+      });
+
+      // 1. First request (MISS)
+      const res1 = await app.request('/api/live-data');
+      expect(res1.status).toBe(200);
+      expect(res1.headers.get('Cache-Control')).toContain('no-cache');
+      expect(res1.headers.get('Cache-Control')).toContain('no-store');
+      expect(res1.headers.get('Pragma')).toBe('no-cache');
+
+      // 2. Second request (HIT)
+      const res2 = await app.request('/api/live-data');
+      expect(res2.status).toBe(200);
+      expect(res2.headers.get('X-AMS-Edge-Cache')).toBe('HIT');
+      expect(res2.headers.get('Cache-Control')).toContain('no-cache');
+      expect(res2.headers.get('Cache-Control')).toContain('no-store');
+    });
+
+    it('should expand tag "agenda" to purge all route aliases (/api/agenda, /api/events, /api/programs)', async () => {
+      const urlAgenda = 'https://ams.local/api/agenda';
+      const urlEvents = 'https://ams.local/api/events';
+      const urlPrograms = 'https://ams.local/api/programs';
+
+      const dummyResponse = (name: string) =>
+        new Response(JSON.stringify({ ok: true, name }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+
+      await putEdgeCache(urlAgenda, dummyResponse('agenda'), 60, 'agenda');
+      await putEdgeCache(urlEvents, dummyResponse('events'), 60, 'agenda');
+      await putEdgeCache(urlPrograms, dummyResponse('programs'), 60, 'agenda');
+
+      expect(await matchEdgeCache(urlAgenda)).not.toBeNull();
+      expect(await matchEdgeCache(urlEvents)).not.toBeNull();
+      expect(await matchEdgeCache(urlPrograms)).not.toBeNull();
+
+      // Invalidate single tag 'agenda'
+      await invalidateEdgeCache('agenda');
+
+      // All aliases MUST be purged!
+      expect(await matchEdgeCache(urlAgenda)).toBeNull();
+      expect(await matchEdgeCache(urlEvents)).toBeNull();
+      expect(await matchEdgeCache(urlPrograms)).toBeNull();
+    });
   });
 });

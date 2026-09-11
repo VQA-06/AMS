@@ -153,6 +153,17 @@ export const MembersPage: React.FC<MembersPageProps> = ({
   useEffect(() => {
     loadMembers();
     loadOptions();
+
+    // Listen for realtime mutation events across tabs and modals
+    const handleMutation = () => {
+      loadMembers({ forceRefresh: true });
+      loadOptions({ forceRefresh: true });
+    };
+
+    window.addEventListener('ams:data-mutated', handleMutation);
+    return () => {
+      window.removeEventListener('ams:data-mutated', handleMutation);
+    };
   }, [loadMembers]);
 
   useEffect(() => {

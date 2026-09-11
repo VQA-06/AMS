@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users,
   Building2,
@@ -49,62 +49,88 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [trackerSummary, setTrackerSummary] = useState<MemberActivitySummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [mSummary, dRes, eRes, tRes, topEvRes, yrRes] = await Promise.all([
-          fetchCached<{ total: number; active: number; inactive: number }>('/api/members/stats/summary').catch(
-            () => ({ total: 0, active: 0, inactive: 0 })
-          ),
-          fetchCached<{ divisions: string[] }>('/api/members/divisions').catch(() => ({ divisions: [] })),
-          fetchCached<{ events: Event[] }>('/api/agenda').catch(() => ({ events: [] })),
-          fetchCached<{ summary: MemberActivitySummary }>('/api/attendances/recap/matrix').catch(() => null),
-          fetchCached<{ events: TopEventStatItem[] }>('/api/agenda/reports/top-presence').catch(() => null),
-          fetchCached<{ stats: YearlyMemberStat[] }>('/api/members/stats/yearly-recap').catch(() => null),
-        ]);
+  const loadData = useCallback(async (force = false) => {
+    try {
+      const [mSummary, dRes, eRes, tRes, topEvRes, yrRes] = await Promise.all([
+        fetchCached<{ total: number; active: number; inactive: number }>('/api/members/stats/summary', {
+          forceRefresh: force,
+          ttlMs: 15_000,
+        }).catch(() => ({ total: 0, active: 0, inactive: 0 })),
+        fetchCached<{ divisions: string[] }>('/api/members/divisions', {
+          forceRefresh: force,
+          ttlMs: 15_000,
+        }).catch(() => ({ divisions: [] })),
+        fetchCached<{ events: Event[] }>('/api/agenda', {
+          forceRefresh: force,
+          ttlMs: 15_000,
+        }).catch(() => ({ events: [] })),
+        fetchCached<{ summary: MemberActivitySummary }>('/api/attendances/recap/matrix', {
+          forceRefresh: force,
+          ttlMs: 15_000,
+        }).catch(() => null),
+        fetchCached<{ events: TopEventStatItem[] }>('/api/agenda/reports/top-presence', {
+          forceRefresh: force,
+          ttlMs: 15_000,
+        }).catch(() => null),
+        fetchCached<{ stats: YearlyMemberStat[] }>('/api/members/stats/yearly-recap', {
+          forceRefresh: force,
+          ttlMs: 15_000,
+        }).catch(() => null),
+      ]);
 
-        const rawEvents = eRes?.events || [];
-        setMemberStats(mSummary || { total: 0, active: 0, inactive: 0 });
-        setDivisions(dRes?.divisions || []);
-        setEvents(rawEvents);
-        if (tRes && tRes.summary) {
-          setTrackerSummary(tRes.summary);
-        }
-
-        // Set Top Events with reliable dataset mapping
-        if (topEvRes && topEvRes.events && topEvRes.events.length > 0) {
-          setTopEvents(topEvRes.events);
-        } else if (rawEvents.length > 0) {
-          setTopEvents(
-            rawEvents.map((ev) => ({
-              id: ev.id,
-              name: ev.name,
-              status: ev.status,
-              starts_at: ev.starts_at,
-              ends_at: ev.ends_at,
-              qr_policy: ev.qr_policy,
-              location_name: ev.location_name,
-              attendance_count: ev.attendance_count || 0,
-              checkin_count: ev.checkin_count || 0,
-              checkout_count: ev.checkout_count || 0,
-              guest_count: ev.guest_count || 0,
-              member_count: ev.member_count || 0,
-            }))
-          );
-        }
-
-        if (yrRes && yrRes.stats && yrRes.stats.length > 0) {
-          setYearlyStats(yrRes.stats);
-        }
-      } catch (err) {
-        console.error('Dashboard load error:', err);
-      } finally {
-        setLoading(false);
+      const rawEvents = eRes?.events || [];
+      setMemberStats(mSummary || { total: 0, active: 0, inactive: 0 });
+      setDivisions(dRes?.divisions || []);
+      setEvents(rawEvents);
+      if (tRes && tRes.summary) {
+        setTrackerSummary(tRes.summary);
       }
-    }
 
-    loadData();
+      // Set Top Events with reliable dataset mapping
+      if (topEvRes && topEvRes.events && topEvRes.events.length > 0) {
+        setTopEvents(topEvRes.events);
+      } else if (rawEvents.length > 0) {
+        setTopEvents(
+          rawEvents.map((ev) => ({
+            id: ev.id,
+            name: ev.name,
+            status: ev.status,
+            starts_at: ev.starts_at,
+            ends_at: ev.ends_at,
+            qr_policy: ev.qr_policy,
+            location_name: ev.location_name,
+            attendance_count: ev.attendance_count || 0,
+            checkin_count: ev.checkin_count || 0,
+            checkout_count: ev.checkout_count || 0,
+            guest_count: ev.guest_count || 0,
+            member_count: ev.member_count || 0,
+          }))
+        );
+      }
+
+      if (yrRes && yrRes.stats && yrRes.stats.length > 0) {
+        setYearlyStats(yrRes.stats);
+      }
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+
+    // Listen for realtime mutation events across tabs and modals
+    const handleMutation = () => {
+      loadData(true);
+    };
+
+    window.addEventListener('ams:data-mutated', handleMutation);
+    return () => {
+      window.removeEventListener('ams:data-mutated', handleMutation);
+    };
+  }, [loadData]);
 
   const activeEvents = events.filter((e) => e.status === 'active');
 

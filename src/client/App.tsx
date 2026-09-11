@@ -92,16 +92,16 @@ export const App: React.FC = () => {
     setCurrentRoute(parseRoute(pathname, searchStr ? `?${searchStr}` : ''));
   }, []);
 
-  const loadGlobalData = useCallback(async () => {
+  const loadGlobalData = useCallback(async (force = false) => {
     if (!admin) return;
     try {
       const [mRes, eRes, dRes] = await Promise.all([
-        fetchCached<{ members: Member[]; total: number }>('/api/members?limit=200', { ttlMs: 30_000 }).catch(() => ({
+        fetchCached<{ members: Member[]; total: number }>('/api/members?limit=200', { forceRefresh: force, ttlMs: 15_000 }).catch(() => ({
           members: [],
           total: 0,
         })),
-        fetchCached<{ events: Event[] }>('/api/agenda', { ttlMs: 30_000 }).catch(() => ({ events: [] })),
-        fetchCached<{ divisions: string[] }>('/api/members/divisions', { ttlMs: 30_000 }).catch(() => ({
+        fetchCached<{ events: Event[] }>('/api/agenda', { forceRefresh: force, ttlMs: 15_000 }).catch(() => ({ events: [] })),
+        fetchCached<{ divisions: string[] }>('/api/members/divisions', { forceRefresh: force, ttlMs: 15_000 }).catch(() => ({
           divisions: [],
         })),
       ]);
@@ -134,6 +134,16 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     loadGlobalData();
+
+    // Listen for realtime mutation events across tabs, modals, and scanner
+    const handleMutation = () => {
+      loadGlobalData(true);
+    };
+
+    window.addEventListener('ams:data-mutated', handleMutation);
+    return () => {
+      window.removeEventListener('ams:data-mutated', handleMutation);
+    };
   }, [loadGlobalData]);
 
   // Auth Guard Routing Effects - Preserves exact subpage route on refresh

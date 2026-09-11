@@ -59,7 +59,7 @@ eventsRoutes.post('/', authMiddleware, requireRole(['owner', 'admin']), async (c
     meta: { name: created.name, qr_policy: created.qr_policy },
   });
 
-  await invalidateEdgeCache('agenda', (c as any).executionCtx);
+  await invalidateEdgeCache(['agenda', 'attendance', 'members'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -220,7 +220,7 @@ eventsRoutes.patch('/:id', authMiddleware, requireRole(['owner', 'admin']), asyn
     meta: { changes: input },
   });
 
-  await invalidateEdgeCache('agenda', (c as any).executionCtx);
+  await invalidateEdgeCache(['agenda', 'attendance', 'members'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -247,7 +247,7 @@ eventsRoutes.post('/:id/activate', authMiddleware, requireRole(['owner', 'admin'
   const repo = new EventRepository(c.env.DB);
   const updated = await repo.update(id, { status: 'active' });
 
-  await invalidateEdgeCache('agenda', (c as any).executionCtx);
+  await invalidateEdgeCache(['agenda', 'attendance'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -274,7 +274,7 @@ eventsRoutes.post('/:id/close', authMiddleware, requireRole(['owner', 'admin']),
   const repo = new EventRepository(c.env.DB);
   const updated = await repo.update(id, { status: 'closed' });
 
-  await invalidateEdgeCache('agenda', (c as any).executionCtx);
+  await invalidateEdgeCache(['agenda', 'attendance'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -325,7 +325,7 @@ eventsRoutes.delete('/:id', authMiddleware, requireRole(['owner', 'admin']), asy
     meta: { name: existing.name },
   });
 
-  await invalidateEdgeCache('agenda', (c as any).executionCtx);
+  await invalidateEdgeCache(['agenda', 'attendance', 'members'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -583,7 +583,7 @@ eventsRoutes.post('/bulk-close', authMiddleware, requireRole(['owner', 'admin'])
     meta: { count: ids.length, ids },
   });
 
-  await invalidateEdgeCache('agenda', (c as any).executionCtx);
+  await invalidateEdgeCache(['agenda', 'attendance'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,

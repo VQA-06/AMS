@@ -352,7 +352,7 @@ scanRoutes.post(
         tokenJti: decrypted.jti,
       });
 
-      await invalidateEdgeCache(['attendance', 'agenda'], (c as any).executionCtx);
+      await invalidateEdgeCache(['attendance', 'agenda', 'members'], (c as any).executionCtx);
     } catch (err: unknown) {
       console.error('Atomic scan batch error:', err);
       const isDuplicate =

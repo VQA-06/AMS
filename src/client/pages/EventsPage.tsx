@@ -85,6 +85,16 @@ export const EventsPage: React.FC<EventsPageProps> = ({
 
   useEffect(() => {
     loadEvents();
+
+    // Listen for realtime mutation events across tabs and modals
+    const handleMutation = () => {
+      loadEvents(true);
+    };
+
+    window.addEventListener('ams:data-mutated', handleMutation);
+    return () => {
+      window.removeEventListener('ams:data-mutated', handleMutation);
+    };
   }, [loadEvents]);
 
   useEffect(() => {

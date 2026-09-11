@@ -39,6 +39,9 @@ export function edgeCache(options: EdgeCacheOptions) {
         });
       }
 
+      cachedResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+      cachedResponse.headers.set('Pragma', 'no-cache');
+      cachedResponse.headers.set('Expires', '0');
       return cachedResponse;
     }
 
@@ -47,6 +50,9 @@ export function edgeCache(options: EdgeCacheOptions) {
 
     // 3. Store into Edge Cache if 200 OK
     if (c.res && c.res.status === 200) {
+      c.res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+      c.res.headers.set('Pragma', 'no-cache');
+      c.res.headers.set('Expires', '0');
       try {
         const responseToCache = c.res.clone();
         await putEdgeCache(url, responseToCache, ttlSeconds, tag, c);

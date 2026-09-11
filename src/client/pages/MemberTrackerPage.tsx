@@ -61,6 +61,16 @@ export const MemberTrackerPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
+
+    // Listen for realtime mutation events across tabs and modals
+    const handleMutation = () => {
+      loadData();
+    };
+
+    window.addEventListener('ams:data-mutated', handleMutation);
+    return () => {
+      window.removeEventListener('ams:data-mutated', handleMutation);
+    };
   }, [loadData]);
 
   const getTierBadge = (tier: ActivityTier) => {

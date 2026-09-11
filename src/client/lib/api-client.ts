@@ -51,7 +51,22 @@ export async function fetchApi<T = unknown>(
     return promise;
   }
 
-  return executeFetch<T>(url, options);
+  // Mutation request (POST, PUT, PATCH, DELETE)
+  const result = await executeFetch<T>(url, options);
+
+  // Clear in-flight GET promises so obsolete queries don't overwrite new mutation state
+  inFlightRequests.clear();
+
+  // Dispatch mutation event for real-time reactivity across components and tabs
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('ams:data-mutated', {
+        detail: { url, method: (options.method || 'POST').toUpperCase() },
+      })
+    );
+  }
+
+  return result;
 }
 
 async function executeFetch<T>(
@@ -92,9 +107,15 @@ async function executeFetch<T>(
         headers,
         credentials: 'include',
         signal: controller.signal,
+        cache: 'no-cache', // Bypass browser disk cache for dynamic API queries
       });
 
       clearTimeout(timeoutId);
+
+      // Handle 304 Not Modified cleanly
+      if (response.status === 304) {
+        return null as unknown as T;
+      }
 
       const contentType = response.headers.get('content-type') || '';
       if (contentType.includes('text/csv')) {

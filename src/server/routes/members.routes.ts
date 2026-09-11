@@ -321,7 +321,7 @@ membersRoutes.post('/', authMiddleware, requireRole(['owner', 'admin']), async (
     meta: { external_id: created.external_id, name: created.name, division: created.division },
   });
 
-  await invalidateEdgeCache('members', (c as any).executionCtx);
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -460,7 +460,7 @@ membersRoutes.patch('/:id', authMiddleware, requireRole(['owner', 'admin']), asy
     meta: { changes: input },
   });
 
-  await invalidateEdgeCache('members', (c as any).executionCtx);
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -515,7 +515,7 @@ membersRoutes.delete('/:id', authMiddleware, requireRole(['owner', 'admin']), as
     meta: { external_id: existing.external_id, name: existing.name },
   });
 
-  await invalidateEdgeCache('members', (c as any).executionCtx);
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -658,7 +658,7 @@ membersRoutes.post('/import', authMiddleware, requireRole(['owner', 'admin']), a
     meta: { total: rows.length, created, updated, skipped, failed, mode },
   });
 
-  await invalidateEdgeCache('members', (c as any).executionCtx);
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -739,7 +739,7 @@ membersRoutes.post('/cleanup-guests', authMiddleware, requireRole(['owner', 'adm
     },
   });
 
-  await invalidateEdgeCache('members', (c as any).executionCtx);
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -777,7 +777,7 @@ membersRoutes.post('/bulk-deactivate', authMiddleware, requireRole(['owner', 'ad
     meta: { count: ids.length, ids },
   });
 
-  await invalidateEdgeCache('members', (c as any).executionCtx);
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -814,7 +814,7 @@ membersRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'admin'
     meta: { count: ids.length, ids },
   });
 
-  await invalidateEdgeCache('members', (c as any).executionCtx);
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -1030,6 +1030,7 @@ membersRoutes.post(
         division: promoted.division,
       },
     });
+    await invalidateEdgeCache(['members', 'attendance', 'agenda'], (c as any).executionCtx);
 
     return c.json<ApiResponse>({
       ok: true,
@@ -1114,6 +1115,7 @@ membersRoutes.post(
       entity_id: 'bulk',
       meta: { count, promoted_ids: promoted.map((m) => m.id), division },
     });
+    await invalidateEdgeCache(['members', 'attendance', 'agenda'], (c as any).executionCtx);
 
     return c.json<ApiResponse>({
       ok: true,

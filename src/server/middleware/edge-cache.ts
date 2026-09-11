@@ -39,10 +39,12 @@ export function edgeCache(options: EdgeCacheOptions) {
         });
       }
 
-      cachedResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
-      cachedResponse.headers.set('Pragma', 'no-cache');
-      cachedResponse.headers.set('Expires', '0');
-      return cachedResponse;
+      const res = new Response(cachedResponse.body, cachedResponse);
+      res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+      res.headers.set('Pragma', 'no-cache');
+      res.headers.set('Expires', '0');
+      res.headers.set('X-AMS-Edge-Cache', 'HIT');
+      return res;
     }
 
     // 2. Cache MISS - Proceed to handler
@@ -50,9 +52,16 @@ export function edgeCache(options: EdgeCacheOptions) {
 
     // 3. Store into Edge Cache if 200 OK
     if (c.res && c.res.status === 200) {
-      c.res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
-      c.res.headers.set('Pragma', 'no-cache');
-      c.res.headers.set('Expires', '0');
+      try {
+        c.res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+        c.res.headers.set('Pragma', 'no-cache');
+        c.res.headers.set('Expires', '0');
+      } catch {
+        c.res = new Response(c.res.body, c.res);
+        c.res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+        c.res.headers.set('Pragma', 'no-cache');
+        c.res.headers.set('Expires', '0');
+      }
       try {
         const responseToCache = c.res.clone();
         await putEdgeCache(url, responseToCache, ttlSeconds, tag, c);

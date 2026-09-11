@@ -116,9 +116,19 @@ export function usePwaInstall() {
   // Apply service worker update
   const applyUpdate = useCallback(() => {
     if (waitingWorker) {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener(
+          'controllerchange',
+          () => {
+            window.location.reload();
+          },
+          { once: true }
+        );
+      }
       waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      window.location.reload();
     }
-    window.location.reload();
   }, [waitingWorker]);
 
   return {

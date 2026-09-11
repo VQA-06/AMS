@@ -217,11 +217,14 @@ export class EventRepository {
       this.db.prepare('DELETE FROM attendances WHERE event_id = ?').bind(id),
       this.db.prepare('DELETE FROM scan_attempts WHERE event_id = ?').bind(id),
       this.db.prepare('DELETE FROM qr_tokens WHERE event_id = ?').bind(id),
+      this.db.prepare('DELETE FROM event_guests WHERE event_id = ?').bind(id),
+      this.db.prepare('UPDATE event_guests SET source_event_id = NULL WHERE source_event_id = ?').bind(id),
     ];
 
     if (guestIds.length > 0) {
       const placeholders = guestIds.map(() => '?').join(',');
       statements.push(
+        this.db.prepare(`DELETE FROM event_guests WHERE member_id IN (${placeholders})`).bind(...guestIds),
         this.db.prepare(`DELETE FROM attendances WHERE member_id IN (${placeholders})`).bind(...guestIds),
         this.db.prepare(`DELETE FROM scan_attempts WHERE member_id IN (${placeholders})`).bind(...guestIds),
         this.db.prepare(`DELETE FROM qr_tokens WHERE member_id IN (${placeholders})`).bind(...guestIds),

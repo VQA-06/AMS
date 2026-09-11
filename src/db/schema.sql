@@ -100,6 +100,7 @@ CREATE INDEX IF NOT EXISTS idx_qr_tokens_jti ON qr_tokens(jti);
 CREATE INDEX IF NOT EXISTS idx_qr_tokens_expires ON qr_tokens(expires_at);
 CREATE INDEX IF NOT EXISTS idx_qr_tokens_member_scope ON qr_tokens(member_id, scope);
 CREATE INDEX IF NOT EXISTS idx_qr_tokens_validity ON qr_tokens(revoked_at, expires_at);
+CREATE INDEX IF NOT EXISTS idx_qr_tokens_created_by ON qr_tokens(created_by);
 
 -- =====================================
 -- ATTENDANCES
@@ -126,6 +127,8 @@ CREATE INDEX IF NOT EXISTS idx_attendance_member ON attendances(member_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_scanned_at ON attendances(scanned_at);
 CREATE INDEX IF NOT EXISTS idx_attendances_event_session ON attendances(event_id, session_type);
 CREATE INDEX IF NOT EXISTS idx_attendances_member_scanned ON attendances(member_id, scanned_at);
+CREATE INDEX IF NOT EXISTS idx_attendances_member_session ON attendances(member_id, session_type);
+CREATE INDEX IF NOT EXISTS idx_attendances_operator ON attendances(operator_id);
 CREATE INDEX IF NOT EXISTS idx_attendances_qr_token ON attendances(qr_token_id);
 
 -- =====================================
@@ -144,6 +147,7 @@ CREATE TABLE IF NOT EXISTS scan_attempts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_scan_attempts_event ON scan_attempts(event_id);
+CREATE INDEX IF NOT EXISTS idx_scan_attempts_member ON scan_attempts(member_id);
 CREATE INDEX IF NOT EXISTS idx_scan_attempts_created ON scan_attempts(created_at);
 CREATE INDEX IF NOT EXISTS idx_scan_attempts_jti ON scan_attempts(token_jti);
 
@@ -180,3 +184,20 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_admin ON audit_logs(admin_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+
+-- =====================================
+-- EVENT GUESTS (Multi-Event Guest Authorization)
+-- =====================================
+CREATE TABLE IF NOT EXISTS event_guests (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  source_event_id TEXT REFERENCES events(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(event_id, member_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_event_guests_event ON event_guests(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_guests_member ON event_guests(member_id);
+CREATE INDEX IF NOT EXISTS idx_event_guests_source ON event_guests(source_event_id);
+

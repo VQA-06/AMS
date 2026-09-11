@@ -319,8 +319,10 @@ export class MemberRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    // Delete associated tokens, attendances, scan attempts, and member record atomically
+    // Unlink admin accounts and delete associated tokens, attendances, scan attempts, event guests, and member record atomically
     await this.db.batch([
+      this.db.prepare('UPDATE admins SET member_id = NULL WHERE member_id = ?').bind(id),
+      this.db.prepare('DELETE FROM event_guests WHERE member_id = ?').bind(id),
       this.db.prepare('DELETE FROM attendances WHERE member_id = ?').bind(id),
       this.db.prepare('DELETE FROM scan_attempts WHERE member_id = ?').bind(id),
       this.db.prepare('DELETE FROM qr_tokens WHERE member_id = ?').bind(id),
@@ -353,6 +355,8 @@ export class MemberRepository {
       const slice = ids.slice(i, i + batchSize);
       const placeholders = slice.map(() => '?').join(',');
       await this.db.batch([
+        this.db.prepare(`UPDATE admins SET member_id = NULL WHERE member_id IN (${placeholders})`).bind(...slice),
+        this.db.prepare(`DELETE FROM event_guests WHERE member_id IN (${placeholders})`).bind(...slice),
         this.db.prepare(`DELETE FROM attendances WHERE member_id IN (${placeholders})`).bind(...slice),
         this.db.prepare(`DELETE FROM scan_attempts WHERE member_id IN (${placeholders})`).bind(...slice),
         this.db.prepare(`DELETE FROM qr_tokens WHERE member_id IN (${placeholders})`).bind(...slice),
@@ -416,20 +420,58 @@ export class MemberRepository {
   }
 
   /**
-   * Promotes multiple temporary guest members to official permanent members in a batch.
+   * Promotes multiple temporary guest members to official permanent members in an optimized batch.
    */
   async bulkPromoteGuests(
     ids: string[],
     division?: string
   ): Promise<{ count: number; promoted: Member[] }> {
-    const promoted: Member[] = [];
-    for (const id of ids) {
-      const res = await this.promoteGuest(id, { division });
-      if (res) {
-        promoted.push(res);
-      }
+    if (!ids || ids.length === 0) {
+      return { count: 0, promoted: [] };
     }
-    return { count: promoted.length, promoted };
+
+    const members = await this.findByIds(ids);
+    if (members.length === 0) {
+      return { count: 0, promoted: [] };
+    }
+
+    const statements: D1PreparedStatement[] = [];
+    for (const member of members) {
+      let newExternalId = `MBR-${Math.floor(100000 + Math.random() * 900000)}`;
+      let meta: Record<string, unknown> = {};
+      try {
+        meta = typeof member.metadata === 'string' ? JSON.parse(member.metadata) : member.metadata || {};
+      } catch {
+        meta = {};
+      }
+      delete meta.temporary;
+      delete meta.event_id;
+      meta.is_promoted = true;
+      meta.promoted_at = new Date().toISOString();
+
+      const memberDivision = division !== undefined ? division : member.division;
+      const groupName =
+        member.group_name && member.group_name.startsWith('Tamu:') ? 'Anggota' : member.group_name || 'Anggota';
+
+      statements.push(
+        this.db
+          .prepare(`
+            UPDATE members
+            SET external_id = ?,
+                group_name = ?,
+                division = ?,
+                status = 'active',
+                metadata = ?,
+                updated_at = datetime('now')
+            WHERE id = ?
+          `)
+          .bind(newExternalId, groupName, memberDivision, JSON.stringify(meta), member.id)
+      );
+    }
+
+    await this.db.batch(statements);
+    const updated = await this.findByIds(ids);
+    return { count: updated.length, promoted: updated };
   }
 
   /**

@@ -85,8 +85,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           type="button"
           disabled={loading}
           onClick={onClose}
-          className="absolute right-4 top-4 text-slate-400 hover:text-white p-1 rounded-lg transition-colors disabled:opacity-50"
-          aria-label="Tutup"
+          className="absolute right-3 top-3 text-slate-400 hover:text-white min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
+          aria-label="Tutup dialog"
         >
           <X className="w-4 h-4" />
         </button>
@@ -112,7 +112,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             type="button"
             disabled={loading}
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 min-h-[40px] rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-slate-400 focus:outline-none"
           >
             {cancelText}
           </button>
@@ -120,12 +120,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             type="button"
             disabled={loading}
             onClick={onConfirm}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2 ${style.btnBg} disabled:opacity-50`}
+            className={`px-5 py-2.5 min-h-[40px] rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2 ${style.btnBg} disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus:outline-none`}
           >
             {loading ? (
               <>
                 <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                <span>Memproses...</span>
+                <span>Memproses…</span>
               </>
             ) : (
               <span>{confirmText}</span>

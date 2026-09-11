@@ -119,7 +119,7 @@ export async function matchEdgeCache(rawUrl: string): Promise<Response | null> {
     try {
       const matched = await cfCache.match(rawUrl);
       if (matched) {
-        return matched.clone();
+        return new Response(matched.body, matched);
       }
     } catch {
       // Fallback cleanly

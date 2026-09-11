@@ -76,6 +76,7 @@ export interface QrToken {
   member_external_id?: string;
   member_division?: string | null;
   event_name?: string | null;
+  source_event_name?: string | null;
 }
 
 export interface Attendance {

@@ -5,13 +5,13 @@ import {
   Phone,
   Mail,
   Edit2,
-  UserX,
-  QrCode,
   Eye,
   Trash2,
 } from 'lucide-react';
 import { Member } from '@/shared/types';
 import { SkeletonMemberList } from '../ui/Skeleton';
+import { Badge } from '../ui/Badge';
+import { EmptyState } from '../ui/EmptyState';
 
 interface MemberListProps {
   members: Member[];
@@ -32,9 +32,9 @@ export const MemberList: React.FC<MemberListProps> = ({
   members,
   loading = false,
   onEdit,
-  onDeactivate,
+  onDeactivate: _onDeactivate,
   onDelete,
-  onGenerateQr,
+  onGenerateQr: _onGenerateQr,
   onViewPass,
   canManage = true,
   selectedIds,
@@ -49,13 +49,11 @@ export const MemberList: React.FC<MemberListProps> = ({
 
   if (members.length === 0) {
     return (
-      <div className="glass-panel rounded-3xl p-10 text-center border border-slate-800 animate-in fade-in duration-200">
-        <User className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-        <h4 className="text-base font-bold text-slate-300">Belum ada anggota yang terdaftar</h4>
-        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-          Silakan tambah anggota secara manual atau gunakan fitur Import CSV/JSON.
-        </p>
-      </div>
+      <EmptyState
+        icon={User}
+        title="Belum ada anggota yang terdaftar"
+        description="Silakan tambah anggota secara manual atau gunakan fitur Import CSV/JSON."
+      />
     );
   }
 
@@ -68,7 +66,7 @@ export const MemberList: React.FC<MemberListProps> = ({
           return (
             <div
               key={member.id}
-              className={`glass-panel-elevated rounded-2xl p-4 border transition-all space-y-3 ${
+              className={`content-auto glass-panel-elevated rounded-2xl p-4 border transition-all space-y-3 ${
                 isSelected ? 'border-sky-500/80 bg-sky-950/20 shadow-lg shadow-sky-500/10' : 'border-slate-800/80 shadow-md'
               }`}
             >
@@ -79,21 +77,20 @@ export const MemberList: React.FC<MemberListProps> = ({
                       type="checkbox"
                       checked={isSelected || false}
                       onChange={() => onToggleSelect(member.id)}
+                      aria-label={`Pilih ${member.name}`}
                       className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500 shrink-0"
                     />
                   )}
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-bold text-base text-white">{member.name}</h4>
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          member.status === 'active'
-                            ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50'
-                            : 'bg-rose-950/80 text-rose-400 border border-rose-800/50'
-                        }`}
+                      <Badge
+                        variant={member.status === 'active' ? 'emerald' : 'rose'}
+                        size="xs"
+                        dot
                       >
                         {member.status === 'active' ? 'Aktif' : 'Nonaktif'}
-                      </span>
+                      </Badge>
                     </div>
                     <p className="text-xs text-sky-400 font-mono mt-0.5">ID: {member.external_id}</p>
                   </div>
@@ -101,25 +98,31 @@ export const MemberList: React.FC<MemberListProps> = ({
 
                 <div className="flex items-center gap-1 shrink-0">
                   <button
+                    type="button"
                     onClick={() => onViewPass(member)}
                     title="Lihat & Unduh QR Universal"
-                    className="p-2 text-sky-400 hover:bg-sky-950/50 rounded-xl transition-colors font-semibold"
+                    aria-label={`Lihat Pass QR ${member.name}`}
+                    className="min-w-[40px] min-h-[40px] flex items-center justify-center text-sky-400 hover:text-sky-300 hover:bg-sky-950/50 rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                   {canManage && (
                     <>
                       <button
+                        type="button"
                         onClick={() => onEdit(member)}
                         title="Edit Anggota"
-                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-xl transition-colors"
+                        aria-label={`Edit ${member.name}`}
+                        className="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => onDelete(member.id, member.name)}
                         title="Hapus Anggota"
-                        className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-xl transition-colors"
+                        aria-label={`Hapus ${member.name}`}
+                        className="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus:outline-none"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -131,18 +134,18 @@ export const MemberList: React.FC<MemberListProps> = ({
               {/* Badges: Divisi & Group */}
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 {member.division ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-950/60 text-sky-300 border border-sky-800/40">
+                  <Badge variant="sky" size="xs">
                     <Building2 className="w-3 h-3 text-sky-400" />
                     <span>Divisi: {member.division}</span>
-                  </span>
+                  </Badge>
                 ) : (
                   <span className="text-[11px] text-slate-500 italic">Tanpa Divisi</span>
                 )}
 
                 {member.group_name && (
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-800 text-slate-300">
+                  <Badge variant="slate" size="xs">
                     {member.group_name}
-                  </span>
+                  </Badge>
                 )}
               </div>
 
@@ -181,6 +184,7 @@ export const MemberList: React.FC<MemberListProps> = ({
                     onChange={onToggleSelectAll}
                     className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
                     title={isAllSelected ? 'Batalkan pilih semua' : 'Pilih semua'}
+                    aria-label="Pilih semua anggota"
                   />
                 </th>
               )}
@@ -209,6 +213,7 @@ export const MemberList: React.FC<MemberListProps> = ({
                         type="checkbox"
                         checked={isSelected || false}
                         onChange={() => onToggleSelect(member.id)}
+                        aria-label={`Pilih ${member.name}`}
                         className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
                       />
                     </td>
@@ -221,65 +226,69 @@ export const MemberList: React.FC<MemberListProps> = ({
                   </td>
                   <td className="px-5 py-3.5">
                     {member.division ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-sky-950/60 text-sky-300 border border-sky-800/40">
+                      <Badge variant="sky" size="xs">
                         <Building2 className="w-3 h-3 text-sky-400 shrink-0" />
                         <span>{member.division}</span>
-                      </span>
+                      </Badge>
                     ) : (
                       <span className="text-slate-500 text-xs">-</span>
                     )}
                   </td>
-                <td className="px-5 py-3.5 text-xs text-slate-300">
-                  {member.group_name || '-'}
-                </td>
-                <td className="px-5 py-3.5 text-xs text-slate-400 space-y-0.5">
-                  {member.email && <div className="truncate max-w-[160px]">{member.email}</div>}
-                  {member.phone && <div className="text-slate-500">{member.phone}</div>}
-                  {!member.email && !member.phone && <span>-</span>}
-                </td>
-                <td className="px-5 py-3.5">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                      member.status === 'active'
-                        ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50'
-                        : 'bg-rose-950/80 text-rose-400 border border-rose-800/50'
-                    }`}
-                  >
-                    {member.status === 'active' ? 'Aktif' : 'Nonaktif'}
-                  </span>
-                </td>
-                <td className="px-5 py-3.5 text-right">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <button
-                      onClick={() => onViewPass(member)}
-                      title="Lihat & Unduh QR Universal"
-                      className="p-1.5 text-sky-400 hover:bg-sky-950/60 rounded-lg transition-colors"
+                  <td className="px-5 py-3.5 text-xs text-slate-300">
+                    {member.group_name || '-'}
+                  </td>
+                  <td className="px-5 py-3.5 text-xs text-slate-400 space-y-0.5">
+                    {member.email && <div className="truncate max-w-[160px]">{member.email}</div>}
+                    {member.phone && <div className="text-slate-500">{member.phone}</div>}
+                    {!member.email && !member.phone && <span>-</span>}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <Badge
+                      variant={member.status === 'active' ? 'emerald' : 'rose'}
+                      size="xs"
+                      dot
                     >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    {canManage && (
-                      <>
-                        <button
-                          onClick={() => onEdit(member)}
-                          title="Edit Anggota"
-                          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => onDelete(member.id, member.name)}
-                          title="Hapus Anggota"
-                          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
+                      {member.status === 'active' ? 'Aktif' : 'Nonaktif'}
+                    </Badge>
+                  </td>
+                  <td className="px-5 py-3.5 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onViewPass(member)}
+                        title="Lihat & Unduh QR Universal"
+                        aria-label={`Lihat Pass QR ${member.name}`}
+                        className="min-w-[36px] min-h-[36px] flex items-center justify-center text-sky-400 hover:text-sky-300 hover:bg-sky-950/60 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      {canManage && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => onEdit(member)}
+                            title="Edit Anggota"
+                            aria-label={`Edit ${member.name}`}
+                            className="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDelete(member.id, member.name)}
+                            title="Hapus Anggota"
+                            aria-label={`Hapus ${member.name}`}
+                            className="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus:outline-none"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

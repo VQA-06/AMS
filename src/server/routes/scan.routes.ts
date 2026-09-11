@@ -5,6 +5,7 @@ import { EventRepository } from '../repositories/event.repo';
 import { QrTokenRepository } from '../repositories/qr.repo';
 import { AttendanceRepository } from '../repositories/attendance.repo';
 import { AuditRepository } from '../repositories/audit.repo';
+import { EventGuestRepository } from '../repositories/event-guest.repo';
 import { authMiddleware, requireRole } from '../middleware/auth';
 import { invalidateEdgeCache } from '../lib/edge-cache';
 import { createRateLimiter } from '../middleware/rate-limit';
@@ -200,7 +201,11 @@ scanRoutes.post(
       );
     }
 
-    if (dbToken.max_uses !== null && dbToken.uses_count >= dbToken.max_uses) {
+    // For imported multi-event guests, token may have been used at the source event (uses_count >= 1).
+    // Duplicate check per event is enforced strictly by attendanceRepo.findByEventMemberSession below.
+    const isMultiEventGuest = decrypted.scope === 'event' && decrypted.eventId !== input.eventId;
+
+    if (!isMultiEventGuest && dbToken.max_uses !== null && dbToken.uses_count >= dbToken.max_uses) {
       await auditRepo.recordFailedScan({
         eventId: input.eventId,
         tokenJti: decrypted.jti,
@@ -288,24 +293,29 @@ scanRoutes.post(
     }
 
     if (decrypted.scope === 'event' && decrypted.eventId !== input.eventId) {
-      await auditRepo.recordFailedScan({
-        eventId: input.eventId,
-        tokenJti: decrypted.jti,
-        memberId: decrypted.memberId,
-        reason: ErrorCode.WRONG_EVENT,
-        stationId: input.stationId,
-        operatorId: admin?.id,
-      });
-      return c.json<ApiResponse>(
-        {
-          ok: false,
-          error: {
-            code: ErrorCode.WRONG_EVENT,
-            message: 'QR Code ini ditujukan untuk kegiatan yang berbeda.',
+      const eventGuestRepo = new EventGuestRepository(c.env.DB);
+      const isAuthorized = await eventGuestRepo.isGuestAuthorizedForEvent(input.eventId, decrypted.memberId);
+
+      if (!isAuthorized) {
+        await auditRepo.recordFailedScan({
+          eventId: input.eventId,
+          tokenJti: decrypted.jti,
+          memberId: decrypted.memberId,
+          reason: ErrorCode.WRONG_EVENT,
+          stationId: input.stationId,
+          operatorId: admin?.id,
+        });
+        return c.json<ApiResponse>(
+          {
+            ok: false,
+            error: {
+              code: ErrorCode.WRONG_EVENT,
+              message: 'QR Code ini ditujukan untuk kegiatan yang berbeda.',
+            },
           },
-        },
-        400
-      );
+          400
+        );
+      }
     }
 
     // 6. Check Duplicate Attendance

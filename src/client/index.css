@@ -101,15 +101,36 @@
   animation: toastProgressKeyframe 3.5s linear forwards;
 }
 
-/* High-Performance Lightweight Dark Cards (Zero GPU Blur Lag, No Overflow Clipping) */
+/* High-Performance Lightweight Dark Cards (Zero GPU Blur Lag, Cyber-Tactical Obsidian) */
 .glass-panel {
-  background: #0f172a;
-  border: 1px solid #1e293b;
+  background: #0b1329;
+  border: 1px solid rgba(51, 65, 85, 0.45);
 }
 
 .glass-panel-elevated {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: #0f172a;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  box-shadow: 0 10px 25px -5px rgba(2, 6, 23, 0.6), 0 8px 10px -6px rgba(2, 6, 23, 0.6);
+}
+
+.glass-panel-interactive {
+  background: #0b1329;
+  border: 1px solid rgba(51, 65, 85, 0.45);
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+.glass-panel-interactive:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: #0f172a;
+  transform: translateY(-1px);
+}
+
+/* WCAG 2.1 AA Compliant Focus Visible Ring */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid #0ea5e9;
+  outline-offset: 2px;
 }
 
 /* Safe area insets for modern mobile devices */
@@ -140,5 +161,28 @@
   background-size: 200% 100%;
   animation: skeletonShimmerKeyframe 1.6s ease-in-out infinite;
   will-change: background-position;
+}
+
+/* Accessibility: prefers-reduced-motion handler */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .scanner-laser,
+  .animate-toast-progress,
+  .skeleton-shimmer,
+  .animate-pulse,
+  .animate-spin {
+    animation: none !important;
+  }
+}
+
+/* Mobile List Rendering Optimization (CSS Virtualization) */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 120px;
 }
 

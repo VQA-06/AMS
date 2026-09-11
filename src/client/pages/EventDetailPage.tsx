@@ -22,6 +22,10 @@ import {
   X,
   Trash2,
   UserCheck,
+  User,
+  LayoutGrid,
+  Table as TableIcon,
+  History,
 } from 'lucide-react';
 import { Event, Attendance, QrToken, Member, SessionType } from '@/shared/types';
 import { fetchApi } from '../lib/api-client';
@@ -36,6 +40,9 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { AlertModal } from '../components/ui/AlertModal';
 import { ModalPortal } from '../components/ui/ModalPortal';
 import { BulkActionBar, BulkActionItem } from '@/client/components/ui/BulkActionBar';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
 
 interface EventDetailPageProps {
   eventId: string;
@@ -65,6 +72,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
   const [event, setEvent] = useState<Event | null>(initialEvent || null);
   const [activeTab, setActiveTab] = useState<'attendance' | 'qr' | 'overview'>('attendance');
+  const [mobileViewMode, setMobileViewMode] = useState<'card' | 'table'>('card');
   const [sessionFilter, setSessionFilter] = useState<'ALL' | SessionType>('ALL');
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [qrTokens, setQrTokens] = useState<QrToken[]>([]);
@@ -212,7 +220,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
-          await fetchApi(`/api/qr/${id}`, { method: 'DELETE' });
+          const eventParam = event ? `?event_id=${event.id}` : '';
+          await fetchApi(`/api/qr/${id}${eventParam}`, { method: 'DELETE' });
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           await loadData();
           setAlertModal({
@@ -407,8 +416,9 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       onConfirm: async () => {
         try {
           setConfirmLoading(true);
+          const eventParam = event ? `?event_id=${event.id}` : '';
           for (const id of ids) {
-            await fetchApi(`/api/qr/${id}`, { method: 'DELETE' });
+            await fetchApi(`/api/qr/${id}${eventParam}`, { method: 'DELETE' });
           }
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           setSelectedTokenIds(new Set());
@@ -862,15 +872,15 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
               </button>
             </div>
 
-            {/* Search, Division & Actions */}
-            <div className="glass-panel-elevated rounded-2xl p-3 sm:p-4 border border-slate-800 flex flex-col md:flex-row gap-3 items-center justify-between">
+            {/* Search, Division, Mobile View Switcher & Actions */}
+            <div className="glass-panel-elevated rounded-2xl p-3 sm:p-4 border border-slate-800/80 flex flex-col md:flex-row gap-3 items-center justify-between">
               <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari nama / ID peserta..."
-                  className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 w-full sm:w-60"
+                  placeholder="Cari nama / ID peserta…"
+                  className="px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-xs text-white placeholder-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 w-full sm:w-60"
                 />
 
                 {divisions.length > 0 && (
@@ -879,7 +889,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                     <select
                       value={selectedDivision}
                       onChange={(e) => setSelectedDivision(e.target.value)}
-                      className="bg-transparent text-slate-200 focus:outline-none text-xs"
+                      className="bg-transparent text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded text-xs"
+                      aria-label="Filter berdasarkan divisi"
                     >
                       <option value="" className="bg-slate-900">Semua Divisi</option>
                       {divisions.map((div, i) => (
@@ -890,144 +901,266 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                     </select>
                   </div>
                 )}
+
+                {/* Mobile View Toggle Switch */}
+                <div className="flex items-center gap-1 md:hidden bg-slate-900 border border-slate-700/80 rounded-xl p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setMobileViewMode('card')}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                      mobileViewMode === 'card'
+                        ? 'bg-sky-500 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    aria-label="Tampilan Kartu Tiket Presensi"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span>Kartu</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobileViewMode('table')}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                      mobileViewMode === 'table'
+                        ? 'bg-sky-500 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    aria-label="Tampilan Tabel Mini"
+                  >
+                    <TableIcon className="w-3.5 h-3.5" />
+                    <span>Tabel</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+              <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
                 {isManager && Boolean(event.allow_manual_attendance) && (
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<Plus className="w-4 h-4 text-sky-400" />}
                     onClick={() => setIsManualModalOpen(true)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl glass-panel text-slate-200 hover:text-white text-xs font-semibold"
                   >
-                    <Plus className="w-4 h-4 text-sky-400" />
-                    <span>Absen Manual</span>
-                  </button>
+                    Absen Manual
+                  </Button>
                 )}
 
                 {canExport && (
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<Download className="w-4 h-4 text-slate-400" />}
                     onClick={handleExportAttendanceCsv}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl glass-panel text-slate-200 hover:text-white text-xs font-semibold shadow"
                   >
-                    <Download className="w-4 h-4 text-slate-400" />
-                    <span>Export CSV</span>
-                  </button>
+                    Export CSV
+                  </Button>
                 )}
 
-                <button
+                <Button
+                  variant="secondary"
+                  size="icon"
                   onClick={loadData}
-                  className="p-2 glass-panel text-slate-400 hover:text-white rounded-xl transition-colors"
-                  title="Refresh"
+                  title="Segarkan Data"
+                  aria-label="Segarkan Data Presensi"
                 >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                </button>
+                  <RefreshCw className={`w-4 h-4 text-slate-300 ${loading ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
             </div>
           </div>
 
-          {/* Table */}
+          {/* Attendance Records: Hybrid Adaptive View */}
           {displayedAttendances.length === 0 ? (
-            <div className="glass-panel rounded-3xl p-10 text-center border border-slate-800">
-              <Users className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-slate-300">
-                {sessionFilter === 'ALL'
-                  ? 'Belum ada data kehadiran'
-                  : `Belum ada data untuk sesi ${sessionFilter}`}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Gunakan scanner QR untuk mulai memindai tiket anggota.
-              </p>
-            </div>
+            <EmptyState
+              icon={<Users className="w-8 h-8 text-sky-400" />}
+              title={
+                sessionFilter === 'ALL'
+                  ? 'Belum ada data presensi tercatat'
+                  : `Belum ada data untuk sesi ${sessionFilter}`
+              }
+              description="Pindai tiket QR peserta melalui kamera scanner atau lakukan input absen manual jika peserta berhalangan membawa tiket."
+              actionText={event.status === 'active' && onScanEvent ? 'Buka Scanner QR' : undefined}
+              actionIcon={<QrCode className="w-4 h-4" />}
+              onAction={event.status === 'active' && onScanEvent ? () => onScanEvent(event) : undefined}
+            />
           ) : (
-            <div className="glass-panel rounded-3xl overflow-hidden border border-slate-800 shadow-xl overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900/80 uppercase font-bold tracking-wider text-slate-400 border-b border-slate-800">
-                  <tr>
-                    {isManager && (
-                      <th className="w-10 px-4 py-3.5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={displayedAttendances.length > 0 && selectedAttendanceIds.size === displayedAttendances.length}
-                          onChange={() => handleToggleSelectAllAttendances(displayedAttendances)}
-                          className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                          title={selectedAttendanceIds.size === displayedAttendances.length ? 'Batalkan pilih semua' : 'Pilih semua'}
-                        />
-                      </th>
-                    )}
-                    <th className="px-5 py-3.5">ID Anggota</th>
-                    <th className="px-5 py-3.5">Nama</th>
-                    <th className="px-5 py-3.5">Divisi</th>
-                    <th className="px-5 py-3.5">Sesi</th>
-                    <th className="px-5 py-3.5">Waktu Scan</th>
-                    <th className="px-5 py-3.5">Operator</th>
-                    <th className="px-5 py-3.5">Metode</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {displayedAttendances.map((att) => {
-                    const sessionBadgeColor =
-                      att.session_type === 'CHECKIN'
-                        ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800/50'
-                        : att.session_type === 'CHECKOUT'
-                        ? 'bg-sky-950/80 text-sky-400 border-sky-800/50'
-                        : att.session_type === 'BREAK_OUT'
-                        ? 'bg-amber-950/80 text-amber-400 border-amber-800/50'
-                        : 'bg-purple-950/80 text-purple-400 border-purple-800/50';
+            <>
+              {/* Mobile Compact Pass Card View (Visible on < md when mobileViewMode === 'card') */}
+              <div className={`grid grid-cols-1 gap-3 ${mobileViewMode === 'card' ? 'md:hidden' : 'hidden'}`}>
+                {displayedAttendances.map((att) => {
+                  const isSelected = selectedAttendanceIds.has(att.id);
+                  const sessionVariant =
+                    att.session_type === 'CHECKIN'
+                      ? 'emerald'
+                      : att.session_type === 'CHECKOUT'
+                      ? 'sky'
+                      : att.session_type === 'BREAK_OUT'
+                      ? 'amber'
+                      : 'purple';
 
-                    const isSelected = selectedAttendanceIds.has(att.id);
-
-                    return (
-                      <tr
-                        key={att.id}
-                        className={`transition-colors ${
-                          isSelected ? 'bg-sky-950/20 hover:bg-sky-950/30' : 'hover:bg-slate-900/40'
-                        }`}
-                      >
-                        {isManager && (
-                          <td className="w-10 px-4 py-3.5 text-center">
+                  return (
+                    <div
+                      key={att.id}
+                      className={`glass-panel-elevated rounded-2xl p-4 border transition-all space-y-3 ${
+                        isSelected
+                          ? 'border-sky-500/80 bg-sky-950/20 shadow-lg shadow-sky-500/10'
+                          : 'border-slate-800/80 shadow-md'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          {isManager && (
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleToggleSelectAttendance(att.id)}
-                              className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
+                              className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500 shrink-0"
+                              aria-label={`Pilih kehadiran ${att.member_name}`}
                             />
-                          </td>
-                        )}
-                        <td className="px-5 py-3.5 font-bold text-sky-400">{att.member_external_id}</td>
-                        <td className="px-5 py-3.5 font-sans font-semibold text-white">{att.member_name}</td>
-                        <td className="px-5 py-3.5 font-sans">
-                          {att.member_division ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/40 text-[11px] font-semibold">
-                              <Building2 className="w-3 h-3 text-sky-400 shrink-0" />
-                              <span>{att.member_division}</span>
-                            </span>
-                          ) : (
-                            <span className="text-slate-500">-</span>
                           )}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${sessionBadgeColor}`}
-                          >
-                            {att.session_type}
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-heading font-bold text-base text-white">{att.member_name}</h4>
+                              <Badge variant={sessionVariant} size="sm">
+                                {att.session_type}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-sky-400 font-oxanium mt-0.5 font-semibold">
+                              ID: {att.member_external_id}
+                            </p>
+                          </div>
+                        </div>
+
+                        {att.is_manual ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950/80 text-amber-400 border border-amber-800/60 shrink-0 font-mono">
+                            Manual
                           </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-slate-400">
-                          {new Date(att.scanned_at).toLocaleString('id-ID')}
-                        </td>
-                        <td className="px-5 py-3.5 font-sans text-slate-300">{att.operator_name || '-'}</td>
-                        <td className="px-5 py-3.5 font-sans">
-                          {att.is_manual ? (
-                            <span className="text-amber-400 font-semibold">Manual</span>
-                          ) : (
-                            <span className="text-emerald-400 font-semibold">Scan QR</span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 shrink-0 font-mono">
+                            Scan QR
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/60 text-xs">
+                        {att.member_division && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-950/60 text-sky-300 border border-sky-800/40">
+                            <Building2 className="w-3 h-3 text-sky-400" />
+                            <span>{att.member_division}</span>
+                          </span>
+                        )}
+                        <span className="text-[11px] text-slate-300 font-mono flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{new Date(att.scanned_at).toLocaleString('id-ID')}</span>
+                        </span>
+                        {att.operator_name && (
+                          <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                            <User className="w-3 h-3 text-slate-500" />
+                            <span>Op: {att.operator_name}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Table View (Desktop default or Mobile when switched to table) */}
+              <div
+                className={`glass-panel rounded-3xl overflow-hidden border border-slate-800/80 shadow-xl overflow-x-auto ${
+                  mobileViewMode === 'table' ? 'block' : 'hidden md:block'
+                }`}
+              >
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-900/80 uppercase font-bold tracking-wider text-slate-400 border-b border-slate-800">
+                    <tr>
+                      {isManager && (
+                        <th className="w-10 px-4 py-3.5 text-center">
+                          <input
+                            type="checkbox"
+                            checked={displayedAttendances.length > 0 && selectedAttendanceIds.size === displayedAttendances.length}
+                            onChange={() => handleToggleSelectAllAttendances(displayedAttendances)}
+                            className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
+                            title={selectedAttendanceIds.size === displayedAttendances.length ? 'Batalkan pilih semua' : 'Pilih semua'}
+                            aria-label="Pilih semua baris kehadiran"
+                          />
+                        </th>
+                      )}
+                      <th className="px-5 py-3.5">ID Anggota</th>
+                      <th className="px-5 py-3.5">Nama</th>
+                      <th className="px-5 py-3.5">Divisi</th>
+                      <th className="px-5 py-3.5">Sesi</th>
+                      <th className="px-5 py-3.5">Waktu Scan</th>
+                      <th className="px-5 py-3.5">Operator</th>
+                      <th className="px-5 py-3.5">Metode</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-mono">
+                    {displayedAttendances.map((att) => {
+                      const sessionVariant =
+                        att.session_type === 'CHECKIN'
+                          ? 'emerald'
+                          : att.session_type === 'CHECKOUT'
+                          ? 'sky'
+                          : att.session_type === 'BREAK_OUT'
+                          ? 'amber'
+                          : 'purple';
+
+                      const isSelected = selectedAttendanceIds.has(att.id);
+
+                      return (
+                        <tr
+                          key={att.id}
+                          className={`transition-colors ${
+                            isSelected ? 'bg-sky-950/20 hover:bg-sky-950/30' : 'hover:bg-slate-900/40'
+                          }`}
+                        >
+                          {isManager && (
+                            <td className="w-10 px-4 py-3.5 text-center">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleToggleSelectAttendance(att.id)}
+                                className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
+                                aria-label={`Pilih ${att.member_name}`}
+                              />
+                            </td>
                           )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <td className="px-5 py-3.5 font-bold text-sky-400 font-oxanium">{att.member_external_id}</td>
+                          <td className="px-5 py-3.5 font-sans font-semibold text-white">{att.member_name}</td>
+                          <td className="px-5 py-3.5 font-sans">
+                            {att.member_division ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/40 text-[11px] font-semibold">
+                                <Building2 className="w-3 h-3 text-sky-400 shrink-0" />
+                                <span>{att.member_division}</span>
+                              </span>
+                            ) : (
+                              <span className="text-slate-500">-</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <Badge variant={sessionVariant} size="sm">
+                              {att.session_type}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-3.5 text-slate-300">
+                            {new Date(att.scanned_at).toLocaleString('id-ID')}
+                          </td>
+                          <td className="px-5 py-3.5 font-sans text-slate-300">{att.operator_name || '-'}</td>
+                          <td className="px-5 py-3.5 font-sans">
+                            {att.is_manual ? (
+                              <span className="text-amber-400 font-semibold font-mono text-xs">Manual</span>
+                            ) : (
+                              <span className="text-emerald-400 font-semibold font-mono text-xs">Scan QR</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
           {/* Contextual Floating Bulk Action Bar for Attendances */}
@@ -1168,7 +1301,17 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                           />
                         </td>
                         <td className="px-5 py-3.5 font-bold text-sky-400">{tok.member_external_id}</td>
-                        <td className="px-5 py-3.5 font-sans font-semibold text-white">{tok.member_name}</td>
+                        <td className="px-5 py-3.5 font-sans font-semibold text-white">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span>{tok.member_name}</span>
+                            {tok.note && tok.note.includes('Impor dari') && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-sans shadow-sm">
+                                <History className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                                <span>{tok.note}</span>
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-5 py-3.5 font-sans">
                           {tok.member_division ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/40 text-[11px] font-semibold">
@@ -1340,9 +1483,11 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
           loadData();
         }}
         event={event}
-        onSuccess={async () => {
+        onSuccess={async (options?: { shouldPrint?: boolean }) => {
           await loadData();
-          setIsPrintSheetOpen(true);
+          if (options?.shouldPrint !== false) {
+            setIsPrintSheetOpen(true);
+          }
         }}
       />
 
@@ -1558,6 +1703,33 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
         type={alertModal.type}
         onClose={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Contextual Sticky Action Bar for Mobile Viewport */}
+      <div className="md:hidden fixed bottom-[64px] left-0 right-0 p-3 bg-slate-950/95 backdrop-blur-md border-t border-slate-800/80 z-30 flex items-center justify-between gap-2 shadow-2xl pb-safe">
+        {event.status === 'active' && onScanEvent ? (
+          <Button
+            variant="cyber"
+            size="md"
+            icon={<QrCode className="w-4 h-4" />}
+            onClick={() => onScanEvent(event)}
+            className="flex-1 shadow-sky-500/25 text-xs font-bold"
+          >
+            Scan Presensi Sesi Ini
+          </Button>
+        ) : null}
+
+        {isManager && Boolean(event.allow_manual_attendance) && (
+          <Button
+            variant="secondary"
+            size="md"
+            icon={<Plus className="w-4 h-4 text-sky-400" />}
+            onClick={() => setIsManualModalOpen(true)}
+            className={event.status === 'active' && onScanEvent ? 'shrink-0 text-xs' : 'flex-1 text-xs'}
+          >
+            Absen Manual
+          </Button>
+        )}
+      </div>
     </div>
   );
 };

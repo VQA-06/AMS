@@ -37,8 +37,9 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
   const onScanRef = useRef(onScan);
   const activeRef = useRef<boolean>(active);
   const isMountedRef = useRef<boolean>(true);
+  const facingModeRef = useRef<'environment' | 'user'>(facingMode);
 
-  // Keep latest onScan and active props in refs
+  // Keep latest onScan, active, and facingMode props in refs
   useEffect(() => {
     onScanRef.current = onScan;
   }, [onScan]);
@@ -46,6 +47,10 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
   useEffect(() => {
     activeRef.current = active;
   }, [active]);
+
+  useEffect(() => {
+    facingModeRef.current = facingMode;
+  }, [facingMode]);
 
   // Unified Decoded Token Handler with 15s Same-Token Suppression
   const handleDecodedText = useCallback((decodedText: string) => {
@@ -133,9 +138,11 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
   }, []);
 
   const startDirectScanner = useCallback(
-    async (modeOrDeviceId: 'environment' | 'user' | string = facingMode) => {
+    async (modeOrDeviceId?: 'environment' | 'user' | string) => {
       if (isStartingRef.current) return;
       isStartingRef.current = true;
+
+      const targetMode = modeOrDeviceId || facingModeRef.current || 'environment';
 
       try {
         setCameraError(null);
@@ -158,17 +165,17 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
         }
 
         const isDeviceId =
-          typeof modeOrDeviceId === 'string' && modeOrDeviceId.length > 20;
+          typeof targetMode === 'string' && targetMode.length > 20;
 
         const videoConstraints: MediaTrackConstraints = isDeviceId
           ? {
-              deviceId: { exact: modeOrDeviceId },
+              deviceId: { exact: targetMode },
               width: { ideal: 1280, min: 640 },
               height: { ideal: 720, min: 480 },
               frameRate: { ideal: 30 },
             }
           : {
-              facingMode: { ideal: modeOrDeviceId || 'environment' },
+              facingMode: { ideal: targetMode || 'environment' },
               width: { ideal: 1280, min: 640 },
               height: { ideal: 720, min: 480 },
               frameRate: { ideal: 30 },
@@ -374,19 +381,26 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
         isStartingRef.current = false;
       }
     },
-    [facingMode, handleDecodedText, stopAllTracks]
+    [handleDecodedText]
   );
 
-  // Mount once and clean up completely on unmount
+  // Synchronize camera hardware lifecycle with `active` prop
+  useEffect(() => {
+    if (active) {
+      startDirectScanner();
+    } else {
+      stopAllTracks();
+    }
+  }, [active, startDirectScanner, stopAllTracks]);
+
+  // Clean up completely on unmount
   useEffect(() => {
     isMountedRef.current = true;
-    startDirectScanner('environment');
-
     return () => {
       isMountedRef.current = false;
       stopAllTracks();
     };
-  }, []);
+  }, [stopAllTracks]);
 
   const toggleTorch = async () => {
     if (!mediaStreamRef.current || !hasTorch) return;

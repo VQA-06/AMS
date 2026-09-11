@@ -44,15 +44,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       const data = await fetchApi<{ admin: Admin }>('/api/auth/me');
-      setAdmin(data.admin);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('ams_admin', JSON.stringify(data.admin));
+      if (data && data.admin) {
+        setAdmin(data.admin);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('ams_admin', JSON.stringify(data.admin));
+        }
       }
-    } catch {
-      setAdmin(null);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('ams_admin');
-        localStorage.removeItem('ams_session_token');
+    } catch (err: any) {
+      // Only clear credentials if backend explicitly returns 401 UNAUTHORIZED
+      const isUnauthorized =
+        err?.code === 'UNAUTHORIZED' ||
+        (err instanceof Error && (err.message.includes('401') || err.message.includes('Sesi login telah berakhir')));
+
+      if (isUnauthorized) {
+        setAdmin(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('ams_admin');
+          localStorage.removeItem('ams_session_token');
+        }
       }
     } finally {
       setLoading(false);

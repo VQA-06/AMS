@@ -28,6 +28,7 @@ import { PrintBadgeSheet, PrintableToken } from '../components/qr/PrintBadgeShee
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { AlertModal } from '../components/ui/AlertModal';
 import { ModalPortal } from '../components/ui/ModalPortal';
+import { Button } from '../components/ui/Button';
 
 import { BulkActionBar, BulkActionItem } from '@/client/components/ui/BulkActionBar';
 import { UserCheck } from 'lucide-react';
@@ -63,6 +64,15 @@ export const MembersPage: React.FC<MembersPageProps> = ({
 
   // Filters
   const [search, setSearch] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const [selectedDivision, setSelectedDivision] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
@@ -118,7 +128,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (search) params.set('search', search);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       if (selectedDivision) params.set('division', selectedDivision);
       if (selectedStatus && selectedStatus !== 'all') params.set('status', selectedStatus);
       params.set('limit', '100');
@@ -135,7 +145,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [search, selectedDivision, selectedStatus]);
+  }, [debouncedSearch, selectedDivision, selectedStatus]);
 
   const loadOptions = async (opts?: { forceRefresh?: boolean }) => {
     try {
@@ -526,74 +536,90 @@ export const MembersPage: React.FC<MembersPageProps> = ({
           )}
 
           {canGenerate && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Printer className="w-4 h-4 text-sky-400" />}
               onClick={handleOpenBulkPrint}
-              disabled={bulkLoading}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 glass-panel text-slate-200 hover:text-white font-bold text-xs rounded-xl transition-all shadow"
+              loading={bulkLoading}
               title="Cetak A4 / Simpan PDF QR Universal Seluruh Anggota Aktif"
             >
-              <Printer className="w-4 h-4 text-sky-400" />
-              <span>{bulkLoading ? 'Memuat...' : 'Cetak Semua Badge / PDF'}</span>
-            </button>
+              Cetak Semua Badge / PDF
+            </Button>
           )}
 
           {isManager && (
             <>
-              <button
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Plus className="w-4 h-4" />}
                 onClick={() => {
                   setEditingMember(null);
                   setIsFormOpen(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
               >
-                <Plus className="w-4 h-4" />
-                <span>Tambah Anggota</span>
-              </button>
+                Tambah Anggota
+              </Button>
 
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Upload className="w-4 h-4 text-sky-400" />}
                 onClick={() => setIsImportOpen(true)}
-                className="flex items-center gap-2 px-3.5 py-2.5 glass-panel text-slate-200 hover:text-white font-bold text-xs rounded-xl transition-all shadow"
               >
-                <Upload className="w-4 h-4 text-sky-400" />
-                <span>Impor CSV / Excel</span>
-              </button>
+                Impor CSV / Excel
+              </Button>
             </>
           )}
 
           {canExport && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Download className="w-4 h-4 text-emerald-400" />}
               onClick={handleExportCsv}
-              className="flex items-center gap-2 px-3.5 py-2.5 glass-panel text-slate-200 hover:text-white font-bold text-xs rounded-xl transition-all shadow"
               title="Ekspor CSV Anggota"
             >
-              <Download className="w-4 h-4 text-emerald-400" />
-              <span>Ekspor CSV</span>
-            </button>
+              Ekspor CSV
+            </Button>
           )}
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="glass-panel p-3 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-3 border border-slate-800">
-        <div className="relative w-full md:w-96">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+      <div className="glass-panel p-2.5 sm:p-3 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 border border-slate-800">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
-            placeholder="Cari berdasarkan nama, ID, email, atau no HP..."
+            aria-label="Cari anggota"
+            placeholder="Cari berdasarkan nama, NIM/ID, email, atau no HP..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-950/60 border border-slate-800/80 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
+            className="w-full bg-slate-950/80 border border-slate-800/80 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none focus:border-sky-500/50 transition-colors"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Hapus teks pencarian"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded-full"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto flex-wrap sm:flex-nowrap">
           {/* Division Filter */}
-          <div className="flex items-center gap-1.5 glass-panel px-3 py-1.5 rounded-xl text-xs w-full sm:w-auto">
-            <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <div className="relative min-w-[140px] flex-1 sm:flex-initial">
+            <Building2 className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <select
               value={selectedDivision}
               onChange={(e) => setSelectedDivision(e.target.value)}
-              className="bg-transparent text-slate-200 focus:outline-none text-xs w-full"
+              aria-label="Filter berdasarkan Divisi"
+              className="w-full pl-8 pr-7 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs font-medium text-slate-200 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none appearance-none cursor-pointer"
             >
               <option value="" className="bg-slate-900">Semua Divisi</option>
               {divisions.map((div) => (
@@ -602,25 +628,45 @@ export const MembersPage: React.FC<MembersPageProps> = ({
                 </option>
               ))}
             </select>
+            <Filter className="w-3 h-3 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
           {/* Status Filter */}
-          <div className="flex items-center gap-1.5 glass-panel px-3 py-1.5 rounded-xl text-xs w-full sm:w-auto">
-            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <div className="relative min-w-[140px] flex-1 sm:flex-initial">
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="bg-transparent text-slate-200 focus:outline-none text-xs w-full"
+              aria-label="Filter berdasarkan Status"
+              className="w-full px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs font-medium text-slate-200 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none appearance-none cursor-pointer"
             >
               <option value="all" className="bg-slate-900">Semua Status</option>
               <option value="active" className="bg-slate-900">Aktif</option>
               <option value="inactive" className="bg-slate-900">Nonaktif</option>
             </select>
+            <Filter className="w-3 h-3 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
+          {(search || selectedDivision || (selectedStatus && selectedStatus !== 'all')) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setSelectedDivision('');
+                setSelectedStatus('all');
+              }}
+              aria-label="Reset semua filter"
+              className="px-3 py-2 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300 hover:text-white hover:bg-rose-900/60 text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+          )}
+
           <button
+            type="button"
             onClick={() => loadMembers({ forceRefresh: true })}
-            className="p-2 glass-panel text-slate-400 hover:text-white rounded-xl transition-colors"
+            aria-label="Refresh daftar anggota"
+            className="min-w-[36px] min-h-[36px] px-2.5 py-2 flex items-center justify-center glass-panel text-slate-400 hover:text-white rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
             title="Refresh"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />

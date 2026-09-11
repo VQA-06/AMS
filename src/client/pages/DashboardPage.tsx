@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users,
   Building2,
@@ -19,8 +19,10 @@ import { Event, MemberActivitySummary } from '@/shared/types';
 import { TabKey } from '../components/layout/MobileShell';
 import { TopEventsChart, TopEventStatItem } from '../components/dashboard/TopEventsChart';
 import { MembersYearlyChart, YearlyMemberStat } from '../components/dashboard/MembersYearlyChart';
-
 import { SkeletonEventList, Skeleton } from '../components/ui/Skeleton';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
 
 interface DashboardPageProps {
   onNavigate: (tab: TabKey) => void;
@@ -55,15 +57,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         fetchCached<{ total: number; active: number; inactive: number }>('/api/members/stats/summary', {
           forceRefresh: force,
           ttlMs: 15_000,
-        }).catch(() => ({ total: 0, active: 0, inactive: 0 })),
+        }).catch(() => null),
         fetchCached<{ divisions: string[] }>('/api/members/divisions', {
           forceRefresh: force,
           ttlMs: 15_000,
-        }).catch(() => ({ divisions: [] })),
+        }).catch(() => null),
         fetchCached<{ events: Event[] }>('/api/agenda', {
           forceRefresh: force,
           ttlMs: 15_000,
-        }).catch(() => ({ events: [] })),
+        }).catch(() => null),
         fetchCached<{ summary: MemberActivitySummary }>('/api/attendances/recap/matrix', {
           forceRefresh: force,
           ttlMs: 15_000,
@@ -78,10 +80,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         }).catch(() => null),
       ]);
 
-      const rawEvents = eRes?.events || [];
-      setMemberStats(mSummary || { total: 0, active: 0, inactive: 0 });
-      setDivisions(dRes?.divisions || []);
-      setEvents(rawEvents);
+      const rawEvents = eRes?.events;
+      if (mSummary) {
+        setMemberStats(mSummary);
+      }
+      if (dRes?.divisions) {
+        setDivisions(dRes.divisions);
+      }
+      if (rawEvents) {
+        setEvents(rawEvents);
+      }
       if (tRes && tRes.summary) {
         setTrackerSummary(tRes.summary);
       }
@@ -89,7 +97,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       // Set Top Events with reliable dataset mapping
       if (topEvRes && topEvRes.events && topEvRes.events.length > 0) {
         setTopEvents(topEvRes.events);
-      } else if (rawEvents.length > 0) {
+      } else if (rawEvents && rawEvents.length > 0) {
         setTopEvents(
           rawEvents.map((ev) => ({
             id: ev.id,
@@ -133,99 +141,173 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   }, [loadData]);
 
   const activeEvents = events.filter((e) => e.status === 'active');
+  const totalAttendances = useMemo(() => {
+    return topEvents.reduce((acc, ev) => acc + (ev.attendance_count || 0), 0);
+  }, [topEvents]);
 
   return (
     <div className="space-y-6 animate-in fade-in pb-4">
-      {/* Top Banner */}
-      <div className="glass-panel-elevated rounded-3xl p-6 sm:p-8 border border-slate-800 relative overflow-hidden bg-slate-900 shadow-2xl">
-        <div className="relative z-10 max-w-xl space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-400 text-xs font-bold uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Computer Community • AMS Pass</span>
+      {/* Enterprise Operational Command Header */}
+      <div className="glass-panel-elevated rounded-2xl p-5 sm:p-6 border border-slate-800 relative overflow-hidden bg-slate-900/90 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1.5 max-w-xl">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Pusat Kendali Presensi • Computer Community</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold font-heading text-white">
-            Absensi Cepat & Akurat
+          <h2 className="text-xl sm:text-2xl font-bold font-heading text-white">
+            Ringkasan Operasional & Kehadiran
           </h2>
-          <p className="text-xs sm:text-sm text-slate-300">
-            Sistem absensi modern Computer Community berbasis tiket JWE AES-256-GCM. Anggota tidak perlu akun, panitia memvalidasi secara instan via scanner mobile.
+          <p className="text-xs text-slate-400">
+            {activeEvents.length > 0
+              ? `${activeEvents.length} kegiatan sedang aktif siap menerima validasi presensi QR tiket.`
+              : 'Semua kegiatan saat ini dalam status selesai atau draft. Buat kegiatan baru untuk memulai sesi absensi.'}
           </p>
+        </div>
 
-          <div className="flex flex-wrap gap-3 pt-4">
-            <button
-              onClick={() => onNavigate('scanner')}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-sky-500/30 active:scale-95 transition-all"
-            >
-              <QrCode className="w-4 h-4" />
-              <span>Buka Kamera Scanner</span>
-            </button>
-            <button
-              onClick={onOpenAddMember}
-              className="flex items-center gap-2 px-4 py-3 rounded-2xl glass-panel text-slate-200 hover:text-white text-xs sm:text-sm font-semibold transition-colors"
-            >
-              <Plus className="w-4 h-4 text-sky-400" />
-              <span>Tambah Anggota</span>
-            </button>
+        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+          <Button
+            variant="cyber"
+            size="md"
+            icon={<QrCode className="w-4 h-4" />}
+            onClick={() => onNavigate('scanner')}
+          >
+            Buka Scanner QR
+          </Button>
+          <Button
+            variant="secondary"
+            size="md"
+            icon={<Plus className="w-4 h-4 text-sky-400" />}
+            onClick={onOpenCreateEvent}
+          >
+            Buat Kegiatan
+          </Button>
+          <Button
+            variant="secondary"
+            size="md"
+            icon={<Users className="w-4 h-4 text-sky-400" />}
+            onClick={onOpenAddMember}
+          >
+            Tambah Anggota
+          </Button>
+        </div>
+      </div>
+
+      {/* Level 1: 4 Balanced Uniform KPI Metric Cards (No Cavernous Voids) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Card 1: Total Anggota */}
+        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 flex items-center justify-between shadow-xl">
+          <div className="min-w-0">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
+              Total Anggota
+            </span>
+            {loading ? (
+              <div className="h-8 w-16 rounded-lg bg-slate-800 animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl sm:text-3xl font-bold font-heading text-white mt-1">
+                {memberStats.total}
+              </p>
+            )}
+            <p className="text-[10px] text-emerald-400 mt-0.5 font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+              <span>{memberStats.active} aktif</span>
+            </p>
+          </div>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 ml-2">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+        </div>
+
+        {/* Card 2: Kegiatan Aktif */}
+        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 flex items-center justify-between shadow-xl">
+          <div className="min-w-0">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
+              Kegiatan Aktif
+            </span>
+            {loading ? (
+              <div className="h-8 w-16 rounded-lg bg-slate-800 animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl sm:text-3xl font-bold font-heading text-sky-400 mt-1">
+                {activeEvents.length}
+              </p>
+            )}
+            <p className="text-[10px] text-slate-400 mt-0.5 font-mono">{events.length} total agenda</p>
+          </div>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 ml-2">
+            <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+        </div>
+
+        {/* Card 3: Total Presensi Tercatat */}
+        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 flex items-center justify-between shadow-xl">
+          <div className="min-w-0">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
+              Total Presensi
+            </span>
+            {loading ? (
+              <div className="h-8 w-16 rounded-lg bg-slate-800 animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl sm:text-3xl font-bold font-heading text-white mt-1">
+                {totalAttendances}
+              </p>
+            )}
+            <p className="text-[10px] text-teal-400 mt-0.5 font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0" />
+              <span>Tervalidasi sistem</span>
+            </p>
+          </div>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center shrink-0 ml-2">
+            <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+        </div>
+
+        {/* Card 4: Divisi Terdata */}
+        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 flex items-center justify-between shadow-xl">
+          <div className="min-w-0">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
+              Divisi Terdata
+            </span>
+            {loading ? (
+              <div className="h-8 w-16 rounded-lg bg-slate-800 animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl sm:text-3xl font-bold font-heading text-white mt-1">
+                {divisions.length}
+              </p>
+            )}
+            <p className="text-[10px] text-indigo-400 mt-0.5 font-medium">Bidang divisi aktif</p>
+          </div>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 ml-2">
+            <Building2 className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
         </div>
       </div>
 
-      {/* Stats Metric Cards & Yearly Growth Chart */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Graphical Stat Anggota per Tahun (Cohort Growth with Active Default Filter) */}
-        <div className="md:col-span-2">
+      {/* Level 2: Dedicated Balanced Analytics Row (50% / 50% on Desktop) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 min-w-0">
+        <div className="min-w-0 h-full">
           <MembersYearlyChart
             stats={yearlyStats}
             totalActiveMembers={memberStats.active}
             totalAllMembers={memberStats.total}
             loading={loading}
+            onAddMember={onOpenAddMember}
           />
         </div>
 
-        {/* Total Divisi */}
-        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800 flex items-center justify-between shadow-xl">
-          <div>
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Divisi Terdata
-            </span>
-            <p className="text-2xl sm:text-3xl font-bold font-heading text-white mt-1">
-              {loading ? '...' : divisions.length}
-            </p>
-            <p className="text-[10px] text-sky-400 mt-0.5">Field Divisi Aktif</p>
-          </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
-            <Building2 className="w-5 h-5 sm:w-6 sm:h-6" />
-          </div>
-        </div>
-
-        {/* Kegiatan Aktif */}
-        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800 flex items-center justify-between shadow-xl">
-          <div>
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Kegiatan Aktif
-            </span>
-            <p className="text-2xl sm:text-3xl font-bold font-heading text-emerald-400 mt-1">
-              {loading ? '...' : activeEvents.length}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">{events.length} total event</p>
-          </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-            <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
-          </div>
+        <div className="min-w-0 h-full">
+          <TopEventsChart
+            events={topEvents}
+            loading={loading}
+            onOpenScanner={() => onNavigate('scanner')}
+            onSelectEvent={(eventId) => {
+              if (onNavigateToEvent) {
+                onNavigateToEvent(eventId);
+              } else {
+                onNavigate('events');
+              }
+            }}
+          />
         </div>
       </div>
-
-      {/* Interactive Top Events Attendance Graphical Chart */}
-      <TopEventsChart
-        events={topEvents}
-        loading={loading}
-        onSelectEvent={(eventId) => {
-          if (onNavigateToEvent) {
-            onNavigateToEvent(eventId);
-          } else {
-            onNavigate('events');
-          }
-        }}
-      />
 
       {/* Division Distribution & Active Events Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -234,8 +316,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="flex items-center justify-between">
             <h3 className="font-heading font-bold text-lg text-white">Kegiatan yang Sedang Aktif</h3>
             <button
+              type="button"
               onClick={() => onNavigate('events')}
-              className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1"
+              className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1 focus-visible:outline-none focus-visible:underline rounded"
             >
               <span>Semua Event</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
@@ -245,22 +328,21 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           {loading ? (
             <SkeletonEventList count={2} />
           ) : activeEvents.length === 0 ? (
-            <div className="glass-panel rounded-3xl p-8 text-center border border-slate-800 animate-in fade-in duration-200">
-              <Calendar className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-slate-300">Tidak ada kegiatan aktif saat ini</p>
-              <button
-                onClick={onOpenCreateEvent}
-                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 text-xs font-semibold"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Buat Kegiatan Baru</span>
-              </button>
-            </div>
+            <EmptyState
+              icon={<Calendar className="w-8 h-8 text-sky-400" />}
+              title="Tidak ada kegiatan aktif saat ini"
+              description="Silakan buat kegiatan baru untuk mulai memvalidasi presensi QR kode terenkripsi."
+              actionText="Buat Kegiatan Baru"
+              actionIcon={<Plus className="w-4 h-4" />}
+              onAction={onOpenCreateEvent}
+            />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {activeEvents.map((ev) => (
                 <div
                   key={ev.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     if (onNavigateToEvent) {
                       onNavigateToEvent(ev.id);
@@ -268,13 +350,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       onNavigate('events');
                     }
                   }}
-                  className="glass-panel-elevated rounded-2xl p-4 border border-slate-800 hover:border-sky-500/50 transition-all cursor-pointer space-y-3 group"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      if (onNavigateToEvent) {
+                        onNavigateToEvent(ev.id);
+                      } else {
+                        onNavigate('events');
+                      }
+                    }
+                  }}
+                  className="glass-panel-interactive rounded-2xl p-4 border border-slate-800/80 hover:border-sky-500/50 cursor-pointer space-y-3 group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950 text-emerald-400 border border-emerald-800">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <Badge variant="emerald" size="sm" pulse>
                       Aktif
-                    </span>
+                    </Badge>
                     <span className="text-[10px] font-mono text-slate-400">{ev.qr_policy}</span>
                   </div>
                   <div>
@@ -292,18 +383,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       <span>{ev.attendance_count || 0} Hadir</span>
                     </div>
 
-                    <button
-                      type="button"
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={<QrCode className="w-3.5 h-3.5" />}
                       onClick={(e) => {
                         e.stopPropagation();
                         onScanEvent?.(ev);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow-md shadow-sky-500/20 active:scale-95 transition-all shrink-0 select-none"
-                      title={`Buka Kamera Scanner untuk kegiatan ${ev.name}`}
+                      aria-label={`Buka kamera scanner untuk ${ev.name}`}
                     >
-                      <QrCode className="w-3.5 h-3.5" />
-                      <span>Scan QR</span>
-                    </button>
+                      Scan QR
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -312,7 +403,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         {/* Member Activity Tracker Summary Card */}
-        <div className="glass-panel-elevated rounded-3xl p-5 border border-slate-800 space-y-4">
+        <div className="glass-panel-elevated rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-3.5">
           <div className="flex items-center justify-between">
             <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
               <Activity className="w-4 h-4 text-emerald-400" />
@@ -327,30 +418,37 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </button>
           </div>
 
+          <div className="flex items-baseline justify-between pt-1">
+            <span className="text-xs text-slate-400">Rata-Rata Kehadiran</span>
+            <span className="font-heading font-black text-xl text-sky-400">
+              {trackerSummary?.average_attendance_rate ?? 0}%
+            </span>
+          </div>
+
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-800/40 space-y-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 block">
+            <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/40 space-y-0.5">
+              <span className="text-[9px] uppercase font-bold tracking-wider text-emerald-400 block">
                 Sangat Aktif
               </span>
-              <span className="text-xl font-heading font-black text-white">
+              <span className="text-lg font-heading font-black text-white">
                 {trackerSummary?.highly_active_count ?? 0}
               </span>
             </div>
 
-            <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-800/40 space-y-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 block">
+            <div className="p-2.5 rounded-xl bg-amber-950/40 border border-amber-800/40 space-y-0.5">
+              <span className="text-[9px] uppercase font-bold tracking-wider text-amber-400 block">
                 Cukup Aktif
               </span>
-              <span className="text-xl font-heading font-black text-white">
+              <span className="text-lg font-heading font-black text-white">
                 {trackerSummary?.active_count ?? 0}
               </span>
             </div>
 
-            <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-0.5">
+              <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 block">
                 Belum Aktif
               </span>
-              <span className="text-xl font-heading font-black text-white">
+              <span className="text-lg font-heading font-black text-white">
                 {trackerSummary?.inactive_count ?? 0}
               </span>
             </div>

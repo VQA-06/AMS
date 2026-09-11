@@ -9,128 +9,171 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
 ![PWA Ready](https://img.shields.io/badge/PWA-Ready-10B981?style=for-the-badge&logo=pwa)
-![Vitest](https://img.shields.io/badge/Vitest-2.1_(109/109_Pass)-6E9F18?style=for-the-badge&logo=vitest)
+![Vitest](https://img.shields.io/badge/Vitest-2.1_(120/120_Pass)-6E9F18?style=for-the-badge&logo=vitest)
 
 **Sistem Manajemen Presensi & Kegiatan Modern Berbasis QR Code Terenkripsi AES-256-GCM JWE untuk Komunitas Komputer (Computer Community).**
 
-[Fitur Utama](#-fitur-utama) • [PWA & Offline](#-progressive-web-app-pwa) • [Arsitektur](#-arsitektur--diagram-sistem) • [Panduan Instalasi](#-panduan-instalasi-lokal) • [Deployment Cloudflare](#-panduan-deployment-ke-cloudflare) • [Keamanan & Optimasi](#-audit-keamanan--optimasi-performa) • [Pengujian](#-pengujian-unit--integrasi)
+[Fitur Utama](#fitur-utama) • [Arsitektur Sistem](#arsitektur-sistem) • [Skema Database & Migrasi](#skema-database--migrasi) • [Panduan Instalasi Lokal](#panduan-instalasi-lokal) • [Panduan Deployment Cloudflare](#panduan-deployment-ke-cloudflare) • [Keamanan & Hardening](#keamanan--hardening-sistem) • [Pengujian](#pengujian-unit--integrasi)
 
 </div>
 
 ---
 
-## 📖 Tentang AMS
+## Tentang AMS
 
-**AMS (Attendance Management System)** adalah platform pencatatan dan pengelolaan presensi berskala *enterprise* yang dirancang khusus untuk memenuhi kebutuhan kegiatan, seminar, *workshop*, dan keanggotaan organisasi. Dibangun di atas infrastruktur serverless **Cloudflare Workers**, database **Cloudflare D1 (SQLite)**, dan **Cloudflare KV**, AMS memberikan kecepatan respon instan (*edge computing*), efisiensi biaya tinggi (*Zero Cold Start*), kemampuan instalasi mandiri (*Progressive Web App*), serta keamanan kriptografis standar industri.
+**AMS (Attendance Management System)** adalah platform pencatatan dan pengelolaan presensi berskala *enterprise* yang dirancang khusus untuk kegiatan, seminar, *workshop*, dan keanggotaan organisasi. Dibangun di atas infrastruktur serverless **Cloudflare Workers**, database **Cloudflare D1 (SQLite)**, dan **Cloudflare KV**, AMS memberikan kecepatan respon instan (*edge computing*), efisiensi biaya tinggi (*Zero Cold Start*), kemampuan instalasi mandiri (*Progressive Web App*), serta keamanan kriptografis standar industri.
 
 ---
 
-## 🚀 Fitur Utama
+## Fitur Utama
 
-### 1. 📱 Progressive Web App (PWA) & Offline Shell (Mobile First)
-- **Instalasi Multi-Platform:** Dapat dipasang langsung sebagai aplikasi mandiri (*Standalone App*) di Android (WebAPK), iOS Safari (Add to Home Screen), Windows, macOS, dan Linux.
+### 1. Impor Tamu Lintas Kegiatan & QR Reusability
+- **Penggunaan Ulang Kode QR (Zero Re-print):** Mengimpor peserta tamu dari kegiatan terdahulu ke kegiatan baru tanpa mengharuskan pencetakan ulang atau penerbitan kartu fisik baru. Kode QR fisik maupun digital yang dimiliki tamu dari kegiatan sebelumnya langsung aktif dan valid di pintu masuk kegiatan baru.
+- **Batasan 2 Sumber Lampau:** Secara otomatis menyaring dan hanya menampilkan maksimal 2 kegiatan sebelumnya yang memiliki data tiket tamu guna menjaga antarmuka tetap ringkas dan terfokus.
+- **Otorisasi Multi-Kegiatan (`event_guests`):** Menautkan otorisasi peserta tamu ke kegiatan target dengan integritas relasi `UNIQUE(event_id, member_id)`.
+- **Pemisahan Semantik Unlink vs Delete:** Penghapusan tiket tamu hasil impor pada kegiatan target hanya mencabut relasi otorisasi kegiatan tersebut tanpa merusak tiket asli di kegiatan sumber.
+- **Proteksi D1 Batch Chunking:** Pemrosesan batch impor dipecah per 50 statement untuk menjamin kepatuhan batas Cloudflare D1.
+
+### 2. Progressive Web App (PWA) & Offline Shell
+- **Instalasi Multi-Platform:** Berjalan sebagai aplikasi mandiri (*standalone*) di Android (WebAPK), iOS Safari (Add to Home Screen), Windows, macOS, dan Linux.
 - **Offline Shell & Caching Cerdas:** Service Worker (`sw.js`) mem-precache *App Shell*, aset statis, dan icon resolusi tinggi sehingga aplikasi tetap dapat dibuka dan dioperasikan meski tanpa koneksi internet.
-- **Adaptive Maskable Icons & App Shortcuts:** Mendukung adaptive icon Android 13+ serta 4 pintasan cepat (*Shortcuts*) dari launcher: *Scan QR*, *Daftar Anggota*, *Kegiatan*, dan *Keaktifan*.
-- **Auto-Update Notifier:** Otomatis mendeteksi rilis versi baru di edge Cloudflare Workers dan memunculkan notifikasi pembaruan instan (*one-click reload*).
+- **Sinkronisasi Lintas-Domain Otomatis:** Mutasi data pada domain kegiatan atau tiket otomatis memicu pembersihan cache `agenda`, `events`, `attendances`, `members`, `reports`, dan `qr` di CacheStorage.
+- **Adaptive Maskable Icons & App Shortcuts:** Mendukung adaptive icon Android 13+ serta 4 pintasan cepat dari launcher: *Scan QR*, *Daftar Anggota*, *Kegiatan*, dan *Keaktifan*.
+- **Auto-Update Notifier:** Otomatis mendeteksi rilis Service Worker baru (`ams-pwa-v1.1.2`) dan menyajikan notifikasi pembaruan instan (*one-click reload*).
 
-### 2. 📷 Pemindai QR Cepat & Multi-Station
+### 3. Pemindai QR Cepat & Multi-Station
 - Mendukung pemindaian langsung dari kamera *smartphone*, tablet, maupun webcam laptop.
-- Pengenalan QR instan dengan *audio chime*, *haptic feedback*, dan *live scan toast*.
+- Pengenalan QR instan dengan audio chime, haptic feedback, dan live scan toast.
 - Tipe sesi fleksibel: `CHECKIN`, `CHECKOUT`, `BREAK_OUT`, `BREAK_IN`, hingga akses panggung/sesi khusus.
 - Proteksi *double-scan* konkuren dan pencegahan pemalsuan tiket menggunakan dekripsi **AES-256-GCM JWE Compact Token**.
 
-### 3. ⚡ 2-Tier Caching & Skeleton Shimmer UI (Ultra Responsif)
-- **Tier 1: SWR Client-Side Memory Cache (0ms):** Memuat data tabel anggota, kegiatan, dan leaderboard keaktifan secara instan saat navigasi antar tab tanpa jeda *loading* berulang.
-- **Tier 2: Cloudflare Edge Cache API (`caches.default`):** Caching global di jaringan CDN Cloudflare dengan **Granular Tag Invalidation** (perubahan data kegiatan hanya menghapus cache `agenda`, tanpa mengganggu cache `members`).
-- **Skeleton Shimmer UI:** Placeholder visual kartu dan tabel yang elegan saat pemanggilan data awal guna mengeliminasi lonjakan visual (*layout shift / empty jump*).
+### 4. 3-Tier Caching & Realtime State Synchronization
+- **Tier 1 — SWR Client Memory Cache (0ms):** Memuat data tabel anggota, kegiatan, dan leaderboard keaktifan secara instan saat navigasi antar tab dengan mekanisme LRU eviction (maksimal 100 entri).
+- **Tier 2 — Service Worker CacheStorage API:** Caching aset statis dan API offline dengan pembersihan cerdas saat terjadi mutasi non-GET.
+- **Tier 3 — Cloudflare Edge Cache API (`caches.default`):** Caching global di jaringan CDN Cloudflare dengan granular tag invalidation (`agenda`, `attendance`, `members`).
+- **Realtime Cross-Tab Broadcast:** Menggunakan `BroadcastChannel('ams_cache_sync')` untuk menyinkronkan pembaruan cache ke seluruh tab browser yang terbuka secara real-time.
 
-### 3. 🎟️ Tiket Tamu Sementara & Promosi Instan (*Guest Promotion*)
-- Fasilitas penerbitan tiket tamu (*guest pass*) langsung di lokasi kegiatan tanpa repot mengisi formulir pendaftaran panjang.
-- **Promosi Anggota Resmi:** Mengubah tamu/peserta sementara menjadi anggota tetap dalam 1 kali klik dengan seluruh riwayat kehadiran kegiatan pertama langsung tersinkronisasi.
-- Opsi pembersihan otomatis (*cleanup guests*) untuk merapikan database setelah kegiatan selesai.
+### 5. Tiket Tamu Sementara & Promosi Instan
+- Fasilitas penerbitan tiket tamu (*guest pass*) langsung di lokasi kegiatan melalui mode *Daftar Nama* maupun *Nomor Tiket Batch*.
+- **Promosi Anggota Resmi:** Mengubah tamu sementara menjadi anggota tetap dalam 1 kali klik dengan seluruh riwayat kehadiran kegiatan pertama langsung tersinkronisasi.
+- **Pembersihan Otomatis:** Opsi *cleanup guest members* untuk merapikan database setelah kegiatan selesai tanpa meninggalkan baris yatim (*orphan rows*).
 
-### 4. 📊 Dashboard Analitik Interaktif
-- **Grafik Donut Interaktif SVG:** Visualisasi persentase dan peringkat **Top 10 Kegiatan** dengan peserta terbanyak lengkap dengan *inner scroll container*.
+### 6. Dashboard Analitik Interaktif
+- **Grafik Donut Interaktif SVG:** Visualisasi persentase dan peringkat Top 10 Kegiatan dengan peserta terbanyak lengkap dengan *inner scroll container*.
 - **Grafik Pertumbuhan Anggota Tahunan:** Visualisasi kohort angkatan anggota per tahun dengan filter dinamis anggota aktif/seluruhnya.
 - **Navigasi Langsung:** Klik pada bagian donat atau kartu peringkat untuk langsung membuka detail absensi kegiatan terkait.
 
-### 5. 🏆 Member Activity Tracker & Tiering Dinamis
+### 7. Member Activity Tracker & Tiering Dinamis
 - Melacak tingkat keaktifan anggota berdasarkan akumulasi presensi kegiatan:
-  - 🥇 **Platinum**: $\ge 8$ Kehadiran
-  - 🥈 **Gold**: $5 - 7$ Kehadiran
-  - 🥉 **Silver**: $2 - 4$ Kehadiran
-  - 🎖️ **Bronze**: $1$ Kehadiran
-  - ⚪ **Inactive / New**: $0$ Kehadiran
+  - Platinum: >= 8 Kehadiran
+  - Gold: 5 - 7 Kehadiran
+  - Silver: 2 - 4 Kehadiran
+  - Bronze: 1 Kehadiran
+  - Inactive / New: 0 Kehadiran
 - Seluruh tamu otomatis difilter keluar dari leaderboard keaktifan agar data peringkat tetap valid untuk anggota resmi.
 
-### 6. 👥 Manajemen Tim & Autentikasi Admin Berbasis QR
+### 8. Manajemen Tim & Autentikasi Admin Berbasis QR
 - Role-Based Access Control (RBAC): `owner`, `admin`, `operator`, dan `auditor`.
 - Pengangkatan admin langsung dari profil anggota aktif.
 - **Login Menggunakan QR Anggota:** Operator dapat login ke dashboard sistem hanya dengan memindai QR anggota pribadinya tanpa perlu mengetik password.
 
-### 7. ⚡ Multi-Select Batch Actions & Cetak ID Badge A4/PDF
+### 9. Multi-Select Batch Actions & Cetak ID Badge A4/PDF
 - Fitur multi-select pada seluruh daftar data (Anggota, Kegiatan, Absensi).
 - Floating Action Bar responsif: Cetak QR massal, ekspor CSV massal, promosi massal, dan hapus massal dalam sekali klik.
 - Layout pencetakan A4 ramah cetak untuk mencetak puluhan badge anggota sekaligus.
 
-### 8. 🌐 Ketahanan Jaringan & Offline Connectivity Status
-- Pendeteksi status internet (`navigator.onLine`) dengan floating banner real-time saat sinyal terputus.
-- Mekanisme **Timeout 15 Detik** dan **Auto-Retry** otomatis untuk mencegah antarmuka menggantung saat berada di area dengan sinyal lemah.
-
 ---
 
-## 🏛️ Arsitektur & Diagram Sistem
+## Arsitektur Sistem
 
 ```mermaid
 flowchart TD
-    subgraph Client["Client (React 18 + TailwindCSS)"]
-        UI["Mobile-First Cyberpunk UI (Skeleton Shimmer)"]
-        SWR["Client Memory SWR Cache (0ms HIT)"]
+    subgraph Client["Client (React 18 + TailwindCSS PWA)"]
+        UI["Mobile-First UI (Accessible A11y & Touch 44px)"]
+        SWR["Client Memory SWR Cache (0ms HIT + LRU)"]
+        SW["Service Worker (ams-pwa-v1.1.2 CacheStorage)"]
+        BC["BroadcastChannel (ams_cache_sync)"]
         Scanner["Camera QR Scanner (jsQR / html5-qrcode)"]
-        Offline["Offline & Network Status Monitor"]
     end
 
     subgraph Edge["Cloudflare Edge Network"]
-        Worker["Cloudflare Worker (Hono Server)"]
-        EdgeCache["Cloudflare Edge Cache API (caches.default)"]
+        Worker["Cloudflare Worker (Hono Serverless Framework)"]
+        EdgeCache["Cloudflare Edge Cache API (Granular Tag Invalidation)"]
         SecHeaders["Security Headers & Rate Limiter"]
         Crypto["WebCrypto Engine (AES-256-GCM JWE & PBKDF2)"]
     end
 
     subgraph Storage["Cloudflare Distributed Storage"]
-        D1[("Cloudflare D1 Database (SQLite + Indexes)")]
+        D1[("Cloudflare D1 Database (SQLite + Composite Indexes)")]
         KV[("Cloudflare KV (Session & Token Cache)")]
     end
 
     UI --> SWR
-    SWR -->|Cache Miss / Force Refresh| Worker
+    SWR -->|Cache Miss| SW
+    SW -->|Network Fetch| Worker
+    SWR -.->|Sync Event| BC
     Scanner -->|Encrypted JWE Token| Worker
     Worker --> EdgeCache
     Worker --> SecHeaders
     SecHeaders --> Crypto
-    Crypto -->|Atomic Batch Queries| D1
+    Crypto -->|Batch Statements <= 50| D1
     Worker -.->|Stateless HMAC / Cache| KV
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## Skema Database & Migrasi
 
-| Lapisan | Teknologi |
+Database menggunakan SQLite serverless Cloudflare D1 yang dikelola melalui migrasi terstruktur pada `src/db/migrations`:
+
+| File Migrasi | Deskripsi Skema |
 | :--- | :--- |
-| **Frontend Framework** | React 18, TypeScript, TailwindCSS, Lucide Icons |
-| **QR Scanning Engine** | jsQR, html5-qrcode, qrcode.react |
-| **Backend Runtime** | Cloudflare Workers (workerd engine), Hono Framework |
-| **Database** | Cloudflare D1 (Serverless SQLite dengan Composite Indexes) |
-| **Key-Value Storage** | Cloudflare KV Namespace |
-| **Caching Engine** | 2-Tier: Client SWR Memory Cache & Cloudflare Edge Cache API |
-| **Kriptografi** | WebCrypto API (AES-256-GCM JWE, HMAC-SHA256, PBKDF2 30k iters) |
-| **Validasi Skema** | Zod v3 |
-| **Testing** | Vitest (18 Test Suites, 103 Tests passed 100%) |
+| `0001_initial.sql` | Tabel inti: `members`, `events`, `qr_tokens`, `attendances`, `admins`, `audit_logs`. |
+| `0002_qr_tokens_note.sql` | Kolom catatan tambahan pada tiket QR untuk identifikasi sumber dan keperluan khusus. |
+| `0003_events_manual_attendance.sql` | Opsi absensi manual tanpa pemindaian kamera per kegiatan. |
+| `0004_event_status_cancelled.sql` | Status pembatalan kegiatan (`cancelled`). |
+| `0005_admins_table.sql` | Penataan relasi akun administrator dengan profil anggota. |
+| `0006_relational_integrity_and_indexes.sql` | Indeks komposit performa tinggi: `idx_attendances_member_session`, `idx_events_starts_at`, `idx_qr_tokens_member_event`. |
+| `0007_event_guests_multi_event.sql` | Tabel relasi `event_guests` untuk otorisasi tamu lintas kegiatan dan penggunaan ulang kode QR. |
 
 ---
 
-## 💻 Panduan Instalasi Lokal
+## Ringkasan API Endpoints
+
+### Autentikasi & Akun
+- `POST /api/auth/login` — Login admin via email & password (dilindungi rate limiting dan anti-timing attack).
+- `POST /api/auth/login-qr` — Login admin instan via pemindaian QR anggota.
+- `POST /api/auth/logout` — Pencabutan sesi admin.
+- `GET /api/auth/me` — Informasi profil admin yang sedang aktif.
+
+### Agenda & Kegiatan
+- `GET /api/agenda` — Daftar seluruh kegiatan (mendukung filter status, tanggal, dan pagination).
+- `POST /api/agenda` — Pembuatan kegiatan baru.
+- `GET /api/agenda/:id` — Detail kegiatan dan statistik presensi.
+- `PUT /api/agenda/:id` — Pembaruan konfigurasi kegiatan.
+- `DELETE /api/agenda/:id` — Penghapusan kegiatan dengan cascade cleanup manual pada D1.
+- `GET /api/agenda/:id/guest-sources` — Mengambil maksimal 2 kegiatan sebelumnya yang memiliki data peserta tamu.
+- `GET /api/agenda/:id/guest-candidates` — Daftar kandidat tamu dari kegiatan sumber terpilih beserta status import.
+- `POST /api/agenda/:id/guests/import` — Mengimpor tamu terpilih ke kegiatan baru tanpa menerbitkan ulang kode QR.
+- `POST /api/agenda/:id/guests/batch-names` — Pembuatan tiket tamu massal berdasarkan daftar nama.
+- `POST /api/agenda/:id/guests/batch` — Pembuatan tiket tamu massal berdasarkan nomor urut tiket.
+
+### Presensi & Pemindai QR
+- `POST /api/scan/verify` — Verifikasi dan pencatatan absensi dari pemindaian token QR terenkripsi.
+- `GET /api/attendances/event/:eventId` — Rekap presensi untuk kegiatan tertentu.
+- `POST /api/attendances/manual` — Pencatatan presensi manual oleh operator.
+- `DELETE /api/attendances/:id` — Pembatalan rekaman absensi.
+
+### Anggota & Tiket QR
+- `GET /api/members` — Pencarian dan daftar anggota dengan pagination.
+- `POST /api/members` — Pendaftaran anggota baru.
+- `GET /api/qr/event/:eventId` — Daftar tiket QR (langsung maupun impor) untuk kegiatan terkait.
+- `POST /api/qr/:id/revoke` — Pencabutan tiket QR.
+- `DELETE /api/qr/:id` — Penghapusan tiket QR langsung atau unlinking otorisasi tamu impor via parameter `?event_id=...`.
+
+---
+
+## Panduan Instalasi Lokal
 
 ### 1. Prasyarat
 - [Node.js](https://nodejs.org/) v18 atau lebih baru.
@@ -148,7 +191,7 @@ Salin template konfigurasi lokal:
 ```bash
 cp .dev.vars.example .dev.vars
 ```
-Isi file `.dev.vars` sesuai kebutuhan:
+Konfigurasikan variabel environment pada `.dev.vars`:
 ```ini
 ENVIRONMENT="development"
 QR_ACTIVE_KID="k1"
@@ -160,12 +203,12 @@ DEV_ADMIN_EMAIL="admin@absen.local"
 ```
 
 ### 4. Inisialisasi Database Lokal
-Terapkan migrasi skema database SQLite D1 secara lokal:
+Terapkan seluruh migrasi skema database SQLite D1 secara lokal:
 ```bash
-npm run db:init:local
+npm run db:migrate:local
 ```
 
-### 5. Jalankan Server Pengembangan
+### 5. Menjalankan Server Pengembangan
 Jalankan server backend Cloudflare Worker dan antarmuka client:
 ```bash
 # Terminal 1: Backend Worker (Port 8787)
@@ -174,79 +217,37 @@ npm run dev:worker
 # Terminal 2: Frontend Vite Client (Port 5173)
 npm run dev
 ```
-Buka browser di `http://localhost:5173`. Akun Default Owner akan otomatis diinisialisasi pada peluncuran pertama.
+Buka browser di `http://localhost:5173`. Akun Default Owner otomatis diinisialisasi pada peluncuran pertama.
 
 ---
 
-## ☁️ Panduan Deployment ke Cloudflare
+## Panduan Deployment ke Cloudflare
 
-### 1. Autentikasi Akun Cloudflare ke Wrangler
-
-#### A. Metode 1: Login Interaktif Web (OAuth) — Direkomendasikan untuk Komputer Lokal
-Jalankan perintah login di terminal:
+### 1. Autentikasi Cloudflare Wrangler
 ```bash
 npx wrangler login
 ```
-Browser akan terbuka otomatis. Klik tombol **Allow** untuk memberikan izin akses Wrangler ke akun Cloudflare Anda.
-
-#### B. Metode 2: API Token (Server / CI/CD)
-Jika Anda menggunakan server VPS atau GitHub Actions:
-1. Buka [Cloudflare Dashboard > My Profile > API Tokens](https://dash.cloudflare.com/profile/api-tokens).
-2. Klik **Create Token** > pilih template **Edit Cloudflare Workers**.
-3. Pastikan token memiliki izin minimal:
-   - `Account` > `Cloudflare D1` > `Edit`
-   - `Account` > `Workers KV Storage` > `Edit`
-   - `Account` > `Workers Scripts` > `Edit`
-   - `Account` > `Account Settings` > `Read`
-   - `User` > `Memberships` > `Read`
-4. Set variabel environment di terminal Anda:
-   ```bash
-   export CLOUDFLARE_API_TOKEN="api-token-rahasia-anda"
-   export CLOUDFLARE_ACCOUNT_ID="account-id-anda"
-   ```
-
-#### C. Verifikasi Status Autentikasi
+Verifikasi status autentikasi:
 ```bash
 npx wrangler whoami
 ```
 
----
-
-### 2. Membuat & Mengonfigurasi Cloudflare KV (Key-Value Storage)
-
-Cloudflare KV digunakan untuk penyimpanan cache sesi dan token verifikasi:
-
-#### A. Buat Namespace KV Produksi
-Jalankan perintah pembuatan namespace KV:
+### 2. Konfigurasi Cloudflare KV
 ```bash
 npx wrangler kv namespace create KV
 ```
-Output terminal akan menampilkan ID namespace Anda, contoh:
-```text
-🌀 Creating namespace with title "ams-KV"
-✨ Success! Add the following to your wrangler.toml:
-[[kv_namespaces]]
-binding = "KV"
-id = "56bb26c10eb04c74b9925b674935e3a6"
-```
-
-#### B. Perbarui File `wrangler.toml`
-Pastikan blok `[[kv_namespaces]]` pada `wrangler.toml` sudah sesuai dengan ID yang dihasilkan:
+Perbarui blok `[[kv_namespaces]]` pada `wrangler.toml` sesuai ID yang dihasilkan:
 ```toml
 [[kv_namespaces]]
 binding = "KV"
 id = "paste-kv-namespace-id-anda-disini"
 ```
 
----
-
-### 3. Membuat & Mengonfigurasi Cloudflare D1 Database
-
-#### A. Buat Database D1
+### 3. Konfigurasi Database Cloudflare D1
 ```bash
 npx wrangler d1 create ams-db
 ```
-Catat output `database_id` yang diberikan, lalu perbarui pada file `wrangler.toml`:
+Perbarui konfigurasi D1 di `wrangler.toml`:
 ```toml
 [[d1_databases]]
 binding = "DB"
@@ -255,93 +256,70 @@ database_id = "paste-database-id-anda-disini"
 migrations_dir = "src/db/migrations"
 ```
 
-#### B. Terapkan Migrasi Skema ke Database Remote
-Jalankan migrasi seluruh tabel dan indeks ke database Cloudflare D1 produksi:
+Terapkan seluruh migrasi ke database remote:
 ```bash
 npm run db:migrate:remote
 ```
-*(Atau gunakan perintah langsung: `npx wrangler d1 migrations apply ams-db --remote`)*
 
----
-
-### 4. Konfigurasi Kunci Rahasia Produksi (Secrets) & Variabel
-
-#### A. Menyiapkan Kunci Enkripsi JWE (32-Byte Base64)
-Buat kunci kriptografis aman menggunakan OpenSSL:
+### 4. Konfigurasi Secrets Kriptografis Produksi
 ```bash
-openssl rand -base64 32
-```
-*Salin string 32-byte base64 yang dihasilkan.*
-
-#### B. Masukkan Kunci Rahasia ke Cloudflare Workers Secrets
-```bash
-# 1. Kunci Enkripsi JWE AES-256-GCM untuk Tiket QR
+# Kunci Enkripsi JWE AES-256-GCM (32-byte base64 string)
 npx wrangler secret put QR_KEY_K1
 
-# 2. Kunci Secret Token Sesi Admin HMAC-SHA256 (Minimal 32 Karakter)
+# Kunci Secret Token Sesi Admin HMAC-SHA256 (Minimal 32 Karakter)
 npx wrangler secret put SESSION_SECRET
 ```
 
-#### C. Konfigurasi Variabel Publik di `wrangler.toml`
-Pastikan variabel publik di bawah `[vars]` pada `wrangler.toml` telah dikonfigurasi terpusat:
-```toml
-[vars]
-ENVIRONMENT = "production"
-QR_ACTIVE_KID = "k1"
-APP_DOMAIN = "ams.ccunbaja.web.id"
-APP_ISSUER = "https://ams.ccunbaja.web.id"
-APP_AUDIENCE = "ams"
-ALLOWED_ORIGINS = "https://ams.ccunbaja.web.id,https://ams.humanone.workers.dev"
-TRUSTED_ISSUERS = "https://ams.ccunbaja.web.id,https://ams.humanone.workers.dev,https://absen.local"
-
-# Custom Domain Routing
-routes = [
-  { pattern = "ams.ccunbaja.web.id", custom_domain = true }
-]
-```
-
----
-
-### 5. Build & Deploy dalam Satu Perintah
-
-Jalankan perintah deployment terintegrasi:
+### 5. Kompilasi & Deployment
+Lakukan deployment terintegrasi (kompilasi frontend Vite dan publikasi Cloudflare Worker):
 ```bash
 npm run deploy
 ```
-*Perintah di atas akan otomatis mengompilasi aset frontend Vite (`npm run build`), memetakan routing SPA (`not_found_handling = "single-page-application"`), dan mempublikasikan Worker ke Cloudflare global network.*
 
-Aplikasi Anda akan langsung dapat diakses melalui custom domain resmi: **`https://ams.ccunbaja.web.id`**.
+Untuk menguji konfigurasi tanpa mempublikasikan:
+```bash
+npx wrangler deploy --dry-run
+```
 
----
-
-## 🔒 Audit Keamanan & Optimasi Performa
-
-AMS telah melalui audit menyeluruh dan hardening tingkat lanjut:
-
-1. **Perlindungan CSV Formula Injection (CWE-1236):** Sanitasi otomatis (`sanitizeCsvCell`) pada fitur ekspor absensi dan data anggota guna mengamankan karakter pemicu formula (`=`, `+`, `-`, `@`, `\t`, `\r`) saat file dibuka di Microsoft Excel / Google Sheets.
-2. **Security Headers Lengkap:** Injeksi `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, dan `Permissions-Policy: camera=(self)`.
-3. **Anti-Timing Attack:** Menggunakan perbandingan string konstan (*constant-time comparison*) `timingSafeEqualStrings` untuk verifikasi hash password dan token.
-4. **Anti-Brute Force Rate Limiter:** Pembatasan percobaan login (10 percobaan gagal / 15 menit) berbasis *in-memory sliding window* tanpa membebani kuota D1/KV.
-5. **Mitigasi Limit Free Tier Cloudflare:**
-   - Stateless HMAC-SHA256 session token (**0 KV Writes** harian).
-   - 10 Composite Indexes pada D1 untuk mengeliminasi *Full Table Scans* (aman dari batas 5.000.000 Rows Read/hari).
-   - Utility `chunkArray` mencegah pelanggaran batas maksimal 100 bound parameters per query pada D1.
-   - Optimasi CPU PBKDF2 ke 30.000 iterasi (~2.5ms CPU time, aman dari limit 10ms CPU Workers).
-6. **Zero Cross-Request I/O Overhead:** Edge cache menyimpan payload serializable murni, mencegah error *stream lock* pada runtime V8 Cloudflare Workers.
+Aplikasi aktif dan dapat diakses melalui custom domain resmi: `https://ams.ccunbaja.web.id`.
 
 ---
 
-## 🧪 Pengujian Unit & Integrasi
+## Keamanan & Hardening Sistem
+
+1. **Enkripsi JWE AES-256-GCM:** Tiket QR dienkripsi menggunakan WebCrypto API standar industri dengan rotasi Key ID (`kid: k1`). Payload tidak dapat dimanipulasi atau dibaca tanpa kunci privat server.
+2. **Perlindungan CSV Formula Injection (CWE-1236):** Sanitasi otomatis (`sanitizeCsvCell`) pada seluruh fitur ekspor guna menetralkan karakter berbahaya (`=`, `+`, `-`, `@`, `\t`, `\r`) saat dibuka di Microsoft Excel atau Google Sheets.
+3. **Security Headers Lengkap:** Injeksi otomatis `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, dan `Permissions-Policy: camera=(self)`.
+4. **Anti-Timing Attack:** Menggunakan perbandingan string waktu konstan (`timingSafeEqualStrings`) untuk seluruh verifikasi hash kata sandi dan token otentikasi.
+5. **Anti-Brute Force Rate Limiting:** Pembatasan percobaan login berbasis *in-memory sliding window* tanpa membebani kuota I/O database.
+6. **Integritas Relasional Manual Cascade D1:** Karena Cloudflare D1 menonaktifkan foreign key cascade secara default antar request worker, seluruh operasi penghapusan kegiatan atau anggota mengeksekusi batch statement pembersihan bertingkat untuk mencegah baris yatim (*orphan rows*).
+7. **Zero Cross-Request I/O Overhead:** Edge cache menyimpan payload serializable murni, mencegah error *stream lock* pada runtime V8 Cloudflare Workers.
+
+---
+
+## Pengujian Unit & Integrasi
 
 Seluruh fungsi kriptografi, repository database, skema validasi, caching engine, dan antarmuka routing diuji menggunakan **Vitest**:
 
 ```bash
 npm test
 ```
-Hasil pengujian: **18 Test Suites (103/103 Tests Passed 100%)**.
+
+Hasil pengujian otomatis:
+```text
+ Test Files  20 passed (20)
+      Tests  120 passed (120)
+   Duration  1.88s
+```
+
+Kompilasi statis TypeScript:
+```bash
+npx tsc --noEmit
+```
+Hasil: `Exit code 0` (0 error tipe data di seluruh backend dan frontend).
 
 ---
 
-## 📜 Lisensi & Kontribusi
+## Lisensi & Kontribusi
 
 Dikembangkan dengan bangga untuk **Computer Community**. Dilisensikan di bawah [MIT License](LICENSE).

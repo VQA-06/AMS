@@ -77,8 +77,8 @@ export const AlertModal: React.FC<AlertModalProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
-          aria-label="Tutup"
+          className="absolute right-3 top-3 text-slate-400 hover:text-white min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
+          aria-label="Tutup dialog"
         >
           <X className="w-4 h-4" />
         </button>
@@ -103,11 +103,11 @@ export const AlertModal: React.FC<AlertModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className={`w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${style.btnBg}`}
+            className={`w-full sm:w-auto px-6 py-2.5 min-h-[40px] rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${style.btnBg} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus:outline-none`}
           >
             <span>{buttonText}</span>
           </button>
-          </div>
+        </div>
         </div>
       </div>
     </ModalPortal>

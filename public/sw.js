@@ -3,7 +3,7 @@
  * Mobile-First Offline Shell & Smart Caching Engine
  */
 
-const CACHE_NAME = 'ams-pwa-v1.1.0';
+const CACHE_NAME = 'ams-pwa-v1.1.2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -36,6 +36,26 @@ async function purgeApiCache(pattern) {
     await Promise.all(deletions);
   } catch (err) {
     console.warn('[AMS SW] Failed to purge API cache:', err);
+  }
+}
+
+/**
+ * Prune API cache entries to prevent unbounded CacheStorage disk growth on mobile
+ */
+async function pruneApiCache(maxEntries = 50) {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    const requests = await cache.keys();
+    const apiRequests = requests.filter((req) => {
+      const u = new URL(req.url);
+      return u.pathname.startsWith('/api/');
+    });
+    if (apiRequests.length > maxEntries) {
+      const excess = apiRequests.slice(0, apiRequests.length - maxEntries);
+      await Promise.all(excess.map((req) => cache.delete(req)));
+    }
+  } catch {
+    // ignore
   }
 }
 
@@ -83,12 +103,30 @@ self.addEventListener('fetch', (event) => {
         fetch(request).then(async (response) => {
           if (response.ok) {
             // Automatically determine domain to invalidate in CacheStorage
-            if (url.pathname.includes('/agenda') || url.pathname.includes('/events') || url.pathname.includes('/programs') || url.pathname.includes('/activities')) {
-              await Promise.all([purgeApiCache('agenda'), purgeApiCache('events'), purgeApiCache('attendances'), purgeApiCache('reports')]);
+            if (url.pathname.includes('/agenda') || url.pathname.includes('/events') || url.pathname.includes('/programs') || url.pathname.includes('/activities') || url.pathname.includes('/guests') || url.pathname.includes('/qr')) {
+              await Promise.all([
+                purgeApiCache('agenda'),
+                purgeApiCache('events'),
+                purgeApiCache('attendances'),
+                purgeApiCache('members'),
+                purgeApiCache('reports'),
+                purgeApiCache('qr')
+              ]);
             } else if (url.pathname.includes('/members')) {
-              await Promise.all([purgeApiCache('members'), purgeApiCache('attendances'), purgeApiCache('stats')]);
+              await Promise.all([
+                purgeApiCache('members'),
+                purgeApiCache('attendances'),
+                purgeApiCache('agenda'),
+                purgeApiCache('events'),
+                purgeApiCache('stats')
+              ]);
             } else if (url.pathname.includes('/attendances') || url.pathname.includes('/scan')) {
-              await Promise.all([purgeApiCache('attendances'), purgeApiCache('agenda'), purgeApiCache('members')]);
+              await Promise.all([
+                purgeApiCache('attendances'),
+                purgeApiCache('agenda'),
+                purgeApiCache('events'),
+                purgeApiCache('members')
+              ]);
             } else {
               await purgeApiCache();
             }
@@ -109,12 +147,35 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
-        .then((networkRes) => {
+        .then(async (networkRes) => {
+          // If server returns 304 Not Modified, retrieve the full cached 200 response from CacheStorage
+          if (networkRes.status === 304) {
+            const cached = await caches.match(request);
+            if (cached) {
+              return cached;
+            }
+          }
+
+          // If server returns 5xx error, fall back to cached copy if available (stale-if-error)
+          if (!networkRes.ok && networkRes.status >= 500) {
+            const cached = await caches.match(request);
+            if (cached) {
+              const headers = new Headers(cached.headers);
+              headers.set('X-AMS-Fallback', 'stale-on-error');
+              return new Response(cached.body, {
+                status: cached.status,
+                statusText: cached.statusText,
+                headers,
+              });
+            }
+          }
+
           // If response is valid 200, cache a snapshot in background ONLY for true offline fallback
           if (networkRes.ok && request.method === 'GET') {
             const resClone = networkRes.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, resClone);
+              pruneApiCache(50);
             });
           }
           return networkRes;
@@ -181,7 +242,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 5. Static Assets (JS, CSS, Images, WebP, Fonts): Stale-While-Revalidate / Cache-First
+  // 5. Static Assets (JS, CSS, Images, WebP, Fonts):
+  // For Vite hashed assets in /assets/ (*.js, *.css), utilize Cache-First for speed since URLs are immutable
+  const isHashedAsset = url.pathname.startsWith('/assets/') && (url.pathname.endsWith('.js') || url.pathname.endsWith('.css'));
+  if (isHashedAsset) {
+    event.respondWith(
+      caches.match(request).then((cachedRes) => {
+        if (cachedRes) {
+          return cachedRes;
+        }
+        return fetch(request).then((networkRes) => {
+          if (networkRes && networkRes.status === 200) {
+            const resClone = networkRes.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, resClone);
+            });
+          }
+          return networkRes;
+        });
+      })
+    );
+    return;
+  }
+
+  // Otherwise Stale-While-Revalidate for images, icons, fonts, etc.
   event.respondWith(
     caches.match(request).then((cachedRes) => {
       const fetchPromise = fetch(request)

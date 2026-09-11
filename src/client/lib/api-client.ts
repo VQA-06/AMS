@@ -84,9 +84,13 @@ async function executeFetch<T>(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    // If external signal is provided, forward its abort
+    const onExternalAbort = () => controller.abort();
     if (fetchOptions.signal) {
-      fetchOptions.signal.addEventListener('abort', () => controller.abort());
+      if (fetchOptions.signal.aborted) {
+        controller.abort();
+      } else {
+        fetchOptions.signal.addEventListener('abort', onExternalAbort, { once: true });
+      }
     }
 
     try {
@@ -109,8 +113,6 @@ async function executeFetch<T>(
         signal: controller.signal,
         cache: 'no-cache', // Bypass browser disk cache for dynamic API queries
       });
-
-      clearTimeout(timeoutId);
 
       // Handle 304 Not Modified cleanly
       if (response.status === 304) {
@@ -175,8 +177,6 @@ async function executeFetch<T>(
 
       return (json.data ?? json) as T;
     } catch (err: unknown) {
-      clearTimeout(timeoutId);
-
       if (err instanceof ApiError) {
         throw err;
       }
@@ -230,6 +230,11 @@ async function executeFetch<T>(
         err instanceof Error ? err.message : 'Terjadi gangguan pada permintaan jaringan.',
         'NETWORK_ERROR'
       );
+    } finally {
+      clearTimeout(timeoutId);
+      if (fetchOptions.signal) {
+        fetchOptions.signal.removeEventListener('abort', onExternalAbort);
+      }
     }
   }
 

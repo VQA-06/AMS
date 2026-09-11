@@ -4,11 +4,13 @@ import { QrTokenRepository } from '../repositories/qr.repo';
 import { MemberRepository } from '../repositories/member.repo';
 import { EventRepository } from '../repositories/event.repo';
 import { AuditRepository } from '../repositories/audit.repo';
+import { EventGuestRepository } from '../repositories/event-guest.repo';
 import { authMiddleware, requireRole } from '../middleware/auth';
 import { qrGenerateSchema } from '@/shared/schemas/qr.schema';
 import { generateQrToken } from '../crypto/qr-crypto';
 import { ApiResponse, QrToken } from '@/shared/types';
 import { ErrorCode } from '@/shared/constants/error-codes';
+import { invalidateEdgeCache } from '../lib/edge-cache';
 
 const qrRoutes = new Hono<{ Bindings: Env }>();
 
@@ -166,14 +168,52 @@ qrRoutes.get('/event/:id', authMiddleware, async (c) => {
   }
 
   const repo = new QrTokenRepository(c.env.DB);
-  const tokens = await repo.listByEvent(eventId);
+  const eventGuestRepo = new EventGuestRepository(c.env.DB);
+
+  const [directTokens, importedGuestRecords] = await Promise.all([
+    repo.listByEvent(eventId),
+    eventGuestRepo.getImportedGuestsForEvent(eventId),
+  ]);
+
+  const importedTokens: QrToken[] = importedGuestRecords.map((rec) => ({
+    id: rec.token_id,
+    jti: rec.token_jti,
+    member_id: rec.member_id,
+    event_id: rec.event_id,
+    scope: rec.token_scope,
+    valid_from: rec.token_valid_from,
+    expires_at: rec.token_expires_at,
+    max_uses: rec.max_uses,
+    uses_count: rec.uses_count,
+    revoked_at: rec.revoked_at,
+    created_by: null,
+    note: rec.source_event_name ? `Impor dari: ${rec.source_event_name}` : 'Impor dari Kegiatan Lalu',
+    created_at: rec.token_valid_from,
+    member_name: rec.member_name,
+    member_external_id: rec.member_external_id,
+    member_division: rec.member_division,
+    token_event_id: rec.token_event_id,
+  } as any));
+
+  // Deduplicate by member_id (direct tokens take precedence)
+  const memberTokenMap = new Map<string, QrToken>();
+  for (const t of directTokens) {
+    memberTokenMap.set(t.member_id, t);
+  }
+  for (const t of importedTokens) {
+    if (!memberTokenMap.has(t.member_id)) {
+      memberTokenMap.set(t.member_id, t);
+    }
+  }
+
+  const allTokens = Array.from(memberTokenMap.values());
 
   const kid = c.env.QR_ACTIVE_KID || 'k1';
   const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
   const audience = c.env.APP_AUDIENCE || 'ams';
 
   const tokensWithJwe: QrToken[] = await Promise.all(
-    tokens.map(async (tok) => {
+    allTokens.map(async (tok) => {
       // If token is revoked, do not provide QR string
       if (tok.revoked_at) {
         return { ...tok, qr_token: null };
@@ -185,7 +225,7 @@ qrRoutes.get('/event/:id', authMiddleware, async (c) => {
             memberId: tok.member_id,
             jti: tok.jti,
             scope: tok.scope,
-            eventId: tok.event_id,
+            eventId: (tok as any).token_event_id || tok.event_id,
             validFrom: tok.valid_from,
             expiresAt: tok.expires_at,
             issuer,
@@ -305,15 +345,19 @@ qrRoutes.post('/:id/revoke', authMiddleware, requireRole(['owner', 'admin']), as
     entity_id: id,
   });
 
+  await invalidateEdgeCache(['agenda', 'attendance', 'members'], (c as any).executionCtx);
+
   return c.json<ApiResponse>({
     ok: true,
     data: { message: 'Token QR berhasil dicabut (revoked).' },
   });
 });
 
-// DELETE /api/qr/:id - Permanently delete QR token
+// DELETE /api/qr/:id - Permanently delete QR token or unlink imported guest pass
 qrRoutes.delete('/:id', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
   const id = c.req.param('id');
+  const eventId = c.req.query('event_id');
+
   if (!id) {
     return c.json<ApiResponse>(
       {
@@ -328,6 +372,10 @@ qrRoutes.delete('/:id', authMiddleware, requireRole(['owner', 'admin']), async (
   }
 
   const repo = new QrTokenRepository(c.env.DB);
+  const auditRepo = new AuditRepository(c.env.DB);
+  const eventGuestRepo = new EventGuestRepository(c.env.DB);
+  const admin = c.get('admin');
+
   const existing = await repo.findById(id);
   if (!existing) {
     return c.json<ApiResponse>(
@@ -342,10 +390,36 @@ qrRoutes.delete('/:id', authMiddleware, requireRole(['owner', 'admin']), async (
     );
   }
 
-  await repo.delete(id);
+  // If event_id is specified and differs from token's primary event, unlink imported guest
+  if (eventId && existing.event_id !== eventId) {
+    const unlinked = await eventGuestRepo.removeGuestFromEvent(eventId, existing.member_id);
+    if (unlinked) {
+      await auditRepo.logAction({
+        admin_id: admin?.id,
+        action: 'UNLINK_EVENT_GUEST',
+        entity_type: 'event_guest',
+        entity_id: `${eventId}:${existing.member_id}`,
+        meta: {
+          event_id: eventId,
+          member_id: existing.member_id,
+          member_name: existing.member_name,
+        },
+      });
 
-  const auditRepo = new AuditRepository(c.env.DB);
-  const admin = c.get('admin');
+      await invalidateEdgeCache(['agenda', 'attendance', 'members'], (c as any).executionCtx);
+
+      return c.json<ApiResponse>({
+        ok: true,
+        data: { message: 'Akses tamu berhasil dicabut dari kegiatan ini tanpa menghapus tiket asli.' },
+      });
+    }
+  }
+
+  await repo.delete(id);
+  if (existing.event_id) {
+    await eventGuestRepo.removeGuestFromEvent(existing.event_id, existing.member_id);
+  }
+
   await auditRepo.logAction({
     admin_id: admin?.id,
     action: 'DELETE_QR',
@@ -353,6 +427,8 @@ qrRoutes.delete('/:id', authMiddleware, requireRole(['owner', 'admin']), async (
     entity_id: id,
     meta: { member_name: existing.member_name, event_name: existing.event_name },
   });
+
+  await invalidateEdgeCache(['agenda', 'attendance', 'members'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,

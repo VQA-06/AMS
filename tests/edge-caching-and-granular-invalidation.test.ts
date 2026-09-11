@@ -174,5 +174,64 @@ describe('Edge Caching & Granular Targeted Invalidation Tests', () => {
       expect(await matchEdgeCache(urlEvents)).toBeNull();
       expect(await matchEdgeCache(urlPrograms)).toBeNull();
     });
+
+    it('should safely handle cached responses with immutable headers without throwing TypeError', async () => {
+      // Simulate Cloudflare caches.default behavior with immutable headers guard
+      const app = new Hono();
+      let count = 0;
+
+      app.get('/api/immutable-test', edgeCache({ ttlSeconds: 60, tag: 'test' }), (c) => {
+        count++;
+        return c.json({ ok: true, count });
+      });
+
+      // 1. First request: MISS -> stores in cache
+      const res1 = await app.request('/api/immutable-test');
+      expect(res1.status).toBe(200);
+      expect(count).toBe(1);
+
+      // 2. Mock global caches.default to return a Response whose headers object throws on .set() (simulating workerd immutable guard)
+      const mockRawResponse = new Response(JSON.stringify({ ok: true, count: 1 }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          'etag': 'W/"test-123"',
+        },
+      });
+
+      // Simulate immutable headers guard
+      const immutableHeaders = new Headers(mockRawResponse.headers);
+      immutableHeaders.set = () => {
+        throw new TypeError("Can't modify immutable headers.");
+      };
+      Object.defineProperty(mockRawResponse, 'headers', {
+        value: immutableHeaders,
+        writable: true,
+      });
+
+      const originalCaches = (globalThis as any).caches;
+      (globalThis as any).caches = {
+        default: {
+          match: vi.fn().mockResolvedValue(mockRawResponse),
+          put: vi.fn().mockResolvedValue(undefined),
+          delete: vi.fn().mockResolvedValue(true),
+        },
+      };
+
+      try {
+        // 3. Second request: Cache HIT under simulated immutable runtime
+        // Must NOT throw TypeError: Can't modify immutable headers!
+        const res2 = await app.request('/api/immutable-test');
+        expect(res2.status).toBe(200);
+        expect(res2.headers.get('X-AMS-Edge-Cache')).toBe('HIT');
+        expect(res2.headers.get('Cache-Control')).toContain('no-cache');
+
+        const json2 = (await res2.json()) as any;
+        expect(json2.ok).toBe(true);
+        expect(json2.count).toBe(1);
+      } finally {
+        (globalThis as any).caches = originalCaches;
+      }
+    });
   });
 });

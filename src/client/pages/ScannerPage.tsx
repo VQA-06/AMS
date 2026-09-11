@@ -176,7 +176,8 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
                 setSelectedEventId(e.target.value);
                 selectedEventIdRef.current = e.target.value;
               }}
-              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-sky-500"
+              aria-label="Pilih Kegiatan Aktif"
+              className="w-full px-3 py-2.5 min-h-[40px] rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-white focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none focus:border-sky-500 cursor-pointer"
             >
               {activeEvents.length === 0 && (
                 <option value="">-- Tidak ada kegiatan aktif --</option>
@@ -197,7 +198,8 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
             <select
               value={sessionType}
               onChange={(e) => setSessionType(e.target.value as SessionType)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-sky-500"
+              aria-label="Pilih Tipe Sesi Absen"
+              className="w-full px-3 py-2.5 min-h-[40px] rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-white focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none focus:border-sky-500 cursor-pointer"
             >
               <option value="CHECKIN">CHECK-IN (Masuk)</option>
               <option value="CHECKOUT">CHECK-OUT (Keluar)</option>
@@ -230,8 +232,10 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
 
           {recentScans.length > 0 && (
             <button
+              type="button"
               onClick={() => setIsRecentOpen(true)}
-              className="flex items-center gap-1 text-sky-400 hover:text-sky-300 font-semibold text-[11px]"
+              aria-label={`Buka ${recentScans.length} riwayat pemindaian`}
+              className="min-h-[36px] px-3 py-1.5 rounded-xl bg-sky-950/40 hover:bg-sky-950/70 border border-sky-800/40 flex items-center gap-1.5 text-sky-400 hover:text-sky-300 font-semibold text-xs transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
             >
               <History className="w-3.5 h-3.5" />
               <span>{recentScans.length} Riwayat Scan</span>

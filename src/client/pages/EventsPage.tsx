@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, Plus, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Calendar, Plus, RefreshCw, Search, Filter, X, LayoutGrid, LayoutList } from 'lucide-react';
 import { Event } from '@/shared/types';
 import { EventInput } from '@/shared/schemas/event.schema';
 import { fetchApi } from '../lib/api-client';
@@ -10,6 +10,7 @@ import { EventList } from '../components/events/EventList';
 import { EventFormModal } from '../components/events/EventFormModal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { AlertModal } from '../components/ui/AlertModal';
+import { Button } from '../components/ui/Button';
 
 import { BulkActionBar, BulkActionItem } from '@/client/components/ui/BulkActionBar';
 import { CheckCircle, Trash2 } from 'lucide-react';
@@ -35,7 +36,15 @@ export const EventsPage: React.FC<EventsPageProps> = ({
   const isManager = canManageEvents(admin?.role);
 
   const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // View Mode: Table (enterprise workstation) vs Grid (cards)
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+
+  // Search and Filter
+  const [search, setSearch] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft' | 'closed'>('all');
+
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
@@ -348,13 +357,31 @@ export const EventsPage: React.FC<EventsPageProps> = ({
     });
   };
 
+  const filteredEvents = useMemo(() => {
+    return events.filter((ev) => {
+      if (statusFilter !== 'all' && ev.status !== statusFilter) {
+        return false;
+      }
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchName = ev.name.toLowerCase().includes(q);
+        const matchLoc = ev.location_name?.toLowerCase().includes(q);
+        const matchDesc = ev.description?.toLowerCase().includes(q);
+        return matchName || matchLoc || matchDesc;
+      }
+      return true;
+    });
+  }, [events, search, statusFilter]);
+
+  const hasActiveFilters = search.trim() !== '' || statusFilter !== 'all';
+
   return (
-    <div className="space-y-6 animate-in fade-in">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4 animate-in fade-in pb-20">
+      {/* Top Header & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold font-heading text-white flex items-center gap-2.5">
-            <Calendar className="w-6 h-6 text-sky-400" />
+          <h2 className="text-xl sm:text-2xl font-bold font-heading text-white flex items-center gap-2.5">
+            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-sky-400" />
             <span>Manajemen Kegiatan / Event</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -362,7 +389,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {!isManager && (
             <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-700 text-slate-400">
               Mode Read-Only
@@ -370,31 +397,121 @@ export const EventsPage: React.FC<EventsPageProps> = ({
           )}
 
           {isManager && (
-            <button
+            <Button
+              variant="primary"
+              size="md"
+              icon={<Plus className="w-4 h-4" />}
               onClick={() => {
                 setEditingEvent(null);
                 setIsFormOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
             >
-              <Plus className="w-4 h-4" />
-              <span>Buat Kegiatan Baru</span>
+              Buat Kegiatan Baru
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={() => loadEvents(true)}
+            title="Segarkan Data Kegiatan"
+            aria-label="Segarkan Data Kegiatan"
+          >
+            <RefreshCw className={`w-4 h-4 text-slate-300 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
+      </div>
+
+      {/* Unified Command Toolbar */}
+      <div className="glass-panel p-2.5 sm:p-3 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 border border-slate-800">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            aria-label="Cari kegiatan berdasarkan nama, lokasi, atau deskripsi"
+            placeholder="Cari kegiatan atau lokasi..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-slate-950/80 border border-slate-800/80 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none focus:border-sky-500/50 transition-colors"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Hapus teks pencarian"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded-full"
+            >
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
-          <button
-            onClick={() => loadEvents(true)}
-            className="p-2.5 glass-panel text-slate-400 hover:text-white rounded-xl transition-colors"
-            title="Refresh"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* Status Filter */}
+          <div className="relative min-w-[140px] flex-1 sm:flex-initial">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'draft' | 'closed')}
+              aria-label="Filter status kegiatan"
+              className="w-full px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs font-medium text-slate-200 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none appearance-none cursor-pointer"
+            >
+              <option value="all" className="bg-slate-900">Semua Status</option>
+              <option value="active" className="bg-slate-900">Sedang Aktif</option>
+              <option value="draft" className="bg-slate-900">Draft</option>
+              <option value="closed" className="bg-slate-900">Selesai / Tutup</option>
+            </select>
+            <Filter className="w-3 h-3 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {/* View Mode Toggle: Table vs Grid */}
+          <div className="flex items-center bg-slate-950/80 border border-slate-800/80 rounded-xl p-0.5 shrink-0" role="group" aria-label="Pilihan tampilan data">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg text-xs font-medium transition-colors ${
+                viewMode === 'table' ? 'bg-slate-800 text-sky-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Tampilan Tabel Workstation"
+              aria-label="Tampilan Tabel Workstation"
+              aria-pressed={viewMode === 'table'}
+            >
+              <LayoutList className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg text-xs font-medium transition-colors ${
+                viewMode === 'grid' ? 'bg-slate-800 text-sky-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Tampilan Kartu Grid"
+              aria-label="Tampilan Kartu Grid"
+              aria-pressed={viewMode === 'grid'}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('all');
+              }}
+              aria-label="Reset semua filter"
+              className="px-3 py-2 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300 hover:text-white hover:bg-rose-900/60 text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Event List */}
       <EventList
-        events={events}
+        events={filteredEvents}
         loading={loading}
+        viewMode={viewMode}
         canManage={isManager}
         selectedIds={selectedEventIds}
         onToggleSelect={handleToggleSelect}

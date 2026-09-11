@@ -4,6 +4,7 @@ import { EventRepository } from '../repositories/event.repo';
 import { MemberRepository } from '../repositories/member.repo';
 import { QrTokenRepository } from '../repositories/qr.repo';
 import { AuditRepository } from '../repositories/audit.repo';
+import { EventGuestRepository } from '../repositories/event-guest.repo';
 import { authMiddleware, requireRole } from '../middleware/auth';
 import { edgeCache } from '../middleware/edge-cache';
 import { invalidateEdgeCache } from '../lib/edge-cache';
@@ -426,8 +427,8 @@ const createGuestPassesHandler = async (c: Context<{ Bindings: Env }>) => {
   const tokenExpiresAt =
     expires_at ||
     (event.ends_at
-      ? new Date(new Date(event.ends_at).getTime() + 24 * 60 * 60 * 1000).toISOString()
-      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString());
+      ? new Date(new Date(event.ends_at).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
 
   const membersToInsert: Array<{
     id: string;
@@ -555,6 +556,147 @@ const createGuestPassesHandler = async (c: Context<{ Bindings: Env }>) => {
 eventsRoutes.post('/:id/guests', authMiddleware, requireRole(['owner', 'admin']), createGuestPassesHandler);
 eventsRoutes.post('/:id/guests/batch', authMiddleware, requireRole(['owner', 'admin']), createGuestPassesHandler);
 eventsRoutes.post('/:id/guests/batch-names', authMiddleware, requireRole(['owner', 'admin']), createGuestPassesHandler);
+
+// GET /:id/guest-sources - Get up to 2 most recent previous events with guests for import selection
+eventsRoutes.get('/:id/guest-sources', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
+  const eventId = c.req.param('id');
+  if (!eventId) {
+    return c.json<ApiResponse>(
+      { ok: false, error: { code: ErrorCode.VALIDATION_ERROR, message: 'Event ID wajib diisi.' } },
+      400
+    );
+  }
+
+  const eventGuestRepo = new EventGuestRepository(c.env.DB);
+  const sources = await eventGuestRepo.listTwoPreviousEventsWithGuests(eventId);
+
+  return c.json<ApiResponse>({
+    ok: true,
+    data: { sources },
+  });
+});
+
+// GET /:id/guest-candidates - List candidate guests from a chosen previous event
+eventsRoutes.get('/:id/guest-candidates', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
+  const eventId = c.req.param('id');
+  if (!eventId) {
+    return c.json<ApiResponse>(
+      { ok: false, error: { code: ErrorCode.VALIDATION_ERROR, message: 'Event ID wajib diisi.' } },
+      400
+    );
+  }
+
+  const sourceId = c.req.query('source_id');
+  if (!sourceId) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: 'ID kegiatan sumber wajib disertakan.',
+        },
+      },
+      400
+    );
+  }
+
+  const eventGuestRepo = new EventGuestRepository(c.env.DB);
+  const candidates = await eventGuestRepo.listGuestsFromSourceEvent(sourceId, eventId);
+
+  return c.json<ApiResponse>({
+    ok: true,
+    data: { candidates },
+  });
+});
+
+// POST /:id/guests/import - Import selected guests from previous event without re-generating QR
+eventsRoutes.post('/:id/guests/import', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
+  const eventId = c.req.param('id');
+  if (!eventId) {
+    return c.json<ApiResponse>(
+      { ok: false, error: { code: ErrorCode.VALIDATION_ERROR, message: 'Event ID wajib diisi.' } },
+      400
+    );
+  }
+
+  const eventRepo = new EventRepository(c.env.DB);
+  const targetEvent = await eventRepo.findById(eventId);
+
+  if (!targetEvent) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.EVENT_NOT_FOUND,
+          message: 'Kegiatan target tidak ditemukan.',
+        },
+      },
+      404
+    );
+  }
+
+  const body = await c.req.json<{ guest_member_ids: string[]; source_event_id?: string }>();
+  const rawIds = Array.isArray(body.guest_member_ids) ? body.guest_member_ids : [];
+  const guestMemberIds = rawIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
+
+  if (guestMemberIds.length === 0) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: 'Pilih setidaknya satu peserta tamu untuk diimpor.',
+        },
+      },
+      400
+    );
+  }
+
+  if (guestMemberIds.length > 200) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: 'Maksimal 200 peserta tamu per batch impor.',
+        },
+      },
+      400
+    );
+  }
+
+  const eventGuestRepo = new EventGuestRepository(c.env.DB);
+  const auditRepo = new AuditRepository(c.env.DB);
+  const admin = c.get('admin');
+
+  const importedCount = await eventGuestRepo.importGuestsToEvent(
+    eventId,
+    guestMemberIds,
+    body.source_event_id
+  );
+
+  await auditRepo.logAction({
+    admin_id: admin?.id,
+    action: 'IMPORT_EVENT_GUESTS',
+    entity_type: 'event',
+    entity_id: eventId,
+    meta: {
+      imported_count: importedCount,
+      source_event_id: body.source_event_id,
+      target_event_name: targetEvent.name,
+    },
+  });
+
+  await invalidateEdgeCache(['agenda', 'attendance', 'members'], (c as any).executionCtx);
+
+  return c.json<ApiResponse>({
+    ok: true,
+    data: {
+      imported_count: importedCount,
+      message: `Berhasil mengimpor ${importedCount} tamu ke kegiatan ini.`,
+    },
+  });
+});
 
 // POST /api/events/bulk-close - Bulk close active events
 eventsRoutes.post('/bulk-close', authMiddleware, requireRole(['owner', 'admin']), async (c) => {

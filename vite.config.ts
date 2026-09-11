@@ -26,5 +26,28 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 650,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/recharts')) {
+            return 'vendor-charts';
+          }
+          if (id.includes('node_modules/jsqr') || id.includes('node_modules/qrcode.react')) {
+            return 'vendor-scanner';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons';
+          }
+          if (
+            id.includes('node_modules/papaparse') ||
+            id.includes('node_modules/clsx') ||
+            id.includes('node_modules/tailwind-merge')
+          ) {
+            return 'vendor-utils';
+          }
+        },
+      },
+    },
   },
 });

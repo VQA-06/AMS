@@ -6,9 +6,22 @@ interface CacheEntry<T = unknown> {
   timestamp: number;
 }
 
-// In-Memory Stale-While-Revalidate Cache
+// In-Memory Stale-While-Revalidate Cache with LRU Eviction (Max 100 entries)
+const MAX_CACHE_SIZE = 100;
 const cache = new Map<string, CacheEntry<any>>();
 const listeners = new Map<string, Set<(data: any) => void>>();
+
+function setCacheEntry<T>(key: string, entry: CacheEntry<T>): void {
+  if (cache.has(key)) {
+    cache.delete(key);
+  } else if (cache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) {
+      cache.delete(oldestKey);
+    }
+  }
+  cache.set(key, entry);
+}
 
 // BroadcastChannel for instant cross-tab state synchronization
 const syncChannel: BroadcastChannel | null =
@@ -23,6 +36,7 @@ const DOMAIN_EXPANSIONS: Record<string, string[]> = {
   members: ['/api/members', 'divisions', 'groups', 'stats/summary', 'stats/yearly', 'reports/yearly', 'recap/matrix'],
   attendance: ['/api/attendances', 'recap/matrix', 'stats/matrix', 'reports/top-presence', 'activity-tracker'],
   attendances: ['/api/attendances', 'recap/matrix', 'stats/matrix', 'reports/top-presence', 'activity-tracker'],
+  qr: ['/api/qr', '/api/agenda', '/api/events', '/api/members'],
 };
 
 /**
@@ -101,10 +115,15 @@ if (typeof window !== 'undefined') {
     const customEvent = e as CustomEvent<{ url: string; method: string }>;
     if (customEvent.detail && customEvent.detail.url) {
       const url = customEvent.detail.url;
-      if (url.includes('/agenda') || url.includes('/events') || url.includes('/programs') || url.includes('/activities')) {
+      if (url.includes('/guests') || url.includes('/qr')) {
+        invalidateCache('agenda');
+        invalidateCache('members');
+        invalidateCache('/api/qr');
+      } else if (url.includes('/agenda') || url.includes('/events') || url.includes('/programs') || url.includes('/activities')) {
         invalidateCache('agenda');
       } else if (url.includes('/members')) {
         invalidateCache('members');
+        invalidateCache('agenda');
       } else if (url.includes('/attendances') || url.includes('/scan')) {
         invalidateCache('attendance');
       } else {
@@ -127,6 +146,12 @@ export async function fetchCached<T = unknown>(
   const now = Date.now();
   const cached = cache.get(url);
 
+  if (cached) {
+    // Refresh LRU recency
+    cache.delete(url);
+    cache.set(url, cached);
+  }
+
   if (!forceRefresh && cached && now - cached.timestamp < ttlMs) {
     return cached.data as T;
   }
@@ -136,10 +161,12 @@ export async function fetchCached<T = unknown>(
     // Background revalidation
     fetchApi<T>(url, fetchOptions)
       .then((freshData) => {
-        cache.set(url, { data: freshData, timestamp: Date.now() });
-        const subscribers = listeners.get(url);
-        if (subscribers) {
-          subscribers.forEach((fn) => fn(freshData));
+        if (freshData !== null && freshData !== undefined) {
+          setCacheEntry(url, { data: freshData, timestamp: Date.now() });
+          const subscribers = listeners.get(url);
+          if (subscribers) {
+            subscribers.forEach((fn) => fn(freshData));
+          }
         }
       })
       .catch(() => {
@@ -151,7 +178,13 @@ export async function fetchCached<T = unknown>(
 
   // Cold fetch
   const freshData = await fetchApi<T>(url, fetchOptions);
-  cache.set(url, { data: freshData, timestamp: Date.now() });
+  if (freshData !== null && freshData !== undefined) {
+    setCacheEntry(url, { data: freshData, timestamp: Date.now() });
+    return freshData;
+  }
+  if (cached) {
+    return cached.data as T;
+  }
   return freshData;
 }
 

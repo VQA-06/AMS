@@ -49,13 +49,11 @@ export function isAllowedOrigin(origin: string | undefined, env?: Partial<Env>):
       }
     }
 
-    // Default trusted domains & Cloudflare platform domains
+    // Default trusted official domains
     if (
       host === 'ams.ccunbaja.web.id' ||
       host.endsWith('.ccunbaja.web.id') ||
-      host === 'ams.humanone.workers.dev' ||
-      host.endsWith('.workers.dev') ||
-      host.endsWith('.pages.dev')
+      host === 'ams.humanone.workers.dev'
     ) {
       return true;
     }

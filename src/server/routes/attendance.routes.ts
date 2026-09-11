@@ -6,6 +6,7 @@ import { MemberRepository } from '../repositories/member.repo';
 import { EventRepository } from '../repositories/event.repo';
 import { AuditRepository } from '../repositories/audit.repo';
 import { authMiddleware, requireRole } from '../middleware/auth';
+import { createRateLimiter } from '../middleware/rate-limit';
 import { edgeCache } from '../middleware/edge-cache';
 import { invalidateEdgeCache } from '../lib/edge-cache';
 import { manualAttendanceSchema } from '@/shared/schemas/scan.schema';
@@ -51,7 +52,12 @@ attendanceRoutes.get('/event/:id', authMiddleware, async (c) => {
 });
 
 // GET /api/attendances/export - Export attendance list
-attendanceRoutes.get('/export', authMiddleware, requireRole(['owner', 'admin', 'auditor']), async (c) => {
+attendanceRoutes.get(
+  '/export',
+  authMiddleware,
+  requireRole(['owner', 'admin', 'auditor']),
+  createRateLimiter({ maxRequests: 20, windowSeconds: 60, keyPrefix: 'export_attendances' }),
+  async (c) => {
   const query = c.req.query();
   const format = query.format === 'json' ? 'json' : 'csv';
   const repo = new AttendanceRepository(c.env.DB);

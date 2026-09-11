@@ -402,7 +402,7 @@ export const MemberTrackerPage: React.FC = () => {
             <tr>
               <th className="py-3 px-4 w-12 text-center">No</th>
               <th className="py-3 px-4">Nama Anggota & NIM</th>
-              <th className="py-3 px-4">Divisi</th>
+              <th className="py-3 px-4 whitespace-nowrap">Divisi</th>
               <th className="py-3 px-4 text-center">Status Keaktifan</th>
               <th className="py-3 px-4 text-center">Kegiatan Dihadiri</th>
               <th className="py-3 px-4">Terakhir Hadir</th>
@@ -455,9 +455,9 @@ export const MemberTrackerPage: React.FC = () => {
                       </div>
                       <div className="font-mono text-[11px] text-slate-400">{entry.member_external_id}</div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 whitespace-nowrap">
                       {entry.member_division ? (
-                        <Badge variant="sky" size="xs">
+                        <Badge variant="sky" size="xs" icon={<Building2 className="w-3 h-3 text-sky-400 shrink-0" />}>
                           {entry.member_division}
                         </Badge>
                       ) : (

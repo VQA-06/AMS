@@ -134,9 +134,8 @@ export const MemberList: React.FC<MemberListProps> = ({
               {/* Badges: Divisi & Group */}
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 {member.division ? (
-                  <Badge variant="sky" size="xs">
-                    <Building2 className="w-3 h-3 text-sky-400" />
-                    <span>Divisi: {member.division}</span>
+                  <Badge variant="sky" size="xs" icon={<Building2 className="w-3 h-3 text-sky-400 shrink-0" />}>
+                    Divisi: {member.division}
                   </Badge>
                 ) : (
                   <span className="text-[11px] text-slate-500 italic">Tanpa Divisi</span>
@@ -190,7 +189,7 @@ export const MemberList: React.FC<MemberListProps> = ({
               )}
               <th className="px-5 py-3.5">ID / Kode</th>
               <th className="px-5 py-3.5">Nama Anggota</th>
-              <th className="px-5 py-3.5">Divisi</th>
+              <th className="px-5 py-3.5 whitespace-nowrap">Divisi</th>
               <th className="px-5 py-3.5">Grup</th>
               <th className="px-5 py-3.5">Kontak</th>
               <th className="px-5 py-3.5">Status</th>
@@ -224,11 +223,10 @@ export const MemberList: React.FC<MemberListProps> = ({
                   <td className="px-5 py-3.5 font-semibold text-white">
                     {member.name}
                   </td>
-                  <td className="px-5 py-3.5">
+                  <td className="px-5 py-3.5 whitespace-nowrap">
                     {member.division ? (
-                      <Badge variant="sky" size="xs">
-                        <Building2 className="w-3 h-3 text-sky-400 shrink-0" />
-                        <span>{member.division}</span>
+                      <Badge variant="sky" size="xs" icon={<Building2 className="w-3 h-3 text-sky-400 shrink-0" />}>
+                        {member.division}
                       </Badge>
                     ) : (
                       <span className="text-slate-500 text-xs">-</span>

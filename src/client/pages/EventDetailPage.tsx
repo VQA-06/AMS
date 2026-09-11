@@ -1088,7 +1088,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                       )}
                       <th className="px-5 py-3.5">ID Anggota</th>
                       <th className="px-5 py-3.5">Nama</th>
-                      <th className="px-5 py-3.5">Divisi</th>
+                      <th className="px-5 py-3.5 whitespace-nowrap">Divisi</th>
                       <th className="px-5 py-3.5">Sesi</th>
                       <th className="px-5 py-3.5">Waktu Scan</th>
                       <th className="px-5 py-3.5">Operator</th>
@@ -1128,12 +1128,11 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                           )}
                           <td className="px-5 py-3.5 font-bold text-sky-400 font-oxanium">{att.member_external_id}</td>
                           <td className="px-5 py-3.5 font-sans font-semibold text-white">{att.member_name}</td>
-                          <td className="px-5 py-3.5 font-sans">
+                          <td className="px-5 py-3.5 font-sans whitespace-nowrap">
                             {att.member_division ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/40 text-[11px] font-semibold">
-                                <Building2 className="w-3 h-3 text-sky-400 shrink-0" />
-                                <span>{att.member_division}</span>
-                              </span>
+                              <Badge variant="sky" size="xs" icon={<Building2 className="w-3 h-3 text-sky-400 shrink-0" />}>
+                                {att.member_division}
+                              </Badge>
                             ) : (
                               <span className="text-slate-500">-</span>
                             )}
@@ -1273,7 +1272,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                     </th>
                     <th className="px-5 py-3.5">ID Peserta</th>
                     <th className="px-5 py-3.5">Nama</th>
-                    <th className="px-5 py-3.5">Divisi</th>
+                    <th className="px-5 py-3.5 whitespace-nowrap">Divisi</th>
                     <th className="px-5 py-3.5">Masa Berlaku</th>
                     <th className="px-5 py-3.5">Status Tiket</th>
                     <th className="px-5 py-3.5 text-right">Aksi</th>
@@ -1312,12 +1311,11 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                             )}
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 font-sans">
+                        <td className="px-5 py-3.5 font-sans whitespace-nowrap">
                           {tok.member_division ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/40 text-[11px] font-semibold">
-                              <Building2 className="w-3 h-3 text-sky-400 shrink-0" />
-                              <span>{tok.member_division}</span>
-                            </span>
+                            <Badge variant="sky" size="xs" icon={<Building2 className="w-3 h-3 text-sky-400 shrink-0" />}>
+                              {tok.member_division}
+                            </Badge>
                           ) : (
                             <span className="text-slate-500">-</span>
                           )}

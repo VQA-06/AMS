@@ -38,8 +38,45 @@ export const EventsPage: React.FC<EventsPageProps> = ({
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // View Mode: Table (enterprise workstation) vs Grid (cards)
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  // View Mode: Grid (cards) default for mobile/smartphone (< 768px), Table for desktop workstation (>= 768px)
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
+    if (typeof window !== 'undefined') {
+      const isMobile = window.innerWidth < 768;
+      const saved = localStorage.getItem(isMobile ? 'ams_event_view_mode_mobile' : 'ams_event_view_mode_desktop');
+      if (saved === 'table' || saved === 'grid') {
+        return saved;
+      }
+      return isMobile ? 'grid' : 'table';
+    }
+    return 'grid';
+  });
+
+  const handleSetViewMode = (mode: 'table' | 'grid') => {
+    setViewMode(mode);
+    try {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      localStorage.setItem(isMobile ? 'ams_event_view_mode_mobile' : 'ams_event_view_mode_desktop', mode);
+    } catch {
+      // Safe fallback if localStorage is restricted
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const handleMediaChange = (e: MediaQueryListEvent) => {
+      const isMobile = e.matches;
+      const saved = localStorage.getItem(isMobile ? 'ams_event_view_mode_mobile' : 'ams_event_view_mode_desktop');
+      if (saved === 'table' || saved === 'grid') {
+        setViewMode(saved);
+      } else {
+        setViewMode(isMobile ? 'grid' : 'table');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleMediaChange);
+    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
 
   // Search and Filter
   const [search, setSearch] = useState<string>('');
@@ -466,7 +503,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
           <div className="flex items-center bg-slate-950/80 border border-slate-800/80 rounded-xl p-0.5 shrink-0" role="group" aria-label="Pilihan tampilan data">
             <button
               type="button"
-              onClick={() => setViewMode('table')}
+              onClick={() => handleSetViewMode('table')}
               className={`p-1.5 rounded-lg text-xs font-medium transition-colors ${
                 viewMode === 'table' ? 'bg-slate-800 text-sky-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
@@ -478,7 +515,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setViewMode('grid')}
+              onClick={() => handleSetViewMode('grid')}
               className={`p-1.5 rounded-lg text-xs font-medium transition-colors ${
                 viewMode === 'grid' ? 'bg-slate-800 text-sky-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}

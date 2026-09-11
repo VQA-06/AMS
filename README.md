@@ -9,7 +9,7 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
 ![PWA Ready](https://img.shields.io/badge/PWA-Ready-10B981?style=for-the-badge&logo=pwa)
-![Vitest](https://img.shields.io/badge/Vitest-2.1_(120/120_Pass)-6E9F18?style=for-the-badge&logo=vitest)
+![Vitest](https://img.shields.io/badge/Vitest-2.1_(124/124_Pass)-6E9F18?style=for-the-badge&logo=vitest)
 
 **Sistem Manajemen Presensi & Kegiatan Modern Berbasis QR Code Terenkripsi AES-256-GCM JWE untuk Komunitas Komputer (Computer Community).**
 
@@ -307,9 +307,9 @@ npm test
 
 Hasil pengujian otomatis:
 ```text
- Test Files  20 passed (20)
-      Tests  120 passed (120)
-   Duration  1.88s
+ Test Files  21 passed (21)
+      Tests  124 passed (124)
+   Duration  2.03s
 ```
 
 Kompilasi statis TypeScript:

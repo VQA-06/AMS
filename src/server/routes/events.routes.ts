@@ -531,6 +531,14 @@ const createGuestPassesHandler = async (c: Context<{ Bindings: Env }>) => {
   await memberRepo.createBatch(membersToInsert);
   await qrRepo.createBatch(dbTokensToInsert);
 
+  // Register in event_guests for unified multi-event authorization and tracking
+  const eventGuestRepo = new EventGuestRepository(c.env.DB);
+  await eventGuestRepo.importGuestsToEvent(
+    event.id,
+    membersToInsert.map((m) => m.id),
+    event.id
+  );
+
   await auditRepo.logAction({
     admin_id: admin?.id,
     action: 'CREATE_EVENT_GUEST_PASSES',

@@ -1,4 +1,5 @@
 import { QrScope, QrToken } from '@/shared/types';
+import { chunkArray } from '../lib/d1-utils';
 
 export class QrTokenRepository {
   constructor(private db: D1Database) {}
@@ -109,27 +110,32 @@ export class QrTokenRepository {
       note?: string | null;
     }>
   ): Promise<void> {
-    const statements = tokens.map((t) =>
-      this.db
-        .prepare(
-          `INSERT INTO qr_tokens (id, jti, member_id, event_id, scope, valid_from, expires_at, max_uses, uses_count, created_by, note, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, datetime('now'))`
-        )
-        .bind(
-          t.id,
-          t.jti,
-          t.member_id,
-          t.event_id ?? null,
-          t.scope,
-          t.valid_from,
-          t.expires_at,
-          t.max_uses ?? null,
-          t.created_by ?? null,
-          t.note ?? null
-        )
-    );
+    if (!tokens || tokens.length === 0) return;
+    const chunks = chunkArray(tokens, 50);
 
-    await this.db.batch(statements);
+    for (const chunk of chunks) {
+      const statements = chunk.map((t) =>
+        this.db
+          .prepare(
+            `INSERT INTO qr_tokens (id, jti, member_id, event_id, scope, valid_from, expires_at, max_uses, uses_count, created_by, note, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, datetime('now'))`
+          )
+          .bind(
+            t.id,
+            t.jti,
+            t.member_id,
+            t.event_id ?? null,
+            t.scope,
+            t.valid_from,
+            t.expires_at,
+            t.max_uses ?? null,
+            t.created_by ?? null,
+            t.note ?? null
+          )
+      );
+
+      await this.db.batch(statements);
+    }
   }
 
   async revoke(id: string): Promise<boolean> {

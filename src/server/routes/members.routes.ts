@@ -801,6 +801,7 @@ membersRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'admin'
 
   const placeholders = ids.map(() => '?').join(',');
   await c.env.DB.batch([
+    c.env.DB.prepare(`DELETE FROM event_guests WHERE member_id IN (${placeholders})`).bind(...ids),
     c.env.DB.prepare(`DELETE FROM attendances WHERE member_id IN (${placeholders})`).bind(...ids),
     c.env.DB.prepare(`DELETE FROM scan_attempts WHERE member_id IN (${placeholders})`).bind(...ids),
     c.env.DB.prepare(`DELETE FROM qr_tokens WHERE member_id IN (${placeholders})`).bind(...ids),

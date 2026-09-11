@@ -189,26 +189,39 @@ export class EventRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    // 1. Find temporary guest members tied to this event
+    // 1. Find temporary guest members tied EXCLUSIVELY to this event.
+    // CRITICAL PROTECTIONS:
+    // - Never use broad 'Tamu:%' wildcard which matches guests from other events.
+    // - Never delete guests that are enrolled in other events (event_guests),
+    //   have attendance records in other events, or hold tokens in other events.
     const guestMembers = await this.db
       .prepare(`
-        SELECT id FROM members
+        SELECT m.id FROM members m
         WHERE (
-          json_extract(metadata, '$.event_id') = ?
-          OR metadata LIKE ?
-          OR group_name LIKE ?
-          OR id IN (SELECT member_id FROM qr_tokens WHERE event_id = ?)
+          json_extract(m.metadata, '$.event_id') = ?
+          OR m.metadata LIKE ?
+          OR m.id IN (SELECT member_id FROM event_guests WHERE event_id = ?)
+          OR m.id IN (SELECT member_id FROM qr_tokens WHERE event_id = ?)
         )
         AND (
-          json_extract(metadata, '$.temporary') = 1
-          OR json_extract(metadata, '$.temporary') = true
-          OR metadata LIKE '%"temporary":true%'
-          OR metadata LIKE '%"temporary": true%'
-          OR external_id LIKE 'GUEST-%'
-          OR group_name LIKE 'Tamu:%'
+          json_extract(m.metadata, '$.temporary') = 1
+          OR json_extract(m.metadata, '$.temporary') = true
+          OR m.metadata LIKE '%"temporary":true%'
+          OR m.metadata LIKE '%"temporary": true%'
+          OR m.external_id LIKE 'GUEST-%'
+          OR m.group_name LIKE 'Tamu:%'
+        )
+        AND m.id NOT IN (
+          SELECT member_id FROM event_guests WHERE event_id != ?
+        )
+        AND m.id NOT IN (
+          SELECT a.member_id FROM attendances a WHERE a.event_id != ?
+        )
+        AND m.id NOT IN (
+          SELECT t.member_id FROM qr_tokens t WHERE t.event_id != ? AND t.revoked_at IS NULL
         )
       `)
-      .bind(id, `%"event_id":"${id}"%`, `Tamu:%`, id)
+      .bind(id, `%"event_id":"${id}"%`, id, id, id, id, id)
       .all<{ id: string }>();
 
     const guestIds = (guestMembers.results || []).map((r) => r.id);
@@ -216,6 +229,14 @@ export class EventRepository {
     const statements: D1PreparedStatement[] = [
       this.db.prepare('DELETE FROM attendances WHERE event_id = ?').bind(id),
       this.db.prepare('DELETE FROM scan_attempts WHERE event_id = ?').bind(id),
+      // If any tokens in this event belong to a guest member who is still active in another event,
+      // reassign event_id to their next active event so their physical QR badge remains valid
+      this.db.prepare(`
+        UPDATE qr_tokens
+        SET event_id = (SELECT eg.event_id FROM event_guests eg WHERE eg.member_id = qr_tokens.member_id AND eg.event_id != ? LIMIT 1)
+        WHERE event_id = ?
+          AND member_id IN (SELECT eg.member_id FROM event_guests eg WHERE eg.event_id != ?)
+      `).bind(id, id, id),
       this.db.prepare('DELETE FROM qr_tokens WHERE event_id = ?').bind(id),
       this.db.prepare('DELETE FROM event_guests WHERE event_id = ?').bind(id),
       this.db.prepare('UPDATE event_guests SET source_event_id = NULL WHERE source_event_id = ?').bind(id),

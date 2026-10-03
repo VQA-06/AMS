@@ -1736,31 +1736,17 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       />
 
       {/* Contextual Floating Action Button for Mobile Viewport */}
-      {((event.status === 'active' && onScanEvent) || (isManager && Boolean(event.allow_manual_attendance))) && (
-        <div className="md:hidden fixed bottom-20 right-4 z-30 flex items-center gap-2">
-          {isManager && Boolean(event.allow_manual_attendance) && (
-            <button
-              type="button"
-              onClick={() => setIsManualModalOpen(true)}
-              className="h-12 px-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs flex items-center gap-1.5 border border-slate-700/80 shadow-lg shadow-slate-950/50 backdrop-blur-md transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-              aria-label="Absen Manual"
-            >
-              <Plus className="w-4 h-4 text-sky-400" />
-              <span>Absen Manual</span>
-            </button>
-          )}
-
-          {event.status === 'active' && onScanEvent && (
-            <button
-              type="button"
-              onClick={() => onScanEvent(event)}
-              className="h-12 px-4 rounded-2xl bg-sky-500 hover:bg-sky-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-xl shadow-sky-950/60 border border-sky-300/30 transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-              aria-label="Scan Presensi"
-            >
-              <QrCode className="w-4 h-4" />
-              <span>Scan Presensi</span>
-            </button>
-          )}
+      {event.status === 'active' && onScanEvent && (
+        <div className="md:hidden fixed bottom-24 right-4 z-30">
+          <button
+            type="button"
+            onClick={() => onScanEvent(event)}
+            className="h-12 px-4 rounded-2xl bg-sky-500 hover:bg-sky-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-xl shadow-sky-950/60 border border-sky-300/30 transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            aria-label="Scan Presensi"
+          >
+            <QrCode className="w-4 h-4" />
+            <span>Scan Presensi</span>
+          </button>
         </div>
       )}
     </div>

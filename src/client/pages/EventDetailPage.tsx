@@ -5,6 +5,7 @@ import {
   Clock,
   ShieldAlert,
   ShieldCheck,
+  AlertTriangle,
   QrCode,
   Users,
   Download,
@@ -78,6 +79,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
   const [qrTokens, setQrTokens] = useState<QrToken[]>([]);
   const [totalScanned, setTotalScanned] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
+  /** Sections that failed to load; renders as a warning, not as zero counts. */
+  const [partialErrors, setPartialErrors] = useState<string[]>([]);
 
   // Multi-Select state
   const [selectedAttendanceIds, setSelectedAttendanceIds] = useState<Set<string>>(new Set());
@@ -147,20 +150,35 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       if (selectedDivision) params.set('division', selectedDivision);
       if (search) params.set('search', search);
 
-      const [attRes, qrRes, sumRes] = await Promise.all([
+      const settled = await Promise.allSettled([
         fetchApi<{ attendances: Attendance[]; total: number }>(
           `/api/attendances/event/${eventId}?${params.toString()}`
-        ).catch(() => ({ attendances: [], total: 0 })),
-        fetchApi<{ tokens: QrToken[] }>(`/api/qr/event/${eventId}`).catch(() => ({ tokens: [] })),
+        ),
+        fetchApi<{ tokens: QrToken[] }>(`/api/qr/event/${eventId}`),
         fetchApi<{ event: Event; total_scanned: number; total_tokens: number }>(
           `/api/agenda/${eventId}/summary`
         ),
       ]);
 
-      setAttendances(attRes.attendances || []);
-      setTotalScanned(attRes.total || 0);
-      setQrTokens(qrRes.tokens || []);
-      if (sumRes.event) setEvent(sumRes.event);
+      // A failed request used to fall back to an empty list, so an outage
+      // rendered as "0 attendances" — indistinguishable from a real zero.
+      const failed = ['Daftar Kehadiran', 'Token QR', 'Ringkasan Kegiatan'];
+      setPartialErrors(
+        settled.flatMap((r, i) => (r.status === 'rejected' ? [failed[i]] : []))
+      );
+
+      const [attRes, qrRes, sumRes] = settled.map((r) =>
+        r.status === 'fulfilled' ? r.value : null
+      ) as [
+        { attendances: Attendance[]; total: number } | null,
+        { tokens: QrToken[] } | null,
+        { event: Event; total_scanned: number; total_tokens: number } | null,
+      ];
+
+      setAttendances(attRes?.attendances || []);
+      setTotalScanned(attRes?.total || 0);
+      setQrTokens(qrRes?.tokens || []);
+      if (sumRes?.event) setEvent(sumRes.event);
     } catch (err) {
       console.error('Failed to load event details:', err);
     } finally {
@@ -645,7 +663,20 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       : attendances.filter((a) => a.session_type === sessionFilter);
 
   return (
-    <div className="space-y-6 animate-in fade-in">
+    <div className="space-y-6">
+
+      {partialErrors.length > 0 && (
+        <div
+          role="status"
+          className="flex items-start gap-2.5 px-4 py-3 rounded-2xl bg-amber-950/40 border border-amber-700/50 text-amber-200 text-xs"
+        >
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <span>
+            Sebagian data gagal dimuat: {partialErrors.join(', ')}. Angka di bawah
+            mungkin tidak lengkap, bukan nol.
+          </span>
+        </div>
+      )}
       {/* Top Navigation */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -674,7 +705,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             <button
               type="button"
               onClick={() => onScanEvent(event)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
+              className="hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-md shadow-sky-500/20 active:scale-95 transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               title="Buka Pemindai QR untuk kegiatan ini"
             >
               <QrCode className="w-4 h-4" />
@@ -685,8 +716,9 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
           {/* Delete Event Action */}
           {isManager && (
             <button
+              type="button"
               onClick={handleDeleteEvent}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-950/40 border border-rose-900/40 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-950/40 border border-rose-900/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               title="Hapus kegiatan beserta data terkait"
             >
               <Trash2 className="w-4 h-4" />
@@ -700,7 +732,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('attendance')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
             activeTab === 'attendance'
               ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
               : 'text-slate-400 hover:text-slate-200 glass-panel'
@@ -712,7 +744,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
         <button
           onClick={() => setActiveTab('qr')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
             activeTab === 'qr'
               ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
               : 'text-slate-400 hover:text-slate-200 glass-panel'
@@ -724,7 +756,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
         <button
           onClick={() => setActiveTab('overview')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
             activeTab === 'overview'
               ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
               : 'text-slate-400 hover:text-slate-200 glass-panel'
@@ -794,17 +826,17 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             </div>
 
             {/* Break Sessions */}
-            <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-amber-900/40 bg-amber-950/20 flex flex-col justify-between">
-              <span className="text-[10px] sm:text-xs text-amber-300 uppercase font-semibold flex items-center gap-1">
+            <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-purple-900/40 bg-purple-950/20 flex flex-col justify-between">
+              <span className="text-[10px] sm:text-xs text-purple-300 uppercase font-semibold flex items-center gap-1">
                 <Coffee className="w-3.5 h-3.5" />
                 <span>Istirahat</span>
               </span>
               <div className="mt-2 flex items-baseline justify-between text-xs text-slate-300">
-                <span className="font-bold text-amber-400 text-lg">
+                <span className="font-bold text-purple-300 text-lg">
                   {breakOutAttendances.length}{' '}
                   <span className="text-xs text-slate-400 font-normal">Keluar</span>
                 </span>
-                <span className="font-bold text-amber-400 text-lg">
+                <span className="font-bold text-purple-300 text-lg">
                   {breakInAttendances.length}{' '}
                   <span className="text-xs text-slate-400 font-normal">Masuk</span>
                 </span>
@@ -818,7 +850,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             <div className="flex items-center gap-1.5 bg-slate-900/60 p-1.5 rounded-2xl border border-slate-800/80 overflow-x-auto">
               <button
                 onClick={() => setSessionFilter('ALL')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
                   sessionFilter === 'ALL'
                     ? 'bg-slate-800 text-white shadow'
                     : 'text-slate-400 hover:text-slate-200'
@@ -829,7 +861,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
               <button
                 onClick={() => setSessionFilter('CHECKIN')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
                   sessionFilter === 'CHECKIN'
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
                     : 'text-slate-400 hover:text-emerald-400'
@@ -840,7 +872,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
               <button
                 onClick={() => setSessionFilter('CHECKOUT')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
                   sessionFilter === 'CHECKOUT'
                     ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20'
                     : 'text-slate-400 hover:text-sky-400'
@@ -851,10 +883,10 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
               <button
                 onClick={() => setSessionFilter('BREAK_OUT')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
                   sessionFilter === 'BREAK_OUT'
-                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
-                    : 'text-slate-400 hover:text-amber-400'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                    : 'text-slate-400 hover:text-purple-300'
                 }`}
               >
                 Break-Out ({breakOutAttendances.length})
@@ -862,7 +894,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
               <button
                 onClick={() => setSessionFilter('BREAK_IN')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
                   sessionFilter === 'BREAK_IN'
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
                     : 'text-slate-400 hover:text-purple-400'
@@ -995,13 +1027,13 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                       : att.session_type === 'CHECKOUT'
                       ? 'sky'
                       : att.session_type === 'BREAK_OUT'
-                      ? 'amber'
-                      : 'purple';
+                      ? 'purple'
+                      : 'slate';
 
                   return (
                     <div
                       key={att.id}
-                      className={`glass-panel-elevated rounded-2xl p-4 border transition-all space-y-3 ${
+                      className={`glass-panel-elevated rounded-2xl p-4 border transition-colors space-y-3 ${
                         isSelected
                           ? 'border-sky-500/80 bg-sky-950/20 shadow-lg shadow-sky-500/10'
                           : 'border-slate-800/80 shadow-md'
@@ -1020,7 +1052,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                           )}
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="font-heading font-bold text-base text-white">{att.member_name}</h4>
+                              <h3 className="font-heading font-bold text-base text-white">{att.member_name}</h3>
                               <Badge variant={sessionVariant} size="sm">
                                 {att.session_type}
                               </Badge>
@@ -1103,8 +1135,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                           : att.session_type === 'CHECKOUT'
                           ? 'sky'
                           : att.session_type === 'BREAK_OUT'
-                          ? 'amber'
-                          : 'purple';
+                          ? 'purple'
+                          : 'slate';
 
                       const isSelected = selectedAttendanceIds.has(att.id);
 
@@ -1194,7 +1226,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 <>
                   <button
                     onClick={() => setIsGuestModalOpen(true)}
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
+                    className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-colors transition-transform"
                   >
                     <UserPlus className="w-4 h-4" />
                     <span>+ Peserta Tamu</span>
@@ -1204,7 +1236,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                   {isEventOnlyMode && (
                     <button
                       onClick={() => setIsQrModalOpen(true)}
-                      className="flex items-center gap-1.5 px-3.5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
+                      className="flex items-center gap-1.5 px-3.5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform"
                     >
                       <Plus className="w-4 h-4" />
                       <span>+ Anggota Master</span>
@@ -1356,7 +1388,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                             {isManager && tok.member_external_id?.startsWith('GUEST-') && !isRevoked && (
                               <button
                                 onClick={() => handleOpenPromoteSingle(tok)}
-                                className="flex items-center gap-1 px-2 py-1 text-xs bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800/60 rounded-lg transition-all font-semibold shadow-sm active:scale-95"
+                                className="flex items-center gap-1 px-2 py-1 text-xs bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800/60 rounded-lg transition-colors transition-transform font-semibold shadow-sm active:scale-95"
                                 title="Jadikan Anggota Resmi Organisasi"
                               >
                                 <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -1499,8 +1531,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
       {/* Individual Digital Pass Card View Modal */}
       {selectedTokenForCard && selectedTokenForCard.qr_token && !selectedTokenForCard.revoked_at && (
-        <ModalPortal>
-          <div className="modal-backdrop-full animate-in fade-in">
+        <ModalPortal onClose={() => setSelectedTokenForCard(null)}>
+          <div className="modal-backdrop-full">
             <DigitalPassCard
               tokenString={selectedTokenForCard.qr_token}
               memberName={selectedTokenForCard.member_name || 'Peserta'}
@@ -1517,8 +1549,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
       {/* Manual Attendance Modal */}
       {isManualModalOpen && (
-        <ModalPortal>
-          <div className="modal-backdrop-full animate-in fade-in">
+        <ModalPortal onClose={() => setIsManualModalOpen(false)}>
+          <div className="modal-backdrop-full">
             <form
               onSubmit={handleManualSubmit}
               className="w-full max-w-md rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 space-y-3.5 sm:space-y-4 my-auto max-h-[92dvh] overflow-y-auto"
@@ -1534,7 +1566,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                   required
                   value={manualMemberId}
                   onChange={(e) => setManualMemberId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                 >
                   <option value="">-- Pilih Anggota --</option>
                   {members.map((m) => (
@@ -1550,7 +1582,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 <select
                   value={manualSessionType}
                   onChange={(e) => setManualSessionType(e.target.value as SessionType)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                 >
                   <option value="CHECKIN">CHECK-IN (Masuk)</option>
                   <option value="CHECKOUT">CHECK-OUT (Keluar)</option>
@@ -1568,7 +1600,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                   value={manualReason}
                   onChange={(e) => setManualReason(e.target.value)}
                   placeholder="misal: Ponsel anggota mati / lupa membawa tiket QR fisik"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500 min-h-[80px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 min-h-[80px]"
                 />
               </div>
 
@@ -1595,9 +1627,9 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
       {/* Promote Guest Modal */}
       {promotingGuest && (
-        <ModalPortal>
-          <div className="modal-backdrop-full animate-in fade-in">
-            <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 animate-in zoom-in-95 my-auto max-h-[92dvh] overflow-y-auto">
+        <ModalPortal onClose={() => setPromotingGuest(null)}>
+          <div className="modal-backdrop-full">
+            <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 my-auto max-h-[92dvh] overflow-y-auto">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -1634,15 +1666,16 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
               </div>
 
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-300">
+                <label htmlFor="promote-division" className="block text-xs font-semibold text-slate-300">
                   Pilih Divisi (Opsional):
                 </label>
                 <div className="flex items-center gap-2 glass-panel p-2.5 rounded-xl border border-slate-800">
                   <Building2 className="w-4 h-4 text-sky-400 shrink-0" />
                   <select
+                    id="promote-division"
                     value={promoteDivision}
                     onChange={(e) => setPromoteDivision(e.target.value)}
-                    className="w-full bg-transparent text-xs text-white focus:outline-none"
+                    className="w-full bg-transparent text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                   >
                     <option value="" className="bg-slate-900">-- Tanpa Divisi / Pilih Nanti --</option>
                     {divisions.map((div, i) => (
@@ -1670,7 +1703,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                   type="button"
                   onClick={handleConfirmPromote}
                   disabled={promoteLoading}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 active:scale-95 transition-all"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 active:scale-95 transition-colors transition-transform"
                 >
                   <UserCheck className="w-4 h-4" />
                   <span>{promoteLoading ? 'Memproses...' : 'Ya, Angkat Jadi Anggota'}</span>
@@ -1702,32 +1735,34 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
         onClose={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
       />
 
-      {/* Contextual Sticky Action Bar for Mobile Viewport */}
-      <div className="md:hidden fixed bottom-[64px] left-0 right-0 p-3 bg-slate-950/95 backdrop-blur-md border-t border-slate-800/80 z-30 flex items-center justify-between gap-2 shadow-2xl pb-safe">
-        {event.status === 'active' && onScanEvent ? (
-          <Button
-            variant="cyber"
-            size="md"
-            icon={<QrCode className="w-4 h-4" />}
-            onClick={() => onScanEvent(event)}
-            className="flex-1 shadow-sky-500/25 text-xs font-bold"
-          >
-            Scan Presensi Sesi Ini
-          </Button>
-        ) : null}
+      {/* Contextual Floating Action Button for Mobile Viewport */}
+      {((event.status === 'active' && onScanEvent) || (isManager && Boolean(event.allow_manual_attendance))) && (
+        <div className="md:hidden fixed bottom-20 right-4 z-30 flex items-center gap-2">
+          {isManager && Boolean(event.allow_manual_attendance) && (
+            <button
+              type="button"
+              onClick={() => setIsManualModalOpen(true)}
+              className="h-12 px-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs flex items-center gap-1.5 border border-slate-700/80 shadow-lg shadow-slate-950/50 backdrop-blur-md transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              aria-label="Absen Manual"
+            >
+              <Plus className="w-4 h-4 text-sky-400" />
+              <span>Absen Manual</span>
+            </button>
+          )}
 
-        {isManager && Boolean(event.allow_manual_attendance) && (
-          <Button
-            variant="secondary"
-            size="md"
-            icon={<Plus className="w-4 h-4 text-sky-400" />}
-            onClick={() => setIsManualModalOpen(true)}
-            className={event.status === 'active' && onScanEvent ? 'shrink-0 text-xs' : 'flex-1 text-xs'}
-          >
-            Absen Manual
-          </Button>
-        )}
-      </div>
+          {event.status === 'active' && onScanEvent && (
+            <button
+              type="button"
+              onClick={() => onScanEvent(event)}
+              className="h-12 px-4 rounded-2xl bg-sky-500 hover:bg-sky-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-xl shadow-sky-950/60 border border-sky-300/30 transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              aria-label="Scan Presensi"
+            >
+              <QrCode className="w-4 h-4" />
+              <span>Scan Presensi</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

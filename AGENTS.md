@@ -11,11 +11,23 @@ Client source lives in `src/client`, server in `src/server`.
 
 ```bash
 npx tsc --noEmit -p tsconfig.json   # types must stay at zero errors
-npx vitest run                       # 164 tests
+npx vitest run                       # 232 tests
 npm run build
 ```
 
 Run all three after any change that touches `src/client` or `src/server`.
+
+Types, unit tests, and a green build do not prove a change is *visible*. The
+§1 paper cutover left 148 invisible elements behind while all three passed.
+For any change to colour, ground, or layout, also run the app and look at it:
+
+```bash
+npm run build && (cd dist && python3 -m http.server 5175 --bind 127.0.0.1)
+```
+
+`vite` serves over TLS (`@vitejs/plugin-basic-ssl`) with a self-signed cert,
+so a browser must be launched with HTTPS errors ignored; the static build on
+plain HTTP avoids that entirely.
 
 ## UI anti-slop rules
 
@@ -33,9 +45,32 @@ These encode fixes already applied to this codebase. Do not reintroduce them.
 - `prefers-reduced-motion` is handled globally in `index.css`. New custom
   animations must be added to that block.
 
+**Contrast**
+- Never choose a text token without checking the ground that actually paints
+  it. The ground is frequently an *ancestor*: the shell root, the dark sidebar,
+  or the dark header. A `text-ink-2` that looks right in isolation is 2.27:1
+  on `bg-ink`.
+- The app has two grounds. Paper content uses `text-ink*`. Dark chrome (shell
+  root, sidebar, header, dock, full-bleed overlays) uses `text-paper*`. On a
+  dark ground there is no "muted" ink token — use `text-paper/70`.
+- `text-white` is legal in exactly two places: a dark ground, and the QR
+  overlay text on the photographic template (which carries its own dark
+  drop-shadow). Nowhere else — white on `paper-raised` is 1.06:1.
+- `bg-pen-500` is the one saturated surface. Pair it with `text-paper`;
+  `text-ink` on it is 2.94:1.
+- Give every `<option>` an explicit text colour. A native dropdown inherits the
+  *select's* colour, so an option that looks fine in the closed control can
+  render blank in the open list.
+- `tests/text-contrast-guard.test.ts` enforces the mechanical half of this at
+  the source level. It reads classNames and cannot resolve an inherited ground,
+  which is exactly where the shell bug lived — verify those in a browser.
+
 **Accessibility**
 - Never `focus:outline-none` alone. Use the ring quartet:
-  `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950`
+  `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper`
+  (`ring-pen-500` is the variant on filled primary buttons; `focusRing` in
+  `MobileShell` owns it for nav items. The old `sky-400`/`slate-950` values
+  emit no CSS after the paper cutover.)
 - Every `<input>`, `<select>`, `<textarea>` needs a real `<label htmlFor>`, or an
   `aria-label`. Ids follow `<file-path>-field-<n>`.
 - Icon-only buttons need `aria-label`. Password toggles also need `aria-pressed`.

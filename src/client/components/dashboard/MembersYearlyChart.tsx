@@ -145,7 +145,7 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilter('active')}
-              className={`px-2 py-0.5 rounded-lg font-bold transition-all min-h-[32px] sm:min-h-0 flex items-center ${
+              className={`px-2 py-0.5 rounded-lg font-bold transition-colors min-h-[32px] sm:min-h-0 flex items-center ${
                 statusFilter === 'active'
                   ? 'bg-emerald-500 text-slate-950 shadow-sm'
                   : 'text-slate-400 hover:text-white'
@@ -157,7 +157,7 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
-              className={`px-2 py-0.5 rounded-lg font-bold transition-all min-h-[32px] sm:min-h-0 flex items-center ${
+              className={`px-2 py-0.5 rounded-lg font-bold transition-colors min-h-[32px] sm:min-h-0 flex items-center ${
                 statusFilter === 'all'
                   ? 'bg-sky-500 text-slate-950 shadow-sm'
                   : 'text-slate-400 hover:text-white'
@@ -169,7 +169,7 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilter('inactive')}
-              className={`px-2 py-0.5 rounded-lg font-bold transition-all min-h-[32px] sm:min-h-0 flex items-center ${
+              className={`px-2 py-0.5 rounded-lg font-bold transition-colors min-h-[32px] sm:min-h-0 flex items-center ${
                 statusFilter === 'inactive'
                   ? 'bg-rose-500 text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
@@ -194,9 +194,8 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
               : 'Total Terdaftar'}
           </span>
         </div>
-        <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5 font-mono">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-          <span>{totalActiveMembers} aktif dari {totalAllMembers} anggota utama</span>
+        <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
+          {totalActiveMembers} aktif dari {totalAllMembers} anggota utama
         </p>
       </div>
 

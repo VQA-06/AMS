@@ -5,7 +5,7 @@ import { MemberRepository } from '../repositories/member.repo';
 import { AdminRepository } from '../repositories/admin.repo';
 import { QrTokenRepository } from '../repositories/qr.repo';
 import { AuditRepository } from '../repositories/audit.repo';
-import { authMiddleware, requireRole } from '../middleware/auth';
+import { authMiddleware, requireRole, invalidateAdminCache } from '../middleware/auth';
 import { edgeCache } from '../middleware/edge-cache';
 import { invalidateEdgeCache } from '../lib/edge-cache';
 import { memberSchema, memberUpdateSchema, memberImportRowSchema } from '@/shared/schemas/member.schema';
@@ -13,7 +13,7 @@ import { generateQrToken } from '../crypto/qr-crypto';
 import { ApiResponse, Member, QrToken } from '@/shared/types';
 import { ErrorCode } from '@/shared/constants/error-codes';
 import { sanitizeCsvRow } from '../lib/csv-sanitizer';
-
+import { MutationCoordinator } from '../lib/mutation-coordinator';
 const membersRoutes = new Hono<{ Bindings: Env }>();
 
 // GET /api/members - List members (excludes temporary guest members by default)
@@ -88,11 +88,7 @@ membersRoutes.get('/universal-tokens', authMiddleware, async (c) => {
   const memberRepo = new MemberRepository(c.env.DB);
   const qrRepo = new QrTokenRepository(c.env.DB);
 
-  const { members } = await memberRepo.list({
-    status: 'active',
-    exclude_temporary: true,
-    limit: 5000,
-  });
+  const members = await memberRepo.listAllActive();
 
   const kid = c.env.QR_ACTIVE_KID || 'k1';
   const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
@@ -448,6 +444,7 @@ membersRoutes.patch('/:id', authMiddleware, requireRole(['owner', 'admin']), asy
   if (input.status === 'inactive') {
     const adminRepo = new AdminRepository(c.env.DB);
     await adminRepo.deactivateByMemberId(id);
+    invalidateAdminCache();
   }
 
   const auditRepo = new AuditRepository(c.env.DB);
@@ -502,7 +499,7 @@ membersRoutes.delete('/:id', authMiddleware, requireRole(['owner', 'admin']), as
   // Delete any linked admin account
   const adminRepo = new AdminRepository(c.env.DB);
   await adminRepo.deleteByMemberId(id);
-
+  invalidateAdminCache();
   await repo.delete(id);
 
   const auditRepo = new AuditRepository(c.env.DB);
@@ -554,7 +551,7 @@ membersRoutes.post('/import', authMiddleware, requireRole(['owner', 'admin']), a
   }> = [];
 
   const validRowsToCommit: Array<{
-    external_id: string;
+    external_id?: string;
     name: string;
     email: string | null;
     phone: string | null;
@@ -574,7 +571,7 @@ membersRoutes.post('/import', authMiddleware, requireRole(['owner', 'admin']), a
         row: i + 1,
         valid: true,
         data: {
-          external_id: data.external_id,
+          external_id: data.external_id || undefined,
           name: data.name,
           email: data.email ?? null,
           phone: data.phone ?? null,
@@ -586,7 +583,7 @@ membersRoutes.post('/import', authMiddleware, requireRole(['owner', 'admin']), a
       });
 
       validRowsToCommit.push({
-        external_id: data.external_id,
+        external_id: data.external_id || undefined,
         name: data.name,
         email: data.email ?? null,
         phone: data.phone ?? null,
@@ -629,7 +626,8 @@ membersRoutes.post('/import', authMiddleware, requireRole(['owner', 'admin']), a
 
   for (const row of validRowsToCommit) {
     try {
-      const existing = await repo.findByExternalId(row.external_id);
+      const externalId = row.external_id?.trim();
+      const existing = externalId ? await repo.findByExternalId(externalId) : null;
       if (existing) {
         if (mode === 'create') {
           skipped++;
@@ -761,23 +759,26 @@ membersRoutes.post('/bulk-deactivate', authMiddleware, requireRole(['owner', 'ad
     );
   }
 
-  const auditRepo = new AuditRepository(c.env.DB);
   const admin = c.get('admin');
-
+  const coordinator = new MutationCoordinator(c.env.DB, c);
   const placeholders = ids.map(() => '?').join(',');
-  await c.env.DB
+  const updateStmt = c.env.DB
     .prepare(`UPDATE members SET status = 'inactive', updated_at = datetime('now') WHERE id IN (${placeholders})`)
-    .bind(...ids)
-    .run();
-
-  await auditRepo.logAction({
-    admin_id: admin?.id || null,
-    action: 'BULK_DEACTIVATE_MEMBERS',
-    entity_type: 'member',
-    meta: { count: ids.length, ids },
+    .bind(...ids);
+  const deactivateAdminsStmt = c.env.DB
+    .prepare(`UPDATE admins SET status = 'inactive', updated_at = datetime('now') WHERE member_id IN (${placeholders})`)
+    .bind(...ids);
+  invalidateAdminCache();
+  await coordinator.execute({
+    statements: [updateStmt, deactivateAdminsStmt],
+    cacheTags: ['members', 'attendance', 'agenda'],
+    audit: {
+      adminId: admin?.id || null,
+      action: 'BULK_DEACTIVATE_MEMBERS',
+      entityType: 'member',
+      meta: { count: ids.length, ids },
+    },
   });
-
-  await invalidateEdgeCache(['members', 'attendance', 'agenda'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,
@@ -796,26 +797,30 @@ membersRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'admin'
     );
   }
 
-  const auditRepo = new AuditRepository(c.env.DB);
   const admin = c.get('admin');
-
+  const coordinator = new MutationCoordinator(c.env.DB, c);
   const placeholders = ids.map(() => '?').join(',');
-  await c.env.DB.batch([
+
+  const statements = [
     c.env.DB.prepare(`DELETE FROM event_guests WHERE member_id IN (${placeholders})`).bind(...ids),
     c.env.DB.prepare(`DELETE FROM attendances WHERE member_id IN (${placeholders})`).bind(...ids),
     c.env.DB.prepare(`DELETE FROM scan_attempts WHERE member_id IN (${placeholders})`).bind(...ids),
     c.env.DB.prepare(`DELETE FROM qr_tokens WHERE member_id IN (${placeholders})`).bind(...ids),
+    c.env.DB.prepare(`DELETE FROM admins WHERE member_id IN (${placeholders})`).bind(...ids),
     c.env.DB.prepare(`DELETE FROM members WHERE id IN (${placeholders})`).bind(...ids),
-  ]);
+  ];
+  invalidateAdminCache();
 
-  await auditRepo.logAction({
-    admin_id: admin?.id || null,
-    action: 'BULK_DELETE_MEMBERS',
-    entity_type: 'member',
-    meta: { count: ids.length, ids },
+  await coordinator.execute({
+    statements,
+    cacheTags: ['members', 'attendance', 'agenda'],
+    audit: {
+      adminId: admin?.id || null,
+      action: 'BULK_DELETE_MEMBERS',
+      entityType: 'member',
+      meta: { count: ids.length, ids },
+    },
   });
-
-  await invalidateEdgeCache(['members', 'attendance', 'agenda'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,

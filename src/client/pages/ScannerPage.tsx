@@ -145,7 +145,7 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-8rem)] space-y-4 animate-in fade-in pb-4 relative">
+    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-8rem)] space-y-4 pb-4 relative">
       {/* Non-Blocking Floating Notification Banner */}
       <FloatingScanToast result={scanResult} onDismiss={() => setScanResult(null)} />
 
@@ -167,10 +167,10 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Event Picker */}
           <div>
-            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            <label htmlFor="pages-scannerpage-field-1" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
               Kegiatan Aktif:
             </label>
-            <select
+            <select id="pages-scannerpage-field-1"
               value={selectedEventId}
               onChange={(e) => {
                 setSelectedEventId(e.target.value);
@@ -192,10 +192,10 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
 
           {/* Session Mode */}
           <div>
-            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            <label htmlFor="pages-scannerpage-field-2" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
               Tipe Sesi Absen:
             </label>
-            <select
+            <select id="pages-scannerpage-field-2"
               value={sessionType}
               onChange={(e) => setSessionType(e.target.value as SessionType)}
               aria-label="Pilih Tipe Sesi Absen"
@@ -211,7 +211,7 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
 
         {/* No Event Warning Banner */}
         {noEventWarning && (
-          <div className="p-3 rounded-2xl bg-amber-950/80 border border-amber-800 text-amber-300 text-xs flex items-center gap-2 animate-in fade-in">
+          <div className="p-3 rounded-2xl bg-amber-950/80 border border-amber-800 text-amber-300 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
             <span>Pilih kegiatan / event aktif terlebih dahulu pada pilihan di atas.</span>
           </div>

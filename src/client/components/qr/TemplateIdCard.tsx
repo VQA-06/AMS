@@ -186,7 +186,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
   const textSizeClass = nameLen > 22 ? 'text-[15px]' : nameLen > 16 ? 'text-[17px]' : 'text-[19px] sm:text-[20px]';
 
   return (
-    <div className="flex flex-col items-center w-full max-w-xs mx-auto animate-in zoom-in-95">
+    <div className="flex flex-col items-center w-full max-w-xs mx-auto">
       {/* Visual Template Card Preview (Square / Non-rounded 54mm x 85mm ratio) */}
       <div className="relative w-full aspect-[54/85] rounded-none overflow-hidden shadow-2xl border border-slate-700 bg-slate-900 select-none group">
         {/* Template Background Image */}
@@ -238,7 +238,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
           <button
             onClick={handleDownloadPng}
             disabled={downloading}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-sky-500/20 active:scale-95 disabled:opacity-50 min-w-0"
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition-colors transition-transform shadow-md shadow-sky-500/20 active:scale-95 disabled:opacity-50 min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             title="Unduh ID Card gambar PNG HD"
           >
             {downloading ? (
@@ -251,7 +251,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
 
           <button
             onClick={handlePrintSingle}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all border border-slate-700 active:scale-95 min-w-0"
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-colors transition-transform border border-slate-700 active:scale-95 min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             title="Cetak ID Card ukuran 54x85 mm"
           >
             <Printer className="w-3.5 h-3.5 text-sky-400 shrink-0" />
@@ -260,7 +260,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
 
           <button
             onClick={handleCopyToken}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-all border border-slate-800 active:scale-95 min-w-0"
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-colors transition-transform border border-slate-800 active:scale-95 min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             title="Salin token QR"
           >
             {copied ? (

@@ -12,6 +12,28 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   children: React.ReactNode;
 }
 
+/**
+ * Callers pass either a rendered element (`<Users />`) or the icon component
+ * itself. React cannot render a bare component as a child, so that form is
+ * instantiated here rather than crashing the tree. Covers both plain function
+ * components and `forwardRef` icons, which are objects with a `render` key.
+ */
+function renderIcon(icon: React.ReactNode): React.ReactNode {
+  if (React.isValidElement(icon)) return icon;
+
+  const isComponent =
+    typeof icon === 'function' ||
+    (typeof icon === 'object' &&
+      icon !== null &&
+      'render' in (icon as unknown as Record<string, unknown>));
+
+  if (isComponent) {
+    const Icon = icon as unknown as React.ComponentType<{ className?: string }>;
+    return <Icon className="w-3.5 h-3.5" />;
+  }
+  return icon;
+}
+
 export const Badge: React.FC<BadgeProps> = ({
   variant = 'slate',
   size = 'md',
@@ -50,16 +72,16 @@ export const Badge: React.FC<BadgeProps> = ({
   };
 
   const sizeStyles: Record<BadgeSize, string> = {
-    xs: 'text-[10px] px-2 py-0.5 rounded-md font-semibold',
+    xs: 'text-[10px] px-2 py-0.5 rounded-md font-bold',
     sm: 'text-[11px] px-2.5 py-0.5 rounded-lg font-bold',
-    md: 'text-xs px-2.5 py-1 rounded-xl font-semibold',
+    md: 'text-xs px-2.5 py-1 rounded-xl font-bold',
   };
 
   const current = variantStyles[variant];
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 border font-mono select-none whitespace-nowrap shrink-0 ${current.bg} ${sizeStyles[size]} ${className}`}
+      className={`inline-flex items-center gap-1.5 border select-none whitespace-nowrap shrink-0 ${current.bg} ${sizeStyles[size]} ${className}`}
       {...props}
     >
       {(pulse || dot) && (
@@ -70,7 +92,9 @@ export const Badge: React.FC<BadgeProps> = ({
           <span className={`relative inline-flex rounded-full h-2 w-2 ${current.dot}`} />
         </span>
       )}
-      {icon && <span className="inline-flex items-center shrink-0">{icon}</span>}
+      {icon && (
+        <span className="inline-flex items-center shrink-0">{renderIcon(icon)}</span>
+      )}
       <span className="inline-flex items-center gap-1 leading-none whitespace-nowrap">{children}</span>
     </span>
   );

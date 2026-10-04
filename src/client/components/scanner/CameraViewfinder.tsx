@@ -443,7 +443,7 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
     <div className="flex flex-col items-center justify-center w-full max-w-lg mx-auto">
       {/* Insecure Context Warning if opened over non-https LAN */}
       {isInsecureContext && (
-        <div className="w-full mb-3 p-3 rounded-2xl bg-amber-950 border border-amber-800 text-amber-300 text-xs flex items-start gap-2 animate-in fade-in">
+        <div className="w-full mb-3 p-3 rounded-2xl bg-amber-950 border border-amber-800 text-amber-300 text-xs flex items-start gap-2">
           <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
           <div>
             <p className="font-bold">Peringatan Protokol Browser Mobile:</p>
@@ -509,14 +509,14 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
 
         {/* Camera Error / Placeholder */}
         {cameraError && (
-          <div className="absolute inset-0 bg-slate-950 p-6 flex flex-col items-center justify-center text-center z-10 animate-in fade-in">
+          <div className="absolute inset-0 bg-slate-950 p-6 flex flex-col items-center justify-center text-center z-10">
             <AlertCircle className="w-12 h-12 text-rose-400 mb-3" />
             <p className="text-sm font-bold text-rose-300 mb-2">Kamera Belum Terbuka</p>
             <p className="text-xs text-slate-400 mb-4 max-w-xs">{cameraError}</p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => startDirectScanner('environment')}
-                className="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
+                className="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform"
               >
                 Minta Izin & Buka Kamera
               </button>
@@ -529,7 +529,7 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
       <div className="flex items-center justify-center gap-3 mt-4 w-full">
         <button
           onClick={switchCamera}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl glass-panel text-xs font-semibold text-slate-300 hover:text-white active:scale-95 transition-all shadow"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl glass-panel text-xs font-semibold text-slate-300 hover:text-white active:scale-95 transition-colors transition-transform shadow"
         >
           <RefreshCw className="w-4 h-4 text-sky-400" />
           <span>Ganti Kamera</span>
@@ -538,7 +538,7 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
         {hasTorch && (
           <button
             onClick={toggleTorch}
-            className={`p-2.5 rounded-xl text-xs font-semibold active:scale-95 transition-all shadow ${
+            className={`p-2.5 rounded-xl text-xs font-semibold active:scale-95 transition-colors transition-transform shadow ${
               torchOn
                 ? 'bg-amber-400 text-slate-950 shadow-amber-400/30 font-bold'
                 : 'glass-panel text-slate-300 hover:text-white'
@@ -550,7 +550,7 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
 
         <button
           onClick={() => setShowManualInput(!showManualInput)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl glass-panel text-xs font-semibold text-slate-300 hover:text-white active:scale-95 transition-all shadow"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl glass-panel text-xs font-semibold text-slate-300 hover:text-white active:scale-95 transition-colors transition-transform shadow"
         >
           <Keyboard className="w-4 h-4 text-sky-400" />
           <span>Input Manual</span>
@@ -561,18 +561,18 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
       {showManualInput && (
         <form
           onSubmit={handleManualSubmit}
-          className="w-full mt-4 p-4 rounded-2xl glass-panel-elevated border border-slate-800 animate-in fade-in"
+          className="w-full mt-4 p-4 rounded-2xl glass-panel-elevated border border-slate-800"
         >
-          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+          <label htmlFor="components-scanner-cameraviewfinder-field-1" className="block text-xs font-semibold text-slate-300 mb-1.5">
             Tempel / Masukkan String Token JWE QR:
           </label>
           <div className="flex gap-2">
-            <input
+            <input id="components-scanner-cameraviewfinder-field-1"
               type="text"
               value={manualToken}
               onChange={(e) => setManualToken(e.target.value)}
               placeholder="eyJhbGciOiJkaXIi..."
-              className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+              className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-white placeholder-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
               autoFocus
             />
             <button

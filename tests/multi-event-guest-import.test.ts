@@ -43,16 +43,16 @@ describe('Multi-Event Guest Import & QR Reusability', () => {
 
     const repo = new EventGuestRepository(mockDb);
     const sources = await repo.listTwoPreviousEventsWithGuests('evt_current');
-
     expect(sources.length).toBe(2);
     expect(sources[0].id).toBe('evt_prev_2');
     expect(sources[0].guest_count).toBe(15);
     expect(sources[1].id).toBe('evt_prev_1');
     expect(sources[1].guest_count).toBe(25);
+    expect(executedSql).toContain('SELECT event_id, member_id FROM event_guests');
+    expect(executedSql).toContain('UNION');
     expect(executedSql).toContain('LIMIT 2');
     expect(executedParams[0]).toBe('evt_current');
   });
-
   it('should list candidate guests and flag already imported guests', async () => {
     let executedSql = '';
     let executedParams: any[] = [];
@@ -92,16 +92,17 @@ describe('Multi-Event Guest Import & QR Reusability', () => {
 
     const repo = new EventGuestRepository(mockDb);
     const candidates = await repo.listGuestsFromSourceEvent('evt_source', 'evt_target');
-
     expect(candidates.length).toBe(2);
     expect(candidates[0].already_imported).toBe(false);
     expect(candidates[1].already_imported).toBe(true);
-    expect(executedSql).toContain('FROM qr_tokens t');
-    expect(executedSql).toContain('LEFT JOIN event_guests eg');
-    expect(executedParams[0]).toBe('evt_target');
+    expect(executedSql).toContain('SELECT member_id FROM event_guests WHERE event_id = ?');
+    expect(executedSql).toContain('UNION');
+    expect(executedSql).toContain('JOIN qr_tokens t ON t.member_id = m.id');
+    expect(executedSql).toContain('LEFT JOIN event_guests eg_target');
+    expect(executedParams[0]).toBe('evt_source');
     expect(executedParams[1]).toBe('evt_source');
+    expect(executedParams[2]).toBe('evt_target');
   });
-
   it('should batch insert imported guests into event_guests with INSERT OR IGNORE', async () => {
     const executedBatch: Array<{ sql: string; params: any[] }> = [];
 
@@ -128,12 +129,78 @@ describe('Multi-Event Guest Import & QR Reusability', () => {
     );
 
     expect(count).toBe(2);
-    expect(executedBatch.length).toBe(2);
+    expect(executedBatch[1].params[2]).toBe('mem_guest_2');
+  });
+
+  it('should update qr_tokens expires_at when newExpiresAt is provided on import', async () => {
+    const executedBatch: Array<{ sql: string; params: any[] }> = [];
+
+    const mockDb: any = {
+      prepare: (sql: string) => ({
+        bind: (...params: any[]) => ({
+          sql,
+          params,
+        }),
+      }),
+      batch: async (statements: any[]) => {
+        for (const s of statements) {
+          executedBatch.push({ sql: s.sql, params: s.params });
+        }
+        return statements.map(() => ({ success: true, meta: { changes: 1 } }));
+      },
+    };
+
+    const repo = new EventGuestRepository(mockDb);
+    const count = await repo.importGuestsToEvent(
+      'evt_target',
+      ['mem_guest_1', 'mem_guest_2'],
+      'evt_source',
+      '2026-06-02T17:00:00.000Z'
+    );
+
+    expect(count).toBe(2);
+    expect(executedBatch.length).toBe(4);
+    // Statement 0: INSERT OR IGNORE INTO event_guests for mem_guest_1
     expect(executedBatch[0].sql).toContain('INSERT OR IGNORE INTO event_guests');
     expect(executedBatch[0].params[1]).toBe('evt_target');
     expect(executedBatch[0].params[2]).toBe('mem_guest_1');
-    expect(executedBatch[0].params[3]).toBe('evt_source');
-    expect(executedBatch[1].params[2]).toBe('mem_guest_2');
+    // Statement 1: UPDATE qr_tokens for mem_guest_1
+    expect(executedBatch[1].sql).toContain('UPDATE qr_tokens');
+    expect(executedBatch[1].params[0]).toBe('2026-06-02T17:00:00.000Z');
+    expect(executedBatch[1].params[1]).toBe('mem_guest_1');
+    expect(executedBatch[1].params[2]).toBe('2026-06-02T17:00:00.000Z');
+    // Statement 2: INSERT OR IGNORE INTO event_guests for mem_guest_2
+    expect(executedBatch[2].sql).toContain('INSERT OR IGNORE INTO event_guests');
+    expect(executedBatch[2].params[2]).toBe('mem_guest_2');
+    // Statement 3: UPDATE qr_tokens for mem_guest_2
+    expect(executedBatch[3].sql).toContain('UPDATE qr_tokens');
+    expect(executedBatch[3].params[0]).toBe('2026-06-02T17:00:00.000Z');
+    expect(executedBatch[3].params[1]).toBe('mem_guest_2');
+  });
+
+  it('should chunk D1 batch statements with newExpiresAt (25 members = 50 statements per batch)', async () => {
+    const batchesExecuted: number[] = [];
+
+    const mockDb: any = {
+      prepare: (sql: string) => ({
+        bind: (...params: any[]) => ({ sql, params }),
+      }),
+      batch: async (statements: any[]) => {
+        batchesExecuted.push(statements.length);
+        return statements.map(() => ({ success: true, meta: { changes: 1 } }));
+      },
+    };
+
+    const repo = new EventGuestRepository(mockDb);
+    const sixtyGuestIds = Array.from({ length: 60 }, (_, i) => `mem_batch_${i + 1}`);
+
+    const inserted = await repo.importGuestsToEvent('evt_large', sixtyGuestIds, 'evt_prev', '2026-06-02T17:00:00.000Z');
+
+    expect(inserted).toBe(60);
+    expect(batchesExecuted.length).toBe(3);
+    expect(batchesExecuted[0]).toBe(50); // 25 members * 2 stmts = 50
+    expect(batchesExecuted[1]).toBe(50); // 25 members * 2 stmts = 50
+    expect(batchesExecuted[2]).toBe(20); // 10 members * 2 stmts = 20
   });
 
   it('should verify authorization for imported guests via isGuestAuthorizedForEvent', async () => {
@@ -158,6 +225,56 @@ describe('Multi-Event Guest Import & QR Reusability', () => {
 
     const isUnauthorized = await repo.isGuestAuthorizedForEvent('evt_target', 'mem_guest_unknown');
     expect(isUnauthorized).toBe(false);
+  });
+
+  it('should retrieve imported guest tokens across multi-hop source event chains', async () => {
+    let executedSql = '';
+    let executedParams: any[] = [];
+
+    const mockDb: any = {
+      prepare: (sql: string) => ({
+        bind: (...params: any[]) => ({
+          all: async () => {
+            executedSql = sql;
+            executedParams = params;
+            return {
+              results: [
+                {
+                  link_id: 'eg_link_1',
+                  event_id: 'evt_target',
+                  member_id: 'mem_guest_1',
+                  source_event_id: 'evt_intermediate',
+                  source_event_name: 'Seminar AI & Cloud',
+                  member_name: 'Dr. Hendra Wijaya',
+                  member_external_id: 'GUEST-1001',
+                  member_division: 'VIP',
+                  token_id: 'tok_origin_1',
+                  token_jti: 'jti_guest_1',
+                  token_scope: 'event',
+                  token_event_id: 'evt_origin',
+                  token_valid_from: '2026-09-01T00:00:00Z',
+                  token_expires_at: '2026-09-30T23:59:59Z',
+                  max_uses: null,
+                  uses_count: 3,
+                  revoked_at: null,
+                },
+              ],
+            };
+          },
+        }),
+      }),
+    };
+
+    const repo = new EventGuestRepository(mockDb);
+    const importedTokens = await repo.getImportedGuestsForEvent('evt_target');
+
+    expect(importedTokens.length).toBe(1);
+    expect(importedTokens[0].member_id).toBe('mem_guest_1');
+    expect(importedTokens[0].source_event_id).toBe('evt_intermediate');
+    expect(importedTokens[0].token_event_id).toBe('evt_origin');
+    expect(executedSql).toContain('FROM event_guests eg');
+    expect(executedSql).toContain("JOIN qr_tokens t ON t.member_id = m.id AND t.scope = 'event' AND t.revoked_at IS NULL");
+    expect(executedParams[0]).toBe('evt_target');
   });
 
   it('should accurately simulate scanner event validation for reused QR codes', async () => {

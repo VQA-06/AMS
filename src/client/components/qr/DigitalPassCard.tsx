@@ -30,11 +30,12 @@ export const DigitalPassCard: React.FC<DigitalPassCardProps> = ({
   const isPerpetual = scope === 'universal' || new Date(expiresAt).getFullYear() >= 2090;
 
   return (
-    <div className="glass-panel-elevated rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-700/80 shadow-2xl relative flex flex-col items-center text-center max-w-sm w-full mx-auto animate-in zoom-in-95">
+    <div className="glass-panel-elevated rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-700/80 shadow-2xl relative flex flex-col items-center text-center max-w-sm w-full mx-auto">
       {onClose && (
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-full bg-slate-800/80 transition-colors z-10"
+          aria-label="Tutup dialog"
+          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-full bg-slate-800/80 transition-colors z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           title="Tutup"
         >
           <X className="w-4 h-4" />
@@ -71,7 +72,6 @@ export const DigitalPassCard: React.FC<DigitalPassCardProps> = ({
         )}
         {isPerpetual ? (
           <p className="text-[11px] font-semibold text-emerald-400 flex items-center justify-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>Masa Berlaku: Permanen (Status Aktif)</span>
           </p>
         ) : (

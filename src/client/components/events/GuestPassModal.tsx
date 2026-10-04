@@ -250,8 +250,8 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
   };
 
   return (
-    <ModalPortal>
-      <div className="modal-backdrop-full animate-in fade-in">
+    <ModalPortal onClose={onClose}>
+      <div className="modal-backdrop-full">
         <div className="w-full max-w-lg rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[88vh] flex flex-col my-auto">
           {/* Header */}
           <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
@@ -269,6 +269,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
             <button
               type="button"
               onClick={onClose}
+              aria-label="Tutup dialog"
               className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 shrink-0 transition-colors"
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -286,7 +287,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
             <button
               type="button"
               onClick={() => setMode('names')}
-              className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`py-2 px-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
                 mode === 'names'
                   ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
                   : 'glass-panel text-slate-400 hover:text-slate-200'
@@ -299,7 +300,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
             <button
               type="button"
               onClick={() => setMode('batch')}
-              className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`py-2 px-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
                 mode === 'batch'
                   ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
                   : 'glass-panel text-slate-400 hover:text-slate-200'
@@ -312,7 +313,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
             <button
               type="button"
               onClick={() => setMode('import_events')}
-              className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`py-2 px-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
                 mode === 'import_events'
                   ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
                   : 'glass-panel text-slate-400 hover:text-slate-200'
@@ -328,16 +329,16 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
             {mode === 'names' ? (
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label htmlFor="components-events-guestpassmodal-field-1" className="block text-xs font-semibold text-slate-300 mb-1">
                     Ketik Daftar Nama (1 Baris = 1 Peserta):
                   </label>
-                  <textarea
+                  <textarea id="components-events-guestpassmodal-field-1"
                     rows={4}
                     required
                     value={nameListText}
                     onChange={(e) => setNameListText(e.target.value)}
                     placeholder="Contoh:&#10;Dr. Hendra Wijaya, VIP&#10;Siti Aminah, Konsumsi&#10;Ahmad Fauzan"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500 font-mono leading-relaxed"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono leading-relaxed"
                   />
                   <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1">
                     Format: <code className="text-sky-400">Nama, Divisi (opsional)</code>
@@ -345,15 +346,15 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label htmlFor="components-events-guestpassmodal-field-2" className="block text-xs font-semibold text-slate-300 mb-1">
                     Divisi / Kategori Default:
                   </label>
-                  <input
+                  <input id="components-events-guestpassmodal-field-2"
                     type="text"
                     value={defaultDivision}
                     onChange={(e) => setDefaultDivision(e.target.value)}
                     placeholder="misal: Tamu / Undangan"
-                    className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                   />
                 </div>
               </>
@@ -361,16 +362,16 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
               <>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label htmlFor="components-events-guestpassmodal-field-3" className="block text-xs font-semibold text-slate-300 mb-1">
                       Prefix / Nama Label Tiket:
                     </label>
-                    <input
+                    <input id="components-events-guestpassmodal-field-3"
                       type="text"
                       required
                       value={batchPrefix}
                       onChange={(e) => setBatchPrefix(e.target.value)}
                       placeholder="misal: Tamu VIP"
-                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-500"
+                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                     />
                   </div>
 
@@ -392,7 +393,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                         max="100"
                         value={batchCount}
                         onChange={(e) => setBatchCount(parseInt(e.target.value, 10) || 1)}
-                        className="w-24 text-center px-3 py-1.5 sm:py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-sky-400 focus:outline-none"
+                        className="w-24 text-center px-3 py-1.5 sm:py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                       />
                       <button
                         type="button"
@@ -405,15 +406,15 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label htmlFor="components-events-guestpassmodal-field-4" className="block text-xs font-semibold text-slate-300 mb-1">
                       Divisi / Kategori Default:
                     </label>
-                    <input
+                    <input id="components-events-guestpassmodal-field-4"
                       type="text"
                       value={defaultDivision}
                       onChange={(e) => setDefaultDivision(e.target.value)}
                       placeholder="misal: Tamu / Undangan"
-                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-500"
+                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                     />
                   </div>
                 </div>
@@ -464,7 +465,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                             key={src.id}
                             type="button"
                             onClick={() => setSelectedSourceId(src.id)}
-                            className={`p-3 rounded-2xl text-left transition-all border flex flex-col justify-between gap-1.5 ${
+                            className={`p-3 rounded-2xl text-left transition-colors border flex flex-col justify-between gap-1.5 ${
                               isSelected
                                 ? 'bg-sky-950/40 border-sky-500/80 ring-1 ring-sky-500/30'
                                 : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 text-slate-300'
@@ -508,7 +509,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="Cari nama / ID / divisi tamu..."
-                          className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700/80 text-xs text-white focus:outline-none focus:border-sky-500 placeholder:text-slate-500"
+                          className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700/80 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 placeholder:text-slate-500"
                         />
                       </div>
                       <button
@@ -549,7 +550,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                             <label
                               key={cand.member_id}
                               htmlFor={`guest-cand-${cand.member_id}`}
-                              className={`flex items-center justify-between p-2.5 sm:p-3 min-h-[44px] rounded-xl transition-all ${
+                              className={`flex items-center justify-between p-2.5 sm:p-3 min-h-[44px] rounded-xl transition-colors ${
                                 cand.already_imported
                                   ? 'opacity-40 cursor-not-allowed bg-slate-900/20'
                                   : isSelected
@@ -623,7 +624,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                   loading ||
                   (mode === 'import_events' && (selectedMemberIds.size === 0 || sources.length === 0))
                 }
-                className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform disabled:opacity-50 disabled:pointer-events-none"
               >
                 <Sparkles className="w-4 h-4 shrink-0" />
                 <span>

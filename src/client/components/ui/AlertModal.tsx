@@ -21,12 +21,11 @@ export const AlertModal: React.FC<AlertModalProps> = ({
   buttonText = 'Mengerti',
   onClose,
 }) => {
+  // Escape is handled centrally by ModalPortal; this only adds Enter-to-dismiss.
   useEffect(() => {
+    if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
-      if (e.key === 'Escape' || e.key === 'Enter') {
-        onClose();
-      }
+      if (e.key === 'Enter') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -67,10 +66,10 @@ export const AlertModal: React.FC<AlertModalProps> = ({
   const style = getStyle();
 
   return (
-    <ModalPortal>
-      <div className="modal-backdrop-full animate-in fade-in duration-200">
+    <ModalPortal onClose={onClose}>
+      <div className="modal-backdrop-full">
         <div
-          className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 animate-in zoom-in-95 duration-200 text-slate-100 relative my-auto"
+          className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 text-slate-100 relative my-auto"
           role="dialog"
           aria-modal="true"
         >
@@ -103,7 +102,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className={`w-full sm:w-auto px-6 py-2.5 min-h-[40px] rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${style.btnBg} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus:outline-none`}
+            className={`w-full sm:w-auto px-6 py-2.5 min-h-[40px] rounded-xl text-xs font-bold shadow-lg transition-colors transition-transform active:scale-95 flex items-center justify-center gap-2 ${style.btnBg} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus:outline-none`}
           >
             <span>{buttonText}</span>
           </button>

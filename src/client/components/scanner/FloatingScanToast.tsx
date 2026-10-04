@@ -40,10 +40,10 @@ export const FloatingScanToast: React.FC<FloatingScanToastProps> = ({
     <aside
       role="status"
       aria-live="polite"
-      className="fixed top-4 inset-x-3 sm:top-5 sm:left-1/2 sm:-translate-x-1/2 md:top-6 md:right-6 md:left-auto md:translate-x-0 z-50 w-auto sm:w-[94%] md:w-full max-w-sm pointer-events-auto animate-in slide-in-from-top-4 md:slide-in-from-right-4 duration-200 fade-in"
+      className="fixed top-4 inset-x-3 sm:top-5 sm:left-1/2 sm:-translate-x-1/2 md:top-6 md:right-6 md:left-auto md:translate-x-0 z-50 w-auto sm:w-[94%] md:w-full max-w-sm pointer-events-auto md:"
     >
       <div
-        className={`w-full rounded-2xl p-3.5 sm:p-4 shadow-2xl border relative overflow-hidden transition-all ${
+        className={`w-full rounded-2xl p-3.5 sm:p-4 shadow-2xl border relative overflow-hidden transition-colors ${
           result.success
             ? 'bg-slate-900 border-emerald-500/80 ring-2 ring-emerald-500/20 text-white'
             : 'bg-slate-900 border-rose-500/80 ring-2 ring-rose-500/20 text-white'
@@ -85,7 +85,7 @@ export const FloatingScanToast: React.FC<FloatingScanToastProps> = ({
           <button
             onClick={onDismiss}
             aria-label="Tutup notifikasi"
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors shrink-0"
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           >
             <X className="w-4 h-4" />
           </button>

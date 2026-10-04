@@ -23,7 +23,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({ className = '', style }) => 
  */
 export const SkeletonMemberList: React.FC<{ rows?: number }> = ({ rows = 8 }) => {
   return (
-    <div className="space-y-3 animate-in fade-in duration-200">
+    <div className="space-y-3">
       {/* Mobile Card Skeletons (< md screens) */}
       <div className="grid grid-cols-1 gap-3 md:hidden">
         {Array.from({ length: Math.min(rows, 6) }).map((_, idx) => (
@@ -126,7 +126,7 @@ export const SkeletonMemberList: React.FC<{ rows?: number }> = ({ rows = 8 }) =>
  */
 export const SkeletonEventList: React.FC<{ count?: number }> = ({ count = 4 }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-200">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {Array.from({ length: count }).map((_, idx) => (
         <div
           key={`skel-event-${idx}`}

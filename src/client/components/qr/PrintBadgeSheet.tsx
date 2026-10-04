@@ -214,8 +214,8 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
   };
 
   return (
-    <ModalPortal>
-      <div className="modal-backdrop-full animate-in fade-in">
+    <ModalPortal onClose={onClose}>
+      <div className="modal-backdrop-full">
         <div className="w-full max-w-5xl h-[92dvh] sm:h-[90vh] rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700 shadow-2xl flex flex-col overflow-hidden my-auto">
         {/* Top Header & Action Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-slate-900/90 gap-3 shrink-0">
@@ -233,7 +233,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
             <button
               onClick={handleDownloadAll}
               disabled={tokens.length === 0 || downloadingAll}
-              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700 active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-colors transition-transform border border-slate-700 active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               title="Unduh seluruh ID Card sebagai file gambar PNG beresolusi tinggi"
             >
               {downloadingAll ? (
@@ -252,7 +252,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
             <button
               onClick={handlePrintAll}
               disabled={tokens.length === 0 || downloadingAll}
-              className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold shadow-lg shadow-sky-500/20 active:scale-95 transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             >
               <Printer className="w-4 h-4" />
               <span>Cetak Lembar A4 (54×85 mm)</span>
@@ -260,7 +260,8 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
 
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800"
+              aria-label="Tutup dialog"
+              className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             >
               <X className="w-5 h-5" />
             </button>

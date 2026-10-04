@@ -27,17 +27,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onClose,
   loading = false,
 }) => {
-  // Handle Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen || loading) return;
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, loading, onClose]);
+  // Escape, focus capture/restore, and the Tab trap are centralized in
+  // ModalPortal. Dismissal stays disabled while `loading` so a destructive
+  // confirm cannot be abandoned mid-request (see dismissOnEscape below).
 
   if (!isOpen) return null;
 
@@ -74,10 +66,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const style = getStyle();
 
   return (
-    <ModalPortal>
-      <div className="modal-backdrop-full animate-in fade-in duration-200">
+    <ModalPortal onClose={onClose} dismissOnEscape={!loading}>
+      <div className="modal-backdrop-full">
         <div
-          className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 animate-in zoom-in-95 duration-200 text-slate-100 relative my-auto"
+          className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 text-slate-100 relative my-auto"
           role="dialog"
           aria-modal="true"
         >
@@ -120,7 +112,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             type="button"
             disabled={loading}
             onClick={onConfirm}
-            className={`px-5 py-2.5 min-h-[40px] rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2 ${style.btnBg} disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus:outline-none`}
+            className={`px-5 py-2.5 min-h-[40px] rounded-xl text-xs font-bold shadow-lg transition-colors transition-transform active:scale-95 flex items-center gap-2 ${style.btnBg} disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus:outline-none`}
           >
             {loading ? (
               <>

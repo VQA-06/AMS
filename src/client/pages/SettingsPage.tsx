@@ -4,12 +4,12 @@ import {
   ShieldCheck,
   UserPlus,
   History,
-  Key,
   Database,
   User,
   Lock,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Eye,
   EyeOff,
   Sparkles,
@@ -49,6 +49,9 @@ export const SettingsPage: React.FC = () => {
   // Global Dialog State
   const [deletingAdmin, setDeletingAdmin] = useState<Admin | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [clearingCache, setClearingCache] = useState<boolean>(false);
+  /** Sections that failed to load; shown as a warning instead of fake "no data". */
+  const [partialErrors, setPartialErrors] = useState<string[]>([]);
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -196,17 +199,26 @@ export const SettingsPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [admRes, logRes, memRes] = await Promise.all([
-        fetchApi<{ admins: Admin[] }>('/api/auth/admins').catch(() => ({ admins: [] })),
-        fetchApi<{ logs: AuditLog[] }>('/api/audit/logs').catch(() => ({ logs: [] })),
-        fetchApi<{ members: Member[] }>('/api/members?status=active&limit=500').catch(() => ({ members: [] })),
+      const settled = await Promise.allSettled([
+        fetchApi<{ admins: Admin[] }>('/api/auth/admins'),
+        fetchApi<{ logs: AuditLog[] }>('/api/audit/logs'),
+        fetchApi<{ members: Member[] }>('/api/members?status=active&limit=500'),
       ]);
 
-      setAdmins(admRes.admins || []);
-      setAuditLogs(logRes.logs || []);
-      setActiveMembers(memRes.members || []);
-    } catch {
-      // ignore
+      // Falling back to empty arrays made a failed request look like "no data
+      // exists", so the admin roster and audit log silently appeared empty.
+      const failed = ['Daftar Panitia', 'Log Audit', 'Daftar Anggota'];
+      setPartialErrors(
+        settled.flatMap((r, i) => (r.status === 'rejected' ? [failed[i]] : []))
+      );
+
+      const [admRes, logRes, memRes] = settled.map((r) =>
+        r.status === 'fulfilled' ? r.value : null
+      ) as [{ admins: Admin[] } | null, { logs: AuditLog[] } | null, { members: Member[] } | null];
+
+      setAdmins(admRes?.admins || []);
+      setAuditLogs(logRes?.logs || []);
+      setActiveMembers(memRes?.members || []);
     } finally {
       setLoading(false);
     }
@@ -450,7 +462,20 @@ export const SettingsPage: React.FC = () => {
     : [];
 
   return (
-    <div className="space-y-6 animate-in fade-in pb-12">
+    <div className="space-y-6 pb-12">
+
+      {partialErrors.length > 0 && (
+        <div
+          role="status"
+          className="flex items-start gap-2.5 px-4 py-3 rounded-2xl bg-amber-950/40 border border-amber-700/50 text-amber-200 text-xs"
+        >
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <span>
+            Sebagian data gagal dimuat: {partialErrors.join(', ')}. Daftar di bawah
+            mungkin tidak lengkap, bukan kosong.
+          </span>
+        </div>
+      )}
       {/* Top Header */}
       <div>
         <h2 className="text-2xl font-bold font-heading text-white flex items-center gap-2.5">
@@ -467,7 +492,7 @@ export const SettingsPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
-          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
+          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
             activeTab === 'profile'
               ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
               : 'text-slate-400 hover:text-slate-200 glass-panel'
@@ -480,7 +505,7 @@ export const SettingsPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('team')}
-          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
+          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
             activeTab === 'team'
               ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
               : 'text-slate-400 hover:text-slate-200 glass-panel'
@@ -493,7 +518,7 @@ export const SettingsPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('audit')}
-          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
+          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
             activeTab === 'audit'
               ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
               : 'text-slate-400 hover:text-slate-200 glass-panel'
@@ -506,7 +531,7 @@ export const SettingsPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('system')}
-          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
+          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
             activeTab === 'system'
               ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
               : 'text-slate-400 hover:text-slate-200 glass-panel'
@@ -523,7 +548,7 @@ export const SettingsPage: React.FC = () => {
           {/* Account Overview Card */}
           <div className="glass-panel-elevated rounded-3xl p-6 border border-slate-800 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-sky-500/30 font-heading">
+              <div className="w-12 h-12 rounded-2xl bg-sky-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-sky-500/30 font-heading">
                 {currentAdmin?.name?.charAt(0)?.toUpperCase() || 'A'}
               </div>
               <div>
@@ -567,14 +592,14 @@ export const SettingsPage: React.FC = () => {
             </h3>
 
             {profileSuccessMsg && (
-              <div className="p-3.5 rounded-2xl bg-emerald-950/60 border border-emerald-800/60 flex items-start gap-2.5 text-xs text-emerald-300 animate-in fade-in">
+              <div className="p-3.5 rounded-2xl bg-emerald-950/60 border border-emerald-800/60 flex items-start gap-2.5 text-xs text-emerald-300">
                 <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
                 <span>{profileSuccessMsg}</span>
               </div>
             )}
 
             {profileErrorMsg && (
-              <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-800/60 flex items-start gap-2.5 text-xs text-rose-300 animate-in fade-in">
+              <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-800/60 flex items-start gap-2.5 text-xs text-rose-300">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
                 <span>{profileErrorMsg}</span>
               </div>
@@ -583,28 +608,30 @@ export const SettingsPage: React.FC = () => {
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label htmlFor="pages-settingspage-field-1" className="block text-xs font-semibold text-slate-300 mb-1.5">
                     Nama Lengkap:
                   </label>
-                  <input
+                  <input id="pages-settingspage-field-1"
                     type="text"
                     required
                     value={profileName}
+                    autoComplete="name"
                     onChange={(e) => setProfileName(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label htmlFor="pages-settingspage-field-2" className="block text-xs font-semibold text-slate-300 mb-1.5">
                     Email / Username:
                   </label>
-                  <input
+                  <input id="pages-settingspage-field-2"
                     type="email"
                     required
                     value={profileEmail}
+                    autoComplete="email"
                     onChange={(e) => setProfileEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500 font-mono"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
                   />
                 </div>
               </div>
@@ -615,16 +642,16 @@ export const SettingsPage: React.FC = () => {
                 </p>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label htmlFor="pages-settingspage-field-3" className="block text-xs font-semibold text-slate-300 mb-1">
                     Password Saat Ini:
                   </label>
                   <div className="relative">
-                    <input
+                    <input id="pages-settingspage-field-3"
                       type={showCurrentPass ? 'text' : 'password'}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Masukkan password sekarang"
-                      className="w-full px-4 py-2.5 pr-12 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500 font-mono"
+                      className="w-full px-4 py-2.5 pr-12 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
                     />
                     <button
                       type="button"
@@ -638,20 +665,23 @@ export const SettingsPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label htmlFor="pages-settingspage-field-4" className="block text-xs font-semibold text-slate-300 mb-1">
                       Password Baru:
                     </label>
                     <div className="relative">
-                      <input
+                      <input id="pages-settingspage-field-4"
+                        autoComplete="new-password"
                         type={showNewPass ? 'text' : 'password'}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Minimal 6 karakter"
-                        className="w-full px-4 py-2.5 pr-12 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500 font-mono"
+                        className="w-full px-4 py-2.5 pr-12 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
                       />
                       <button
                         type="button"
                         onClick={() => setShowNewPass(!showNewPass)}
+                        aria-label={showNewPass ? 'Sembunyikan password' : 'Tampilkan password'}
+                        aria-pressed={showNewPass}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
                       >
                         {showNewPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -660,15 +690,16 @@ export const SettingsPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label htmlFor="pages-settingspage-field-5" className="block text-xs font-semibold text-slate-300 mb-1">
                       Konfirmasi Password Baru:
                     </label>
-                    <input
+                    <input id="pages-settingspage-field-5"
                       type="password"
                       value={confirmPassword}
+                      autoComplete="new-password"
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Ketik ulang password baru"
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500 font-mono"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
                     />
                   </div>
                 </div>
@@ -924,9 +955,9 @@ export const SettingsPage: React.FC = () => {
 
           {/* Modal Tambah Akun Panitia */}
           {isAddAdminOpen && (
-            <ModalPortal>
-              <div className="modal-backdrop-full animate-in fade-in">
-                <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 my-auto">
+            <ModalPortal onClose={() => setIsAddAdminOpen(false)}>
+              <div className="modal-backdrop-full">
+                <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div className="flex items-center gap-2">
                       <UserPlus className="w-5 h-5 text-sky-400" />
@@ -960,14 +991,14 @@ export const SettingsPage: React.FC = () => {
 
                   <form onSubmit={handleAddAdminFromMember} className="space-y-3.5 text-xs">
                     <div>
-                      <label className="block font-semibold text-slate-300 mb-1">
+                      <label htmlFor="pages-settingspage-field-6" className="block font-semibold text-slate-300 mb-1">
                         Pilih Anggota Utama / Universal:
                       </label>
-                      <select
+                      <select id="pages-settingspage-field-6"
                         required
                         value={selectedMemberId}
                         onChange={(e) => setSelectedMemberId(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500"
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                       >
                         <option value="">-- Pilih Anggota Aktif --</option>
                         {activeMembers
@@ -986,11 +1017,11 @@ export const SettingsPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Role / Peran Akun:</label>
-                      <select
+                      <label htmlFor="pages-settingspage-field-7" className="block font-semibold text-slate-300 mb-1">Role / Peran Akun:</label>
+                      <select id="pages-settingspage-field-7"
                         value={newRole}
                         onChange={(e) => setNewRole(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500"
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                       >
                         <option value="operator">Operator (Pos Scanner & Cek Event)</option>
                         <option value="admin">Admin (Kelola Anggota, Event, QR)</option>
@@ -1000,16 +1031,16 @@ export const SettingsPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block font-semibold text-slate-300 mb-1">
+                      <label htmlFor="pages-settingspage-field-8" className="block font-semibold text-slate-300 mb-1">
                         Password Awal <span className="text-slate-500 font-normal">(Min. 6 Karakter)</span>:
                       </label>
-                      <input
+                      <input id="pages-settingspage-field-8"
                         type="password"
                         required
                         value={newPasswordAdmin}
                         onChange={(e) => setNewPasswordAdmin(e.target.value)}
                         placeholder="Contoh: Panitia123!"
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-sky-500 font-mono"
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
                       />
                     </div>
 
@@ -1040,9 +1071,9 @@ export const SettingsPage: React.FC = () => {
 
           {/* Edit Admin Modal */}
           {editingAdmin && (
-            <ModalPortal>
-              <div className="modal-backdrop-full animate-in fade-in">
-                <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 animate-in zoom-in-95 my-auto">
+            <ModalPortal onClose={() => setEditingAdmin(null)}>
+              <div className="modal-backdrop-full">
+                <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 my-auto">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div className="flex items-center gap-2">
                       <Edit2 className="w-4 h-4 text-sky-400" />
@@ -1077,11 +1108,11 @@ export const SettingsPage: React.FC = () => {
 
                   <form onSubmit={handleSaveEditAdmin} className="space-y-3 text-xs">
                     <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Role / Peran:</label>
-                      <select
+                      <label htmlFor="pages-settingspage-field-9" className="block font-semibold text-slate-300 mb-1">Role / Peran:</label>
+                      <select id="pages-settingspage-field-9"
                         value={editRole}
                         onChange={(e) => setEditRole(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-sky-500"
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                       >
                         <option value="operator">Operator (Pos Scanner & Cek Event)</option>
                         <option value="admin">Admin (Kelola Anggota, Event, QR)</option>
@@ -1096,7 +1127,7 @@ export const SettingsPage: React.FC = () => {
                         disabled={editingAdmin.id === 'adm_owner_default'}
                         value={editStatus}
                         onChange={(e) => setEditStatus(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-sky-500 disabled:opacity-50"
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 disabled:opacity-50"
                       >
                         <option value="active">Aktif</option>
                         <option value="inactive">Nonaktif (Akses Dicabut)</option>
@@ -1104,15 +1135,15 @@ export const SettingsPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block font-semibold text-slate-300 mb-1">
+                      <label htmlFor="pages-settingspage-field-10" className="block font-semibold text-slate-300 mb-1">
                         Reset Password Baru <span className="text-slate-500 font-normal">(Kosongkan jika tidak diubah)</span>:
                       </label>
-                      <input
+                      <input id="pages-settingspage-field-10"
                         type="password"
                         value={editPassword}
                         onChange={(e) => setEditPassword(e.target.value)}
                         placeholder="Masukkan password baru"
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-sky-500 font-mono"
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
                       />
                     </div>
 
@@ -1179,48 +1210,6 @@ export const SettingsPage: React.FC = () => {
       {/* Tab 3: System Status */}
       {activeTab === 'system' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="glass-panel-elevated rounded-3xl p-6 border border-slate-800 space-y-4">
-            <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
-              <Key className="w-4 h-4 text-sky-400" />
-              <span>Arsitektur Kriptografi QR</span>
-            </h3>
-            <div className="space-y-2 text-xs text-slate-300">
-              <div className="flex justify-between p-3 rounded-xl glass-panel">
-                <span>Standard Enkripsi:</span>
-                <span className="font-mono font-bold text-sky-400">JWE Compact (AES-256-GCM)</span>
-              </div>
-              <div className="flex justify-between p-3 rounded-xl glass-panel">
-                <span>Algorithm Header:</span>
-                <span className="font-mono font-bold text-white">alg: dir, enc: A256GCM</span>
-              </div>
-              <div className="flex justify-between p-3 rounded-xl glass-panel">
-                <span>Active Key ID:</span>
-                <span className="font-mono font-bold text-emerald-400">k1 (Rotatable)</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-panel-elevated rounded-3xl p-6 border border-slate-800 space-y-4">
-            <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
-              <Database className="w-4 h-4 text-sky-400" />
-              <span>Cloudflare Serverless Stack</span>
-            </h3>
-            <div className="space-y-2 text-xs text-slate-300">
-              <div className="flex justify-between p-3 rounded-xl glass-panel">
-                <span>Backend Framework:</span>
-                <span className="font-bold text-white">Hono on Cloudflare Workers</span>
-              </div>
-              <div className="flex justify-between p-3 rounded-xl glass-panel">
-                <span>Database:</span>
-                <span className="font-bold text-sky-400">Cloudflare D1 (Dev / Local)</span>
-              </div>
-              <div className="flex justify-between p-3 rounded-xl glass-panel">
-                <span>Rate Limit & Cache:</span>
-                <span className="font-bold text-emerald-400">Cloudflare KV Namespace</span>
-              </div>
-            </div>
-          </div>
-
           <div className="glass-panel-elevated rounded-3xl p-6 border border-slate-800 space-y-4 md:col-span-2">
             <div className="flex items-center justify-between">
               <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
@@ -1239,8 +1228,7 @@ export const SettingsPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
               <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
                 <span className="text-[11px] text-slate-400 block font-medium">Mode Tampilan:</span>
-                <span className="font-bold text-sky-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+                <span className="font-bold text-sky-400">
                   {typeof window !== 'undefined' &&
                   (window.matchMedia('(display-mode: standalone)').matches ||
                     (window.navigator as unknown as { standalone?: boolean }).standalone)
@@ -1262,7 +1250,13 @@ export const SettingsPage: React.FC = () => {
               <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
                 <span className="text-[11px] text-slate-400 block font-medium">Konektivitas Jaringan:</span>
                 <span className="font-bold text-white flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      typeof navigator !== 'undefined' && navigator.onLine
+                        ? 'bg-emerald-400'
+                        : 'bg-rose-400'
+                    }`}
+                  ></span>
                   {typeof navigator !== 'undefined' && navigator.onLine ? 'Online' : 'Offline'}
                 </span>
               </div>
@@ -1294,15 +1288,7 @@ export const SettingsPage: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => {
-                  if ('caches' in window) {
-                    caches.keys().then((names) => {
-                      Promise.all(names.map((name) => caches.delete(name))).then(() => {
-                        window.location.reload();
-                      });
-                    });
-                  }
-                }}
+                onClick={() => setClearingCache(true)}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl glass-panel text-rose-400 hover:text-rose-300 font-semibold text-xs transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -1334,6 +1320,24 @@ export const SettingsPage: React.FC = () => {
         loading={deleteLoading}
         onConfirm={handleConfirmDeleteAdmin}
         onClose={() => setDeletingAdmin(null)}
+      />
+
+      <ConfirmModal
+        isOpen={clearingCache}
+        title="Bersihkan Cache Offline"
+        message="Semua aset offline (service worker & cache browser) akan dihapus dan aplikasi dimuat ulang. Anda tetap bisa masuk, tetapi data yang belum tersinkron akan hilang."
+        type="warning"
+        confirmText="Ya, Bersihkan Cache"
+        cancelText="Batal"
+        onClose={() => setClearingCache(false)}
+        onConfirm={async () => {
+          setClearingCache(false);
+          if ('caches' in window) {
+            const names = await caches.keys();
+            await Promise.all(names.map((name) => caches.delete(name)));
+          }
+          window.location.reload();
+        }}
       />
 
       {/* Alert / Notification Modal */}

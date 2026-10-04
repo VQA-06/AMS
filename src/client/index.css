@@ -163,6 +163,25 @@
   will-change: background-position;
 }
 
+/* One-shot confirmation pop. A looping bounce on a success icon draws the eye
+   for a moment and then becomes permanent visual noise, so the animation runs
+   once and settles. */
+@keyframes popOnceKeyframe {
+  0% {
+    transform: scale(0.85);
+  }
+  55% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-pop-once {
+  animation: popOnceKeyframe 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
 /* Accessibility: prefers-reduced-motion handler */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
@@ -171,6 +190,7 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  .animate-pop-once,
   .scanner-laser,
   .animate-toast-progress,
   .skeleton-shimmer,

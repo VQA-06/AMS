@@ -20,7 +20,7 @@ const MemberTrackerPage = lazy(() => import('./pages/MemberTrackerPage').then((m
 const QrGeneratorModal = lazy(() => import('./components/qr/QrGeneratorModal').then((m) => ({ default: m.QrGeneratorModal })));
 
 const RouteLoadingFallback: React.FC = () => (
-  <div className="p-4 max-w-7xl mx-auto space-y-4 animate-in fade-in duration-150">
+  <div className="p-4 max-w-7xl mx-auto space-y-4">
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
       <div className="h-24 bg-slate-900/60 border border-slate-800/80 rounded-2xl animate-pulse" />
       <div className="h-24 bg-slate-900/60 border border-slate-800/80 rounded-2xl animate-pulse" />
@@ -180,7 +180,7 @@ export const App: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-100">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-b from-white via-slate-50 to-slate-100 p-2 flex items-center justify-center animate-pulse shadow-xl shadow-sky-500/20 border border-white/50 ring-4 ring-white/10 mb-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-b from-white via-slate-50 to-slate-100 p-2 flex items-center justify-center animate-pulse shadow-lg shadow-sky-500/10 border border-white/40 ring-1 ring-white/20 mb-4">
           <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
         </div>
         <p className="text-sm font-semibold text-slate-300">Memuat AMS (Attendance Management System)...</p>

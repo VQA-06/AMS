@@ -3,6 +3,7 @@ import { setCookie, deleteCookie, getCookie } from 'hono/cookie';
 import { Env } from '../env';
 import { AdminRepository } from '../repositories/admin.repo';
 import { MemberRepository } from '../repositories/member.repo';
+import { QrTokenRepository } from '../repositories/qr.repo';
 import { AuditRepository } from '../repositories/audit.repo';
 import {
   adminCreateFromMemberSchema,
@@ -11,7 +12,7 @@ import {
   loginSchema,
   profileUpdateSchema,
 } from '@/shared/schemas/auth.schema';
-import { authMiddleware, requireRole } from '../middleware/auth';
+import { authMiddleware, requireRole, invalidateAdminCache } from '../middleware/auth';
 import { authRateLimiter } from '../middleware/rate-limiter';
 import { ApiResponse } from '@/shared/types';
 import { ErrorCode } from '@/shared/constants/error-codes';
@@ -179,7 +180,22 @@ authRoutes.post('/login-qr', authRateLimiter({ maxAttempts: 10, windowMs: 15 * 6
   const memberId = decrypted.memberId;
   const adminRepo = new AdminRepository(c.env.DB);
   const memberRepo = new MemberRepository(c.env.DB);
+  const qrRepo = new QrTokenRepository(c.env.DB);
 
+  // Check if QR token has been revoked in database
+  const dbToken = await qrRepo.findByJti(decrypted.jti);
+  if (!dbToken || dbToken.revoked_at) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.TOKEN_REVOKED,
+          message: 'QR Pass ini telah dicabut atau dinonaktifkan.',
+        },
+      },
+      401
+    );
+  }
   // Check if member exists and is active
   const member = await memberRepo.findById(memberId);
   if (!member || member.status !== 'active') {
@@ -335,6 +351,10 @@ authRoutes.patch('/profile', authMiddleware, async (c) => {
   }
 
   const updated = await adminRepo.update(dbAdmin.id, updateData);
+  invalidateAdminCache(dbAdmin.email);
+  if (updateData.email && updateData.email !== dbAdmin.email) {
+    invalidateAdminCache(updateData.email);
+  }
 
   const auditRepo = new AuditRepository(c.env.DB);
   await auditRepo.logAction({
@@ -528,6 +548,10 @@ authRoutes.patch('/admins/:id', authMiddleware, requireRole(['owner']), async (c
   }
 
   const updated = await adminRepo.update(id, updateData);
+  invalidateAdminCache(targetAdmin.email);
+  if (updateData.email && updateData.email !== targetAdmin.email) {
+    invalidateAdminCache(updateData.email);
+  }
 
   const auditRepo = new AuditRepository(c.env.DB);
   const currentAdmin = c.get('admin');
@@ -607,6 +631,7 @@ authRoutes.delete('/admins/:id', authMiddleware, requireRole(['owner']), async (
   }
 
   await adminRepo.delete(id);
+  invalidateAdminCache(targetAdmin.email);
 
   const auditRepo = new AuditRepository(c.env.DB);
   await auditRepo.logAction({
@@ -649,6 +674,7 @@ authRoutes.post('/admins/bulk-delete', authMiddleware, requireRole(['owner']), a
     if (target.role === 'owner' && target.member_id === null) continue;
 
     await adminRepo.delete(id);
+    invalidateAdminCache(target.email);
     deletedCount++;
   }
 

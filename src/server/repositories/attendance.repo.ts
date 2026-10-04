@@ -208,7 +208,7 @@ export class AttendanceRepository {
     memberId: string;
     qrTokenId?: string | null;
     sessionType: SessionType;
-    operatorId: string;
+    operatorId?: string | null;
     stationId?: string | null;
     reason: string;
   }): Promise<void> {
@@ -227,7 +227,7 @@ export class AttendanceRepository {
         qrTokenId,
         data.sessionType,
         data.stationId ?? null,
-        data.operatorId,
+        data.operatorId ?? null,
         meta
       );
 
@@ -243,7 +243,7 @@ export class AttendanceRepository {
         data.memberId,
         `Manual: ${data.reason}`,
         data.stationId ?? null,
-        data.operatorId
+        data.operatorId ?? null
       );
 
     await this.db.batch([insertAttendance, insertAttempt]);

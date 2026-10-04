@@ -14,11 +14,11 @@ export const RecentScansSheet: React.FC<RecentScansSheetProps> = ({
   onToggle,
 }) => {
   return (
-    <div className="w-full glass-panel-elevated rounded-t-3xl border-t border-slate-800 transition-all duration-300 shadow-2xl">
+    <div className="w-full glass-panel-elevated rounded-t-3xl border-t border-slate-800 transition-colors duration-300 shadow-2xl">
       {/* Drawer Handle Header */}
       <button
         onClick={onToggle}
-        className="w-full px-5 py-3.5 flex items-center justify-between text-left focus:outline-none"
+        className="w-full px-5 py-3.5 flex items-center justify-between text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
         <div className="flex items-center gap-2.5">
           <History className="w-4 h-4 text-sky-400" />

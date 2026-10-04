@@ -182,7 +182,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
             <button
               type="button"
               onClick={() => setPeriodFilter('all')}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-all min-h-[32px] sm:min-h-0 flex items-center ${periodFilter === 'all'
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-colors min-h-[32px] sm:min-h-0 flex items-center ${periodFilter === 'all'
                 ? 'bg-slate-700 text-white font-bold'
                 : 'text-slate-400 hover:text-white'
                 }`}
@@ -192,7 +192,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
             <button
               type="button"
               onClick={() => setPeriodFilter('year')}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-all min-h-[32px] sm:min-h-0 flex items-center ${periodFilter === 'year'
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-colors min-h-[32px] sm:min-h-0 flex items-center ${periodFilter === 'year'
                 ? 'bg-slate-700 text-white font-bold'
                 : 'text-slate-400 hover:text-white'
                 }`}
@@ -202,7 +202,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
             <button
               type="button"
               onClick={() => setPeriodFilter('30days')}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-all min-h-[32px] sm:min-h-0 flex items-center ${periodFilter === '30days'
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-colors min-h-[32px] sm:min-h-0 flex items-center ${periodFilter === '30days'
                 ? 'bg-slate-700 text-white font-bold'
                 : 'text-slate-400 hover:text-white'
                 }`}
@@ -215,7 +215,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-medium focus:outline-none focus:border-sky-500 cursor-pointer min-h-[36px]"
+            className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 cursor-pointer min-h-[36px]"
           >
             <option value="all">Semua Status</option>
             <option value="active">Aktif Saja</option>
@@ -226,7 +226,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-medium focus:outline-none focus:border-sky-500 cursor-pointer min-h-[36px]"
+            className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 cursor-pointer min-h-[36px]"
           >
             <option value="attendance">Peserta Terbanyak</option>
             <option value="recent">Kegiatan Terbaru</option>

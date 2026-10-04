@@ -66,7 +66,7 @@ export const MemberList: React.FC<MemberListProps> = ({
           return (
             <div
               key={member.id}
-              className={`content-auto glass-panel-elevated rounded-2xl p-4 border transition-all space-y-3 ${
+              className={`content-auto glass-panel-elevated rounded-2xl p-4 border transition-colors space-y-3 ${
                 isSelected ? 'border-sky-500/80 bg-sky-950/20 shadow-lg shadow-sky-500/10' : 'border-slate-800/80 shadow-md'
               }`}
             >
@@ -172,6 +172,7 @@ export const MemberList: React.FC<MemberListProps> = ({
 
       {/* Desktop Table View (visible on md screens and up) */}
       <div className="hidden md:block glass-panel rounded-3xl overflow-hidden border border-slate-800/80 shadow-xl">
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-slate-300">
           <thead className="bg-slate-900/80 text-xs uppercase font-bold tracking-wider text-slate-400 border-b border-slate-800">
             <tr>
@@ -289,6 +290,7 @@ export const MemberList: React.FC<MemberListProps> = ({
             })}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

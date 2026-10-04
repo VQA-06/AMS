@@ -102,8 +102,8 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   };
 
   return (
-    <ModalPortal>
-      <div className="modal-backdrop-full animate-in fade-in">
+    <ModalPortal onClose={onClose}>
+      <div className="modal-backdrop-full">
         <div className="w-full max-w-lg rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[85vh] flex flex-col my-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
@@ -121,6 +121,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Tutup dialog"
             className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 shrink-0 transition-colors"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -159,38 +160,38 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                 value={formData.external_id || ''}
                 onChange={(e) => setFormData({ ...formData, external_id: e.target.value })}
                 placeholder="misal: MBR-102938"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white font-mono focus:outline-none focus:border-sky-500"
+                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label htmlFor="components-members-memberformmodal-field-1" className="block text-xs font-semibold text-slate-300 mb-1">
                 Nama Lengkap <span className="text-rose-400">*</span>
               </label>
-              <input
+              <input id="components-members-memberformmodal-field-1"
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="misal: Budi Santoso"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label htmlFor="components-members-memberformmodal-field-2" className="block text-xs font-semibold text-slate-300 mb-1">
                 Divisi <span className="text-slate-500 font-normal">(Opsional)</span>
               </label>
               <div className="relative">
-                <input
+                <input id="components-members-memberformmodal-field-2"
                   type="text"
                   list="division-options"
                   value={formData.division || ''}
                   onChange={(e) => setFormData({ ...formData, division: e.target.value })}
                   placeholder="misal: Acara, Logistik, Humas"
-                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                 />
                 <datalist id="division-options">
                   {divisionList.map((div, i) => (
@@ -201,16 +202,16 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label htmlFor="components-members-memberformmodal-field-3" className="block text-xs font-semibold text-slate-300 mb-1">
                 Grup / Kategori <span className="text-slate-500 font-normal">(Opsional)</span>
               </label>
-              <input
+              <input id="components-members-memberformmodal-field-3"
                 type="text"
                 list="group-options"
                 value={formData.group_name || ''}
                 onChange={(e) => setFormData({ ...formData, group_name: e.target.value })}
                 placeholder="misal: Panitia Inti, Peserta"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
               />
               <datalist id="group-options">
                 {groupList.map((grp, i) => (
@@ -222,35 +223,36 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Email</label>
-              <input
+              <label htmlFor="components-members-memberformmodal-field-4" className="block text-xs font-semibold text-slate-300 mb-1">Email</label>
+              <input id="components-members-memberformmodal-field-4"
                 type="email"
+                autoComplete="email"
                 value={formData.email || ''}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="email@example.com"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">No. Telepon / WA</label>
-              <input
+              <label htmlFor="components-members-memberformmodal-field-5" className="block text-xs font-semibold text-slate-300 mb-1">No. Telepon / WA</label>
+              <input id="components-members-memberformmodal-field-5"
                 type="tel"
                 value={formData.phone || ''}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="08123456789"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Status</label>
-              <select
+              <label htmlFor="components-members-memberformmodal-field-6" className="block text-xs font-semibold text-slate-300 mb-1">Status</label>
+              <select id="components-members-memberformmodal-field-6"
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
               >
                 <option value="active">Aktif</option>
                 <option value="inactive">Nonaktif</option>
@@ -270,7 +272,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform disabled:opacity-50"
             >
               <Save className="w-4 h-4 shrink-0" />
               <span>{loading ? 'Menyimpan...' : 'Simpan Data'}</span>

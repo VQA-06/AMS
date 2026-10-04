@@ -66,16 +66,20 @@ export class EventGuestRepository {
     const res = await this.db
       .prepare(`
         SELECT e.id, e.name, e.starts_at, e.ends_at,
-               COUNT(DISTINCT t.member_id) as guest_count
+               COUNT(DISTINCT g.member_id) as guest_count
         FROM events e
-        JOIN qr_tokens t ON t.event_id = e.id AND t.scope = 'event' AND t.revoked_at IS NULL
+        JOIN (
+          SELECT event_id, member_id FROM event_guests
+          UNION
+          SELECT event_id, member_id FROM qr_tokens WHERE scope = 'event' AND revoked_at IS NULL
+        ) g ON g.event_id = e.id
         WHERE e.id != ?
           AND (
             COALESCE(e.starts_at, e.created_at) < ?
             OR (COALESCE(e.starts_at, e.created_at) = ? AND e.id < ?)
           )
         GROUP BY e.id
-        HAVING COUNT(DISTINCT t.member_id) > 0
+        HAVING COUNT(DISTINCT g.member_id) > 0
         ORDER BY COALESCE(e.starts_at, e.created_at) DESC, e.created_at DESC
         LIMIT 2
       `)
@@ -91,22 +95,27 @@ export class EventGuestRepository {
   async listGuestsFromSourceEvent(sourceEventId: string, targetEventId: string): Promise<GuestCandidate[]> {
     const res = await this.db
       .prepare(`
-        SELECT 
+        SELECT
           m.id as member_id,
           m.name,
           m.external_id,
           m.division,
           t.jti as token_jti,
           t.id as token_id,
-          CASE WHEN eg.id IS NOT NULL THEN 1 ELSE 0 END as already_imported
-        FROM qr_tokens t
-        JOIN members m ON t.member_id = m.id
-        LEFT JOIN event_guests eg ON eg.event_id = ? AND eg.member_id = m.id
-        WHERE t.event_id = ? AND t.scope = 'event' AND t.revoked_at IS NULL
+          CASE WHEN eg_target.id IS NOT NULL THEN 1 ELSE 0 END as already_imported
+        FROM (
+          SELECT member_id FROM event_guests WHERE event_id = ?
+          UNION
+          SELECT member_id FROM qr_tokens WHERE event_id = ? AND scope = 'event' AND revoked_at IS NULL
+        ) src_guests
+        JOIN members m ON src_guests.member_id = m.id
+        JOIN qr_tokens t ON t.member_id = m.id AND t.scope = 'event' AND t.revoked_at IS NULL
+        LEFT JOIN event_guests eg_target ON eg_target.event_id = ? AND eg_target.member_id = m.id
+        WHERE m.status = 'active'
         GROUP BY m.id
         ORDER BY m.name ASC
       `)
-      .bind(targetEventId, sourceEventId)
+      .bind(sourceEventId, sourceEventId, targetEventId)
       .all<any>();
 
     return (res.results || []).map((row) => ({
@@ -121,16 +130,18 @@ export class EventGuestRepository {
   }
 
   /**
-   * Atomically imports guest member IDs into target event with D1 batch chunking (max 50 stmts/batch)
+   * Atomically imports guest member IDs into target event with D1 batch chunking (max 50 stmts/batch).
+   * If newExpiresAt is provided, updates existing qr_tokens.expires_at to extend validity for the new event.
    */
   async importGuestsToEvent(
     targetEventId: string,
     guestMemberIds: string[],
-    sourceEventId?: string
+    sourceEventId?: string,
+    newExpiresAt?: string
   ): Promise<number> {
     if (guestMemberIds.length === 0) return 0;
 
-    const batchSize = 50;
+    const batchSize = newExpiresAt ? 25 : 50;
     let totalInserted = 0;
 
     for (let i = 0; i < guestMemberIds.length; i += batchSize) {
@@ -147,11 +158,23 @@ export class EventGuestRepository {
             `)
             .bind(linkId, targetEventId, memberId, sourceEventId || null)
         );
+
+        if (newExpiresAt) {
+          stmts.push(
+            this.db
+              .prepare(`
+                UPDATE qr_tokens
+                SET expires_at = ?
+                WHERE member_id = ? AND scope = 'event' AND revoked_at IS NULL AND (expires_at < ? OR expires_at IS NULL)
+              `)
+              .bind(newExpiresAt, memberId, newExpiresAt)
+          );
+        }
       }
 
       const batchRes = await this.db.batch(stmts);
-      for (const r of batchRes) {
-        totalInserted += r.meta?.changes ?? 0;
+      for (let j = 0; j < batchRes.length; j += newExpiresAt ? 2 : 1) {
+        totalInserted += batchRes[j].meta?.changes ?? 0;
       }
     }
 
@@ -192,7 +215,7 @@ export class EventGuestRepository {
   async getImportedGuestsForEvent(eventId: string): Promise<ImportedGuestTokenRecord[]> {
     const res = await this.db
       .prepare(`
-        SELECT 
+        SELECT
           eg.id as link_id,
           eg.event_id,
           eg.member_id,
@@ -213,7 +236,7 @@ export class EventGuestRepository {
         FROM event_guests eg
         JOIN members m ON eg.member_id = m.id
         LEFT JOIN events se ON eg.source_event_id = se.id
-        JOIN qr_tokens t ON t.member_id = m.id AND t.scope = 'event' AND t.revoked_at IS NULL AND (t.event_id = eg.source_event_id OR eg.source_event_id IS NULL)
+        JOIN qr_tokens t ON t.member_id = m.id AND t.scope = 'event' AND t.revoked_at IS NULL
         WHERE eg.event_id = ?
         GROUP BY m.id
         ORDER BY eg.created_at ASC

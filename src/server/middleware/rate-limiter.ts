@@ -74,7 +74,7 @@ export function authRateLimiter(options: RateLimitOptions = {}) {
 
       // If window has passed, reset record
       if (now - record.firstAttemptAt > windowMs) {
-        rateLimitStore.set(key, { attempts: 1, firstAttemptAt: now });
+        rateLimitStore.set(key, { attempts: 0, firstAttemptAt: now });
       }
     }
 

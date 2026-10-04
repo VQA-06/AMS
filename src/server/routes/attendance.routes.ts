@@ -1,19 +1,18 @@
 import { Hono, Context } from 'hono';
+import { StatusCode } from 'hono/utils/http-status';
 import Papa from 'papaparse';
 import { Env } from '../env';
 import { AttendanceRepository } from '../repositories/attendance.repo';
-import { MemberRepository } from '../repositories/member.repo';
-import { EventRepository } from '../repositories/event.repo';
-import { AuditRepository } from '../repositories/audit.repo';
 import { authMiddleware, requireRole } from '../middleware/auth';
 import { createRateLimiter } from '../middleware/rate-limit';
 import { edgeCache } from '../middleware/edge-cache';
 import { invalidateEdgeCache } from '../lib/edge-cache';
 import { manualAttendanceSchema } from '@/shared/schemas/scan.schema';
-import { ApiResponse } from '@/shared/types';
+import { ApiResponse, SessionType } from '@/shared/types';
 import { ErrorCode } from '@/shared/constants/error-codes';
 import { sanitizeCsvRow } from '../lib/csv-sanitizer';
-
+import { DefaultAttendanceEngine } from '../domain/attendance/attendance-engine';
+import { MutationCoordinator } from '../lib/mutation-coordinator';
 const attendanceRoutes = new Hono<{ Bindings: Env }>();
 
 // GET /api/attendances/event/:id - List attendances for an event
@@ -132,110 +131,35 @@ attendanceRoutes.post('/event/:id/manual', authMiddleware, requireRole(['owner',
   }
 
   const input = parsed.data;
-  const eventRepo = new EventRepository(c.env.DB);
-  const memberRepo = new MemberRepository(c.env.DB);
-  const attendanceRepo = new AttendanceRepository(c.env.DB);
-
-  const event = await eventRepo.findById(eventId);
-  if (!event) {
-    return c.json<ApiResponse>(
-      {
-        ok: false,
-        error: {
-          code: ErrorCode.EVENT_NOT_FOUND,
-          message: 'Kegiatan / event tidak ditemukan.',
-        },
-      },
-      404
-    );
-  }
-
-  if (!event.allow_manual_attendance) {
-    return c.json<ApiResponse>(
-      {
-        ok: false,
-        error: {
-          code: ErrorCode.FORBIDDEN,
-          message: 'Pencatatan presensi manual dinonaktifkan pada kegiatan ini.',
-        },
-      },
-      400
-    );
-  }
-
-  const member = await memberRepo.findById(input.member_id);
-  if (!member) {
-    return c.json<ApiResponse>(
-      {
-        ok: false,
-        error: {
-          code: ErrorCode.MEMBER_NOT_FOUND,
-          message: 'Anggota tidak ditemukan.',
-        },
-      },
-      404
-    );
-  }
-
-  // Check duplicate
-  const existing = await attendanceRepo.findByEventMemberSession(eventId, member.id, input.session_type);
-  if (existing) {
-    return c.json<ApiResponse>(
-      {
-        ok: false,
-        error: {
-          code: ErrorCode.ALREADY_SCANNED,
-          message: `Anggota sudah tercatat hadir untuk sesi ${input.session_type}.`,
-        },
-      },
-      400
-    );
-  }
-
   const admin = c.get('admin');
-  const attendanceId = `att_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
+  const engine = new DefaultAttendanceEngine(c.env.DB, c.env);
 
-  await attendanceRepo.recordManual({
-    attendanceId,
+  const result = await engine.recordManual({
     eventId,
-    memberId: member.id,
-    sessionType: input.session_type,
-    operatorId: admin.id,
-    stationId: input.station_id,
+    memberId: input.member_id,
+    sessionType: input.session_type as SessionType,
+    stationId: input.station_id ?? null,
+    operatorId: admin?.id,
     reason: input.reason,
   });
 
-  const auditRepo = new AuditRepository(c.env.DB);
-  await auditRepo.logAction({
-    admin_id: admin?.id,
-    action: 'RECORD_MANUAL_ATTENDANCE',
-    entity_type: 'attendance',
-    entity_id: attendanceId,
-    meta: {
-      event_id: eventId,
-      event_name: event.name,
-      member_id: member.id,
-      member_name: member.name,
-      session_type: input.session_type,
-      notes: input.reason,
-    },
-  });
+  if (!result.success) {
+    const statusCode = result.error?.status_code || 400;
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: result.error,
+      },
+      statusCode
+    );
+  }
 
-  await invalidateEdgeCache(['attendance', 'agenda', 'members'], (c as any).executionCtx);
+  await invalidateEdgeCache(['attendance', 'agenda', 'members'], c);
 
   return c.json<ApiResponse>({
     ok: true,
     data: {
-      attendance: {
-        id: attendanceId,
-        memberName: member.name,
-        memberExternalId: member.external_id,
-        memberDivision: member.division,
-        eventName: event.name,
-        sessionType: input.session_type,
-        isManual: true,
-        scannedAt: new Date().toISOString(),
-      },
+      attendance: result.attendance,
     },
   });
 });
@@ -273,13 +197,23 @@ attendanceRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'adm
     );
   }
 
+  const admin = c.get('admin');
+  const coordinator = new MutationCoordinator(c.env.DB, c);
   const placeholders = ids.map(() => '?').join(',');
-  await c.env.DB
+  const deleteStmt = c.env.DB
     .prepare(`DELETE FROM attendances WHERE id IN (${placeholders})`)
-    .bind(...ids)
-    .run();
+    .bind(...ids);
 
-  await invalidateEdgeCache(['attendance', 'agenda', 'members'], (c as any).executionCtx);
+  await coordinator.execute({
+    statements: [deleteStmt],
+    cacheTags: ['attendance', 'agenda', 'members'],
+    audit: {
+      adminId: admin?.id,
+      action: 'BULK_DELETE_ATTENDANCES',
+      entityType: 'attendance',
+      meta: { count: ids.length, ids },
+    },
+  });
 
   return c.json<ApiResponse>({
     ok: true,

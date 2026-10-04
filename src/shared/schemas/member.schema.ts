@@ -39,7 +39,7 @@ export const memberSchema = z.object({
 export const memberUpdateSchema = memberSchema.partial();
 
 export const memberImportRowSchema = z.object({
-  external_id: z.string().min(1, 'Kode Anggota wajib diisi').max(50),
+  external_id: z.string().min(1, 'Kode Anggota minimal 1 karakter').max(50).nullable().optional().or(z.literal('')),
   name: z.string().min(1, 'Nama wajib diisi').max(100),
   email: z.string().email('Email tidak valid').nullable().optional().or(z.literal('')),
   phone: z.string().nullable().optional().or(z.literal('')),

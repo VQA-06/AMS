@@ -33,7 +33,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
 
   const getButtonClass = (variant?: string, disabled?: boolean) => {
     const base =
-      'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap select-none';
+      'px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap select-none';
     if (disabled) {
       return `${base} opacity-50 cursor-not-allowed bg-slate-800 text-slate-500`;
     }
@@ -51,33 +51,34 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   };
 
   return (
-    <div className="fixed bottom-[5.5rem] sm:bottom-6 left-0 right-0 z-40 px-3 flex justify-center pointer-events-none animate-in slide-in-from-bottom-5 fade-in duration-200">
-      <div className="pointer-events-auto w-full max-w-2xl glass-panel-elevated bg-slate-900/95 backdrop-blur-xl border border-sky-500/40 rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 shadow-2xl shadow-sky-950/60 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+    <div className="fixed bottom-20 sm:bottom-6 left-0 right-0 z-50 px-3 sm:px-6 flex justify-center pointer-events-none">
+      <div className="pointer-events-auto w-full max-w-4xl bg-slate-900/95 sm:bg-slate-900 backdrop-blur-xl border border-sky-500/40 rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 shadow-2xl shadow-slate-950/90 ring-1 ring-white/10 flex flex-col sm:flex-row items-center justify-between gap-2.5">
         {/* Left: Counter & Select All toggle */}
-        <div className="flex items-center justify-between w-full sm:w-auto gap-2">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between w-full sm:w-auto gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <span className="flex items-center justify-center w-7 h-7 rounded-xl bg-sky-500 text-slate-950 font-black font-heading text-xs shadow-md shadow-sky-500/30 shrink-0">
               {selectedCount}
             </span>
-            <div className="text-left">
-              <span className="text-xs font-bold text-white block leading-tight">
+            <div className="text-left shrink-0">
+              <span className="text-xs font-bold text-white block leading-tight whitespace-nowrap">
                 {selectedCount} {itemLabel} Terpilih
               </span>
               {totalCount !== undefined && (
-                <span className="text-[10px] text-slate-400 block">
+                <span className="text-[10px] text-slate-400 block whitespace-nowrap">
                   dari total {totalCount} {itemLabel}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-1 sm:hidden">
+          <div className="flex items-center gap-1 sm:hidden shrink-0">
             {onSelectAll && (
               <button
                 type="button"
                 onClick={onSelectAll}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800/80 border border-slate-700"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800/80 border border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 shrink-0"
                 title={isAllSelected ? 'Batalkan Pilih Semua' : 'Pilih Semua'}
+                aria-label={isAllSelected ? 'Batalkan Pilih Semua' : 'Pilih Semua'}
               >
                 {isAllSelected ? <CheckSquare className="w-4 h-4 text-sky-400" /> : <Square className="w-4 h-4" />}
               </button>
@@ -85,8 +86,9 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
             <button
               type="button"
               onClick={onClearSelection}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800/80 border border-slate-700"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800/80 border border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 shrink-0"
               title="Batal Memilih"
+              aria-label="Batal Memilih"
             >
               <X className="w-4 h-4" />
             </button>
@@ -94,12 +96,12 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
         </div>
 
         {/* Right: Actions list */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto justify-start sm:justify-end pb-1 sm:pb-0 no-scrollbar">
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto justify-start sm:justify-end pb-1 sm:pb-0 pr-2 sm:pr-0 scroll-smooth touch-pan-x overscroll-contain no-scrollbar">
           {onSelectAll && (
             <button
               type="button"
               onClick={onSelectAll}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800/60 border border-slate-700/60"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800/60 border border-slate-700/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 shrink-0 whitespace-nowrap select-none"
             >
               {isAllSelected ? (
                 <>
@@ -131,7 +133,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
           <button
             type="button"
             onClick={onClearSelection}
-            className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-400 bg-slate-800/40 border border-slate-800"
+            className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-400 bg-slate-800/40 border border-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 shrink-0 whitespace-nowrap select-none"
             title="Batal"
           >
             <X className="w-3.5 h-3.5" />

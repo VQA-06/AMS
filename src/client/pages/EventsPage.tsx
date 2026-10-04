@@ -413,7 +413,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
   const hasActiveFilters = search.trim() !== '' || statusFilter !== 'all';
 
   return (
-    <div className="space-y-4 animate-in fade-in pb-20">
+    <div className="space-y-4 pb-20">
       {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>

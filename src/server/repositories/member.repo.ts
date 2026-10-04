@@ -14,10 +14,33 @@ export interface MemberFilterOptions {
 
 export class MemberRepository {
   constructor(private db: D1Database) {}
+  getGuestExclusionConditions(): string[] {
+    return [
+      "(group_name NOT LIKE 'Tamu:%' OR group_name IS NULL)",
+      "external_id NOT LIKE 'GUEST-%'",
+      "(metadata NOT LIKE '%\"temporary\":true%' AND metadata NOT LIKE '%\"temporary\": true%' OR metadata IS NULL)",
+    ];
+  }
+  async listAllActive(options: { division?: string } = {}): Promise<Member[]> {
+    const conditions = [...this.getGuestExclusionConditions(), "status = 'active'"];
+    const params: string[] = [];
+
+    if (options.division) {
+      conditions.push('division = ?');
+      params.push(options.division);
+    }
+
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const query = `SELECT * FROM members ${where} ORDER BY name ASC`;
+    const res = await this.db.prepare(query).bind(...params).all<Member>();
+    return res.results || [];
+  }
+
+
 
   async list(options: MemberFilterOptions = {}): Promise<{ members: Member[]; total: number }> {
     const page = Math.max(1, options.page || 1);
-    const limit = Math.max(1, Math.min(200, options.limit || 50));
+    const limit = Math.max(1, Math.min(10000, options.limit || 50));
     const offset = (page - 1) * limit;
 
     const conditions: string[] = [];
@@ -25,9 +48,7 @@ export class MemberRepository {
 
     // Exclude temporary guest participants by default unless explicitly allowed
     if (options.exclude_temporary !== false) {
-      conditions.push("(group_name NOT LIKE 'Tamu:%' OR group_name IS NULL)");
-      conditions.push("external_id NOT LIKE 'GUEST-%'");
-      conditions.push("(metadata NOT LIKE '%\"temporary\":true%' AND metadata NOT LIKE '%\"temporary\": true%' OR metadata IS NULL)");
+      conditions.push(...this.getGuestExclusionConditions());
     }
 
     if (options.status && options.status !== 'all') {

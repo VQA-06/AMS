@@ -58,11 +58,11 @@ export const PwaInstallBanner: React.FC = () => {
   return (
     <>
       {/* Top Floating Pill Banner (Zero Overlap with Bottom Navigation) */}
-      <div className="fixed top-3 inset-x-3 md:top-4 md:right-4 md:left-auto md:max-w-md z-50 animate-in slide-in-from-top-4 duration-300">
+      <div className="fixed top-3 inset-x-3 md:top-4 md:right-4 md:left-auto md:max-w-md z-50">
         <div className="glass-panel-elevated rounded-2xl md:rounded-full px-3 py-2 border border-sky-500/40 shadow-xl shadow-sky-500/15 backdrop-blur-xl bg-slate-900/95 flex items-center justify-between gap-2.5">
           {/* App Icon & Compact Info */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-b from-white via-slate-50 to-slate-100 p-0.5 flex items-center justify-center shadow-md shadow-sky-500/20 ring-1 ring-white/30 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-b from-white via-slate-50 to-slate-100 p-0.5 flex items-center justify-center shadow-lg shadow-sky-500/10 border border-white/40 ring-1 ring-white/20 shrink-0">
               <img src="/logo.webp" alt="AMS Icon" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
@@ -87,7 +87,7 @@ export const PwaInstallBanner: React.FC = () => {
             <button
               onClick={handleInstallClick}
               disabled={installing}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-all shadow-md shadow-sky-500/20 active:scale-95 whitespace-nowrap"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-colors transition-transform shadow-md shadow-sky-500/20 active:scale-95 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             >
               {updateAvailable ? (
                 <>

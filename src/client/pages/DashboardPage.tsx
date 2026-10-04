@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users,
-  Building2,
   Calendar,
+  AlertTriangle,
   QrCode,
   ArrowUpRight,
   Plus,
   FileSpreadsheet,
-  CheckCircle2,
   Sparkles,
   TrendingUp,
   Activity,
@@ -50,35 +49,53 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [yearlyStats, setYearlyStats] = useState<YearlyMemberStat[]>([]);
   const [trackerSummary, setTrackerSummary] = useState<MemberActivitySummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  /** Endpoints that failed; the dashboard renders partial data with a warning. */
+  const [partialErrors, setPartialErrors] = useState<string[]>([]);
 
   const loadData = useCallback(async (force = false) => {
     try {
-      const [mSummary, dRes, eRes, tRes, topEvRes, yrRes] = await Promise.all([
+      const settled = await Promise.allSettled([
         fetchCached<{ total: number; active: number; inactive: number }>('/api/members/stats/summary', {
           forceRefresh: force,
           ttlMs: 15_000,
-        }).catch(() => null),
+        }),
         fetchCached<{ divisions: string[] }>('/api/members/divisions', {
           forceRefresh: force,
           ttlMs: 15_000,
-        }).catch(() => null),
+        }),
         fetchCached<{ events: Event[] }>('/api/agenda', {
           forceRefresh: force,
           ttlMs: 15_000,
-        }).catch(() => null),
+        }),
         fetchCached<{ summary: MemberActivitySummary }>('/api/attendances/recap/matrix', {
           forceRefresh: force,
           ttlMs: 15_000,
-        }).catch(() => null),
+        }),
         fetchCached<{ events: TopEventStatItem[] }>('/api/agenda/reports/top-presence', {
           forceRefresh: force,
           ttlMs: 15_000,
-        }).catch(() => null),
+        }),
         fetchCached<{ stats: YearlyMemberStat[] }>('/api/members/stats/yearly-recap', {
           forceRefresh: force,
           ttlMs: 15_000,
-        }).catch(() => null),
+        }),
       ]);
+
+      // Surface which sections could not load. Silently rendering them as
+      // empty made a partial outage indistinguishable from real zero counts.
+      const failedLabels = ['Statistik Anggota', 'Divisi', 'Agenda', 'Rekap Keaktifan', 'Top Kegiatan', 'Rekap Tahunan'];
+      setPartialErrors(settled.flatMap((r, i) => (r.status === 'rejected' ? [failedLabels[i]] : [])));
+
+      const [mSummary, dRes, eRes, tRes, topEvRes, yrRes] = settled.map((r) =>
+        r.status === 'fulfilled' ? r.value : null
+      ) as [
+        { total: number; active: number; inactive: number } | null,
+        { divisions: string[] } | null,
+        { events: Event[] } | null,
+        { summary: MemberActivitySummary } | null,
+        { events: TopEventStatItem[] } | null,
+        { stats: YearlyMemberStat[] } | null,
+      ];
 
       const rawEvents = eRes?.events;
       if (mSummary) {
@@ -146,14 +163,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   }, [topEvents]);
 
   return (
-    <div className="space-y-6 animate-in fade-in pb-4">
+    <div className="space-y-6 pb-4">
+
+      {partialErrors.length > 0 && (
+        <div
+          role="status"
+          className="flex items-start gap-2.5 px-4 py-3 rounded-2xl bg-amber-950/40 border border-amber-700/50 text-amber-200 text-xs"
+        >
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <span>
+            Sebagian data gagal dimuat: {partialErrors.join(', ')}. Angka di bawah
+            mungkin tidak lengkap, bukan nol.
+          </span>
+        </div>
+      )}
       {/* Enterprise Operational Command Header */}
       <div className="glass-panel-elevated rounded-2xl p-5 sm:p-6 border border-slate-800 relative overflow-hidden bg-slate-900/90 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1.5 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold uppercase tracking-wider">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Pusat Kendali Presensi • Computer Community</span>
-          </div>
           <h2 className="text-xl sm:text-2xl font-bold font-heading text-white">
             Ringkasan Operasional & Kehadiran
           </h2>
@@ -195,7 +221,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* Level 1: 4 Balanced Uniform KPI Metric Cards (No Cavernous Voids) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Total Anggota */}
-        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 flex items-center justify-between shadow-xl">
+        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 shadow-xl">
           <div className="min-w-0">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
               Total Anggota
@@ -207,18 +233,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 {memberStats.total}
               </p>
             )}
-            <p className="text-[10px] text-emerald-400 mt-0.5 font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-              <span>{memberStats.active} aktif</span>
-            </p>
-          </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 ml-2">
-            <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+            <p className="text-[10px] text-emerald-400 mt-0.5 font-medium">{memberStats.active} aktif</p>
           </div>
         </div>
 
         {/* Card 2: Kegiatan Aktif */}
-        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 flex items-center justify-between shadow-xl">
+        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 shadow-xl">
           <div className="min-w-0">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
               Kegiatan Aktif
@@ -232,13 +252,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             )}
             <p className="text-[10px] text-slate-400 mt-0.5 font-mono">{events.length} total agenda</p>
           </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 ml-2">
-            <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
-          </div>
         </div>
 
         {/* Card 3: Total Presensi Tercatat */}
-        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 flex items-center justify-between shadow-xl">
+        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 shadow-xl">
           <div className="min-w-0">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
               Total Presensi
@@ -250,18 +267,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 {totalAttendances}
               </p>
             )}
-            <p className="text-[10px] text-teal-400 mt-0.5 font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0" />
-              <span>Tervalidasi sistem</span>
-            </p>
-          </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center shrink-0 ml-2">
-            <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
+            <p className="text-[10px] text-teal-400 mt-0.5 font-medium">Tervalidasi sistem</p>
           </div>
         </div>
 
         {/* Card 4: Divisi Terdata */}
-        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 flex items-center justify-between shadow-xl">
+        <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800/80 shadow-xl">
           <div className="min-w-0">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
               Divisi Terdata
@@ -274,9 +285,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </p>
             )}
             <p className="text-[10px] text-indigo-400 mt-0.5 font-medium">Bidang divisi aktif</p>
-          </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 ml-2">
-            <Building2 className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
         </div>
       </div>
@@ -341,26 +349,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               {activeEvents.map((ev) => (
                 <div
                   key={ev.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    if (onNavigateToEvent) {
-                      onNavigateToEvent(ev.id);
-                    } else {
-                      onNavigate('events');
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      if (onNavigateToEvent) {
-                        onNavigateToEvent(ev.id);
-                      } else {
-                        onNavigate('events');
-                      }
-                    }
-                  }}
-                  className="glass-panel-interactive rounded-2xl p-4 border border-slate-800/80 hover:border-sky-500/50 cursor-pointer space-y-3 group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                  className="glass-panel-interactive rounded-2xl p-4 border border-slate-800/80 hover:border-sky-500/50 cursor-pointer space-y-3 group text-left"
                 >
                   <div className="flex items-center justify-between">
                     <Badge variant="emerald" size="sm" pulse>
@@ -368,14 +357,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     </Badge>
                     <span className="text-[10px] font-mono text-slate-400">{ev.qr_policy}</span>
                   </div>
-                  <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onNavigateToEvent) {
+                        onNavigateToEvent(ev.id);
+                      } else {
+                        onNavigate('events');
+                      }
+                    }}
+                    className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-lg"
+                  >
                     <h4 className="font-bold text-base text-white group-hover:text-sky-400 transition-colors truncate">
                       {ev.name}
                     </h4>
                     <p className="text-xs text-slate-400 truncate mt-0.5">
                       {ev.location_name ? `Lokasi: ${ev.location_name}` : 'Lokasi belum ditentukan'}
                     </p>
-                  </div>
+                  </button>
 
                   <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
                     <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5">
@@ -387,10 +386,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       variant="primary"
                       size="sm"
                       icon={<QrCode className="w-3.5 h-3.5" />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onScanEvent?.(ev);
-                      }}
+                      onClick={() => onScanEvent?.(ev)}
                       aria-label={`Buka kamera scanner untuk ${ev.name}`}
                     >
                       Scan QR

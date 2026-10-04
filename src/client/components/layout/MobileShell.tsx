@@ -80,16 +80,14 @@ export const MobileShell: React.FC<MobileShellProps> = ({
   return (
     <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-950 flex flex-col md:flex-row text-slate-100">
       {/* Desktop Sidebar (Sticky Full Height 100dvh) */}
-      <aside className="hidden md:flex flex-col w-64 h-full shrink-0 glass-panel border-r border-slate-800 p-5 justify-between sticky top-0 z-30 bg-slate-950/95">
+      <aside className="hidden md:flex flex-col w-64 h-full shrink-0 bg-slate-950/95 border-r border-slate-800 p-5 justify-between sticky top-0 z-30">
         <div className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-white via-slate-50 to-slate-100 p-1 flex items-center justify-center shadow-lg shadow-sky-500/10 border border-white/40 ring-1 ring-white/20 shrink-0">
               <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="font-heading font-bold text-lg leading-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                AMS
-              </h1>
+              <h1 className="font-heading font-bold text-lg leading-tight text-white">AMS</h1>
               <p className="text-xs text-sky-400 font-medium">Computer Community</p>
             </div>
           </div>
@@ -107,7 +105,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
                       key={item.key}
                       type="button"
                       onClick={() => onTabChange(item.key)}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
                         active
                           ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30 shadow-sm font-semibold'
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
@@ -128,8 +126,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
           <div className="flex items-center justify-between mb-3 px-2">
             <div className="truncate pr-2">
               <p className="text-xs font-semibold text-slate-200 truncate">{admin?.name || 'Admin'}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <div className="mt-0.5">
                 <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded border font-mono ${getRoleInfo(admin?.role).badgeClass}`}>
                   {getRoleInfo(admin?.role).label}
                 </span>
@@ -151,29 +148,22 @@ export const MobileShell: React.FC<MobileShellProps> = ({
       {/* Main Content Area (Independent Scroll Container) */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto overflow-x-hidden pb-24 md:pb-6">
         {/* Desktop Workstation Header Bar */}
-        <header className="hidden md:flex items-center justify-between px-8 py-3 bg-slate-950/80 backdrop-blur border-b border-slate-800/80 sticky top-0 z-20 shrink-0">
+        <header className="hidden md:flex items-center px-8 py-3 bg-slate-950/80 backdrop-blur border-b border-slate-800/80 sticky top-0 z-20 shrink-0">
           <div className="flex items-center gap-2 text-xs">
             <span className="text-slate-500 font-semibold tracking-wide uppercase text-[10px]">AMS</span>
             <span className="text-slate-700">/</span>
             <span className="text-slate-200 font-semibold">{tabLabels[currentTab] || currentTab}</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-slate-400 font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Sistem Presensi Online</span>
-            </div>
           </div>
         </header>
 
         {/* Mobile Top Header */}
         <header className="md:hidden bg-slate-900/95 backdrop-blur border-b border-slate-800/80 sticky top-0 z-30 px-4 py-2.5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-b from-white via-slate-50 to-slate-100 p-0.5 flex items-center justify-center shadow-md shadow-sky-500/10 border border-white/40 ring-1 ring-white/20 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-b from-white via-slate-50 to-slate-100 p-0.5 flex items-center justify-center shadow-lg shadow-sky-500/10 border border-white/40 ring-1 ring-white/20 shrink-0">
               <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h2 className="font-heading font-bold text-base leading-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">AMS</h2>
+              <h2 className="font-heading font-bold text-base leading-tight text-white">AMS</h2>
               <p className="text-[10px] text-sky-400 leading-none font-semibold">Computer Community</p>
             </div>
           </div>
@@ -225,10 +215,10 @@ export const MobileShell: React.FC<MobileShellProps> = ({
                 aria-label="Buka Kamera Scanner QR Presensi"
               >
                 <div
-                  className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-200 ${
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition-colors transition-transform duration-200 ${
                     active
-                      ? 'bg-gradient-to-tr from-sky-400 via-sky-500 to-blue-600 text-white shadow-sky-500/40 scale-105 ring-4 ring-sky-500/30 ring-offset-2 ring-offset-slate-950'
-                      : 'bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-700 text-white shadow-sky-950 ring-2 ring-sky-500/20 hover:scale-105'
+                      ? 'bg-sky-500 text-white shadow-sky-500/40 scale-105 ring-4 ring-sky-500/30 ring-offset-2 ring-offset-slate-950'
+                      : 'bg-slate-800 text-slate-300 shadow-sky-950 ring-2 ring-sky-500/20 hover:scale-105'
                   }`}
                 >
                   <QrCode className="w-7 h-7" />
@@ -245,7 +235,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               key={item.key}
               type="button"
               onClick={() => onTabChange(item.key)}
-              className={`flex flex-col items-center justify-center min-w-[48px] min-h-[48px] py-1 px-2.5 rounded-xl transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+              className={`flex flex-col items-center justify-center min-w-[48px] min-h-[48px] py-1 px-2.5 rounded-xl transition-colors transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                 active ? 'text-sky-400 font-semibold scale-105' : 'text-slate-400 hover:text-slate-200'
               }`}
               aria-label={`Buka tab ${item.label}`}

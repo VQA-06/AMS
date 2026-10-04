@@ -94,6 +94,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
   const [isGuestModalOpen, setIsGuestModalOpen] = useState<boolean>(false);
   const [isPrintSheetOpen, setIsPrintSheetOpen] = useState<boolean>(false);
+  const [selectedPrintTokens, setSelectedPrintTokens] = useState<PrintableToken[] | null>(null);
   const [selectedTokenForCard, setSelectedTokenForCard] = useState<QrToken | null>(null);
 
   // Promote Guest Modal state
@@ -455,6 +456,50 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     });
   };
 
+  const handleBulkRevokeSelectedTokens = () => {
+    const unrevoked = qrTokens.filter((t) => selectedTokenIds.has(t.id) && !t.revoked_at);
+    if (unrevoked.length === 0) return;
+
+    setConfirmDialog({
+      isOpen: true,
+      title: `Cabut ${unrevoked.length} Tiket QR`,
+      message: (
+        <span>
+          Apakah Anda yakin ingin mencabut (revoke) <strong>{unrevoked.length} tiket QR</strong> terpilih? Tiket tidak akan bisa dilihat atau digunakan lagi untuk kegiatan ini.
+        </span>
+      ),
+      type: 'warning',
+      confirmText: `Ya, Cabut (${unrevoked.length})`,
+      onConfirm: async () => {
+        try {
+          setConfirmLoading(true);
+          await Promise.all(
+            unrevoked.map((tok) => fetchApi(`/api/qr/${tok.id}/revoke`, { method: 'POST' }))
+          );
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+          setSelectedTokenIds(new Set());
+          await loadData();
+          setAlertModal({
+            isOpen: true,
+            title: 'Tiket Dicabut',
+            message: `${unrevoked.length} tiket berhasil dicabut.`,
+            type: 'info',
+          });
+        } catch (err) {
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+          setAlertModal({
+            isOpen: true,
+            title: 'Gagal Mencabut Tiket',
+            message: err instanceof Error ? err.message : 'Gagal mencabut tiket terpilih.',
+            type: 'error',
+          });
+        } finally {
+          setConfirmLoading(false);
+        }
+      },
+    });
+  };
+
   const handleOpenPromoteSingle = (tok: QrToken) => {
     setPromoteDivision(tok.member_division || '');
     setPromotingGuest({
@@ -562,6 +607,10 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     (t) => selectedTokenIds.has(t.id) && t.member_external_id?.startsWith('GUEST-')
   ).length;
 
+  const selectedUnrevokedTokens = qrTokens.filter(
+    (t) => selectedTokenIds.has(t.id) && !t.revoked_at
+  );
+
   const tokenBulkActions: BulkActionItem[] = [
     ...(canGenerate
       ? [
@@ -569,7 +618,20 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             label: 'Cetak QR',
             icon: <Printer className="w-3.5 h-3.5" />,
             variant: 'primary' as const,
-            onClick: () => setIsPrintSheetOpen(true),
+            onClick: () => {
+              const targetTokens = printableTokens.filter((t) => selectedTokenIds.has(t.id));
+              if (targetTokens.length === 0) {
+                setAlertModal({
+                  isOpen: true,
+                  title: 'Tidak Ada Tiket Valid Terpilih',
+                  message: 'Tiket yang Anda pilih sudah dicabut (revoked), kedaluwarsa, atau tidak memiliki data QR valid.',
+                  type: 'warning',
+                });
+                return;
+              }
+              setSelectedPrintTokens(targetTokens);
+              setIsPrintSheetOpen(true);
+            },
           },
         ]
       : []),
@@ -580,6 +642,16 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             icon: <UserCheck className="w-3.5 h-3.5" />,
             variant: 'primary' as const,
             onClick: handleOpenPromoteBulk,
+          },
+        ]
+      : []),
+    ...(isManager && selectedUnrevokedTokens.length > 0
+      ? [
+          {
+            label: 'Cabut',
+            icon: <ShieldAlert className="w-3.5 h-3.5" />,
+            variant: 'warning' as const,
+            onClick: handleBulkRevokeSelectedTokens,
           },
         ]
       : []),
@@ -1247,7 +1319,10 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
               {canGenerate && printableTokens.length > 0 && (
                 <button
-                  onClick={() => setIsPrintSheetOpen(true)}
+                  onClick={() => {
+                    setSelectedPrintTokens(null);
+                    setIsPrintSheetOpen(true);
+                  }}
                   className="flex items-center gap-1.5 px-3.5 py-2.5 glass-panel text-slate-200 hover:text-white text-xs font-semibold rounded-xl shadow"
                 >
                   <Printer className="w-4 h-4 text-sky-400" />
@@ -1372,7 +1447,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                             </span>
                           )}
                         </td>
-                        <td className="px-5 py-3.5 text-right font-sans">
+                        <td className="px-5 py-3.5 text-right font-sans whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5">
                             {tok.qr_token && !isRevoked && (
                               <button
@@ -1516,6 +1591,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
         onSuccess={async (options?: { shouldPrint?: boolean }) => {
           await loadData();
           if (options?.shouldPrint !== false) {
+            setSelectedPrintTokens(null);
             setIsPrintSheetOpen(true);
           }
         }}
@@ -1524,8 +1600,11 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       {/* Bulk Print Sheet (Clean A4 Print Window) */}
       <PrintBadgeSheet
         isOpen={isPrintSheetOpen}
-        onClose={() => setIsPrintSheetOpen(false)}
-        tokens={printableTokens}
+        onClose={() => {
+          setIsPrintSheetOpen(false);
+          setSelectedPrintTokens(null);
+        }}
+        tokens={selectedPrintTokens ?? printableTokens}
         eventName={event.name}
       />
 

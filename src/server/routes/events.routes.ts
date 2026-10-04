@@ -1,18 +1,17 @@
 import { Hono, Context } from 'hono';
+import { StatusCode } from 'hono/utils/http-status';
 import { Env } from '../env';
 import { EventRepository } from '../repositories/event.repo';
-import { MemberRepository } from '../repositories/member.repo';
-import { QrTokenRepository } from '../repositories/qr.repo';
 import { AuditRepository } from '../repositories/audit.repo';
 import { EventGuestRepository } from '../repositories/event-guest.repo';
 import { authMiddleware, requireRole } from '../middleware/auth';
 import { edgeCache } from '../middleware/edge-cache';
 import { invalidateEdgeCache } from '../lib/edge-cache';
 import { eventSchema, eventUpdateSchema } from '@/shared/schemas/event.schema';
-import { generateQrToken } from '../crypto/qr-crypto';
-import { ApiResponse, Event } from '@/shared/types';
+import { ApiResponse, Event, Status } from '@/shared/types';
 import { ErrorCode } from '@/shared/constants/error-codes';
-
+import { DefaultGuestPassManager } from '../domain/guest/guest-pass-manager';
+import { MutationCoordinator } from '../lib/mutation-coordinator';
 const eventsRoutes = new Hono<{ Bindings: Env }>();
 
 // GET /api/events - List events
@@ -350,21 +349,6 @@ const createGuestPassesHandler = async (c: Context<{ Bindings: Env }>) => {
     );
   }
 
-  const eventRepo = new EventRepository(c.env.DB);
-  const event = await eventRepo.findById(eventId);
-  if (!event) {
-    return c.json<ApiResponse>(
-      {
-        ok: false,
-        error: {
-          code: ErrorCode.EVENT_NOT_FOUND,
-          message: 'Kegiatan / event tidak ditemukan.',
-        },
-      },
-      404
-    );
-  }
-
   const body = await c.req.json();
   const rawGuests = Array.isArray(body.guests)
     ? body.guests
@@ -375,188 +359,37 @@ const createGuestPassesHandler = async (c: Context<{ Bindings: Env }>) => {
   const prefix = body.prefix || 'Tamu Undangan';
   const division = body.division || null;
   const expires_at = body.expires_at || null;
+  const admin = c.get('admin');
 
-  const guestList: Array<{ name: string; division?: string | null; email?: string | null; phone?: string | null }> = [];
+  const manager = new DefaultGuestPassManager(c.env.DB, c.env);
+  const result = await manager.issueGuestPasses({
+    eventId,
+    guests: rawGuests,
+    count,
+    prefix,
+    division,
+    expiresAt: expires_at,
+    issuerId: admin?.id,
+  });
 
-  if (rawGuests.length > 0) {
-    for (const g of rawGuests) {
-      if (g.name && g.name.trim() !== '') {
-        guestList.push({
-          name: g.name.trim(),
-          division: g.division?.trim() || division || 'Tamu Undangan',
-          email: g.email?.trim() || null,
-          phone: g.phone?.trim() || null,
-        });
-      }
-    }
-  } else if (count > 0) {
-    const totalCount = Math.min(100, Math.max(1, count));
-    for (let i = 1; i <= totalCount; i++) {
-      const padNum = String(i).padStart(2, '0');
-      guestList.push({
-        name: `${prefix} #${padNum}`,
-        division: division || 'Tamu Undangan',
-        email: null,
-        phone: null,
-      });
-    }
-  }
-
-  if (guestList.length === 0) {
+  if (!result.success || !result.data) {
+    const statusCode = result.error?.status_code || 400;
     return c.json<ApiResponse>(
       {
         ok: false,
-        error: {
-          code: ErrorCode.VALIDATION_ERROR,
-          message: 'Daftar nama atau jumlah tiket tamu tidak boleh kosong.',
-        },
+        error: result.error,
       },
-      400
+      statusCode
     );
   }
 
-  const memberRepo = new MemberRepository(c.env.DB);
-  const qrRepo = new QrTokenRepository(c.env.DB);
-  const auditRepo = new AuditRepository(c.env.DB);
-  const admin = (c as any).get('admin');
-
-  const kid = c.env.QR_ACTIVE_KID || 'k1';
-  const issuer = c.env.APP_ISSUER || 'https://ams.ccunbaja.web.id';
-  const audience = c.env.APP_AUDIENCE || 'ams';
-  const validFrom = new Date().toISOString();
-  const tokenExpiresAt =
-    expires_at ||
-    (event.ends_at
-      ? new Date(new Date(event.ends_at).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
-
-  const membersToInsert: Array<{
-    id: string;
-    external_id: string;
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-    group_name?: string | null;
-    division?: string | null;
-    status?: 'active';
-    metadata?: string;
-  }> = [];
-
-  const dbTokensToInsert: Array<{
-    id: string;
-    jti: string;
-    member_id: string;
-    event_id: string;
-    scope: 'event';
-    valid_from: string;
-    expires_at: string;
-    max_uses?: number | null;
-    created_by?: string | null;
-    note?: string | null;
-  }> = [];
-
-  const generatedTokens: Array<{
-    id: string;
-    jti: string;
-    member_id: string;
-    member_name: string;
-    member_external_id: string;
-    member_division: string | null;
-    qr_token: string;
-    scope: 'event';
-    expires_at: string;
-  }> = [];
-
-  for (const guest of guestList) {
-    const memberId = `mem_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
-    const guestExternalId = `GUEST-${Math.floor(100000 + Math.random() * 900000)}`;
-
-    membersToInsert.push({
-      id: memberId,
-      external_id: guestExternalId,
-      name: guest.name,
-      email: guest.email,
-      phone: guest.phone,
-      group_name: `Tamu: ${event.name}`,
-      division: guest.division,
-      status: 'active',
-      metadata: JSON.stringify({ temporary: true, event_id: event.id }),
-    });
-
-    const tokenId = `tok_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
-    const jti = `jti_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
-
-    const tokenString = await generateQrToken(
-      {
-        memberId,
-        jti,
-        scope: 'event',
-        eventId: event.id,
-        validFrom,
-        expiresAt: tokenExpiresAt,
-        issuer,
-        audience,
-        kid,
-      },
-      c.env
-    );
-
-    dbTokensToInsert.push({
-      id: tokenId,
-      jti,
-      member_id: memberId,
-      event_id: event.id,
-      scope: 'event',
-      valid_from: validFrom,
-      expires_at: tokenExpiresAt,
-      max_uses: 1,
-      created_by: admin?.id,
-      note: `Guest Pass untuk ${event.name}`,
-    });
-
-    generatedTokens.push({
-      id: tokenId,
-      jti,
-      member_id: memberId,
-      member_name: guest.name,
-      member_external_id: guestExternalId,
-      member_division: guest.division || null,
-      qr_token: tokenString,
-      scope: 'event',
-      expires_at: tokenExpiresAt,
-    });
-  }
-
-  // Atomic batch inserts (instant <50ms D1 execution)
-  await memberRepo.createBatch(membersToInsert);
-  await qrRepo.createBatch(dbTokensToInsert);
-
-  // Register in event_guests for unified multi-event authorization and tracking
-  const eventGuestRepo = new EventGuestRepository(c.env.DB);
-  await eventGuestRepo.importGuestsToEvent(
-    event.id,
-    membersToInsert.map((m) => m.id),
-    event.id
-  );
-
-  await auditRepo.logAction({
-    admin_id: admin?.id,
-    action: 'CREATE_EVENT_GUEST_PASSES',
-    entity_type: 'event',
-    entity_id: event.id,
-    meta: {
-      count: generatedTokens.length,
-      event_name: event.name,
-    },
-  });
-
-  await invalidateEdgeCache(['agenda', 'members'], (c as any).executionCtx);
+  await invalidateEdgeCache(['agenda', 'members'], c);
 
   return c.json<ApiResponse>({
     ok: true,
     data: {
-      total: generatedTokens.length,
-      tokens: generatedTokens,
+      total: result.data.total,
+      tokens: result.data.tokens,
     },
   });
 };
@@ -627,81 +460,36 @@ eventsRoutes.post('/:id/guests/import', authMiddleware, requireRole(['owner', 'a
     );
   }
 
-  const eventRepo = new EventRepository(c.env.DB);
-  const targetEvent = await eventRepo.findById(eventId);
-
-  if (!targetEvent) {
-    return c.json<ApiResponse>(
-      {
-        ok: false,
-        error: {
-          code: ErrorCode.EVENT_NOT_FOUND,
-          message: 'Kegiatan target tidak ditemukan.',
-        },
-      },
-      404
-    );
-  }
-
-  const body = await c.req.json<{ guest_member_ids: string[]; source_event_id?: string }>();
-  const rawIds = Array.isArray(body.guest_member_ids) ? body.guest_member_ids : [];
-  const guestMemberIds = rawIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
-
-  if (guestMemberIds.length === 0) {
-    return c.json<ApiResponse>(
-      {
-        ok: false,
-        error: {
-          code: ErrorCode.VALIDATION_ERROR,
-          message: 'Pilih setidaknya satu peserta tamu untuk diimpor.',
-        },
-      },
-      400
-    );
-  }
-
-  if (guestMemberIds.length > 200) {
-    return c.json<ApiResponse>(
-      {
-        ok: false,
-        error: {
-          code: ErrorCode.VALIDATION_ERROR,
-          message: 'Maksimal 200 peserta tamu per batch impor.',
-        },
-      },
-      400
-    );
-  }
-
-  const eventGuestRepo = new EventGuestRepository(c.env.DB);
-  const auditRepo = new AuditRepository(c.env.DB);
+  const body = await c.req.json<{ guest_member_ids?: string[]; source_event_id?: string }>();
+  const guestMemberIds = Array.isArray(body.guest_member_ids) ? body.guest_member_ids : [];
   const admin = c.get('admin');
 
-  const importedCount = await eventGuestRepo.importGuestsToEvent(
-    eventId,
+  const manager = new DefaultGuestPassManager(c.env.DB, c.env);
+  const result = await manager.importPriorGuests({
+    targetEventId: eventId,
+    sourceEventId: body.source_event_id,
     guestMemberIds,
-    body.source_event_id
-  );
-
-  await auditRepo.logAction({
-    admin_id: admin?.id,
-    action: 'IMPORT_EVENT_GUESTS',
-    entity_type: 'event',
-    entity_id: eventId,
-    meta: {
-      imported_count: importedCount,
-      source_event_id: body.source_event_id,
-      target_event_name: targetEvent.name,
-    },
+    issuerId: admin?.id,
   });
 
-  await invalidateEdgeCache(['agenda', 'attendance', 'members'], (c as any).executionCtx);
+  if (!result.success || !result.data) {
+    const statusCode = result.error?.status_code || 400;
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: result.error,
+      },
+      statusCode
+    );
+  }
+
+  await invalidateEdgeCache(['agenda', 'attendance', 'members'], c);
 
   return c.json<ApiResponse>({
     ok: true,
     data: {
-      imported_count: importedCount,
-      message: `Berhasil mengimpor ${importedCount} tamu ke kegiatan ini.`,
+      imported_count: result.data.imported_count,
+      message: result.data.message,
     },
   });
 });
@@ -717,23 +505,23 @@ eventsRoutes.post('/bulk-close', authMiddleware, requireRole(['owner', 'admin'])
     );
   }
 
-  const auditRepo = new AuditRepository(c.env.DB);
   const admin = c.get('admin');
-
+  const coordinator = new MutationCoordinator(c.env.DB, c);
   const placeholders = ids.map(() => '?').join(',');
-  await c.env.DB
+  const updateStmt = c.env.DB
     .prepare(`UPDATE events SET status = 'closed', updated_at = datetime('now') WHERE id IN (${placeholders})`)
-    .bind(...ids)
-    .run();
+    .bind(...ids);
 
-  await auditRepo.logAction({
-    admin_id: admin?.id,
-    action: 'BULK_CLOSE_EVENTS',
-    entity_type: 'event',
-    meta: { count: ids.length, ids },
+  await coordinator.execute({
+    statements: [updateStmt],
+    cacheTags: ['agenda', 'attendance'],
+    audit: {
+      adminId: admin?.id,
+      action: 'BULK_CLOSE_EVENTS',
+      entityType: 'event',
+      meta: { count: ids.length, ids },
+    },
   });
-
-  await invalidateEdgeCache(['agenda', 'attendance'], (c as any).executionCtx);
 
   return c.json<ApiResponse>({
     ok: true,

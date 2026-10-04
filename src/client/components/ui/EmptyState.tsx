@@ -26,7 +26,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   return (
     <div
-      className={`glass-panel rounded-3xl p-8 sm:p-12 text-center border border-slate-800/80 flex flex-col items-center justify-center animate-in fade-in duration-200 ${className}`}
+      className={`glass-panel rounded-3xl p-8 sm:p-12 text-center border border-slate-800/80 flex flex-col items-center justify-center ${className}`}
     >
       <div className="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center mb-4 shadow-lg shadow-sky-500/10 ring-4 ring-sky-500/5">
         {React.isValidElement(icon) ? (

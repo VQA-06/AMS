@@ -162,8 +162,8 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
   const currentEvent = events.find((e) => e.id === selectedEventId);
 
   return (
-    <ModalPortal>
-      <div className="modal-backdrop-full animate-in fade-in">
+    <ModalPortal onClose={onClose}>
+      <div className="modal-backdrop-full">
         <div className="w-full max-w-2xl rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[88vh] flex flex-col my-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
@@ -185,6 +185,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Tutup dialog"
             className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 shrink-0 transition-colors"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -226,7 +227,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
+                className="px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform"
               >
                 Selesai
               </button>
@@ -241,14 +242,14 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                 Pilih Tipe / Scope QR:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                <label
-                  className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border cursor-pointer transition-all ${
+                <label htmlFor="components-qr-qrgeneratormodal-field-1"
+                  className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border cursor-pointer transition-colors ${
                     scope === 'universal'
                       ? 'bg-sky-500/20 border-sky-500 text-white shadow-sm'
                       : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60'
                   }`}
                 >
-                  <input
+                  <input id="components-qr-qrgeneratormodal-field-1"
                     type="radio"
                     name="qr_scope"
                     value="universal"
@@ -265,14 +266,14 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                   </p>
                 </label>
 
-                <label
-                  className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border cursor-pointer transition-all ${
+                <label htmlFor="components-qr-qrgeneratormodal-field-2"
+                  className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border cursor-pointer transition-colors ${
                     scope === 'event'
                       ? 'bg-sky-500/20 border-sky-500 text-white shadow-sm'
                       : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60'
                   }`}
                 >
-                  <input
+                  <input id="components-qr-qrgeneratormodal-field-2"
                     type="radio"
                     name="qr_scope"
                     value="event"
@@ -294,13 +295,13 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
             {/* Event Picker if scope == 'event' */}
             {scope === 'event' && (
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label htmlFor="components-qr-qrgeneratormodal-field-3" className="block text-xs font-semibold text-slate-300 mb-1">
                   Pilih Kegiatan / Event Terkait:
                 </label>
-                <select
+                <select id="components-qr-qrgeneratormodal-field-3"
                   value={selectedEventId}
                   onChange={(e) => setSelectedEventId(e.target.value)}
-                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-500"
+                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                 >
                   {events.map((ev) => (
                     <option key={ev.id} value={ev.id}>
@@ -326,7 +327,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                   type="datetime-local"
                   value={customExpiresAt}
                   onChange={(e) => setCustomExpiresAt(e.target.value)}
-                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-500 font-mono"
+                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
                 />
               )}
             </div>
@@ -334,15 +335,15 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
             {/* Member Multi-Select with Division Filter */}
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-2">
-                <label className="text-xs font-semibold text-slate-300">
+                <label htmlFor="components-qr-qrgeneratormodal-field-4" className="text-xs font-semibold text-slate-300">
                   Pilih Anggota ({selectedMemberIds.length} dipilih):
                 </label>
                 <div className="flex items-center gap-2">
                   {divisions.length > 0 && (
-                    <select
+                    <select id="components-qr-qrgeneratormodal-field-4"
                       value={filterDivision}
                       onChange={(e) => setFilterDivision(e.target.value)}
-                      className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] sm:text-xs text-slate-300 focus:outline-none"
+                      className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] sm:text-xs text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                     >
                       <option value="">Semua Divisi</option>
                       {divisions.map((div, i) => (
@@ -369,7 +370,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                     <div
                       key={m.id}
                       onClick={() => toggleSelectMember(m.id)}
-                      className={`p-2 sm:p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition-all text-xs ${
+                      className={`p-2 sm:p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition-colors text-xs ${
                         selected
                           ? 'bg-sky-500/20 text-white border border-sky-500/40'
                           : 'hover:bg-slate-900/60 text-slate-300'
@@ -416,7 +417,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                 type="button"
                 onClick={handleGenerate}
                 disabled={loading || selectedMemberIds.length === 0}
-                className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
+                className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform"
               >
                 <Sparkles className="w-4 h-4 shrink-0" />
                 <span>

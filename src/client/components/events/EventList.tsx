@@ -18,6 +18,7 @@ import { SkeletonEventList } from '../ui/Skeleton';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
+import { eventStatusVariant } from '../../lib/event-status';
 
 interface EventListProps {
   events: Event[];
@@ -64,32 +65,21 @@ export const EventList: React.FC<EventListProps> = ({
   }
 
   const renderStatusBadge = (status: Event['status']) => {
-    switch (status) {
-      case 'active':
-        return (
-          <Badge variant="emerald" size="sm" pulse>
-            Aktif
-          </Badge>
-        );
-      case 'draft':
-        return (
-          <Badge variant="slate" size="sm">
-            Draft
-          </Badge>
-        );
-      case 'closed':
-        return (
-          <Badge variant="rose" size="sm">
-            Selesai / Tutup
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="slate" size="sm">
-            {status}
-          </Badge>
-        );
-    }
+    const variant = eventStatusVariant(status);
+    const label =
+      status === 'active'
+        ? 'Aktif'
+        : status === 'draft'
+        ? 'Draft'
+        : status === 'closed'
+        ? 'Selesai / Tutup'
+        : status;
+
+    return (
+      <Badge variant={variant} size="sm" pulse={status === 'active'}>
+        {label}
+      </Badge>
+    );
   };
 
   if (viewMode === 'table') {

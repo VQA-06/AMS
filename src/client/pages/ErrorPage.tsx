@@ -96,7 +96,7 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
   const displayDesc = description || config.defaultDesc;
 
   return (
-    <div className="min-h-[70vh] flex flex-col items-center justify-center p-4 text-center animate-in fade-in zoom-in-95 duration-300 relative">
+    <div className="min-h-[70vh] flex flex-col items-center justify-center p-4 text-center relative">
       {/* Glow Effect */}
       <div
         className={`absolute w-72 h-72 rounded-full blur-3xl pointer-events-none bg-gradient-to-tr ${config.glow}`}
@@ -131,7 +131,7 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
             <button
               type="button"
               onClick={onRetry || (() => window.location.reload())}
-              className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${config.btnStyle}`}
+              className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg transition-colors transition-transform active:scale-95 flex items-center justify-center gap-2 ${config.btnStyle}`}
             >
               <RefreshCw className="w-4 h-4" />
               <span>Muat Ulang</span>
@@ -149,7 +149,7 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
                 }
               })
             }
-            className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
+            className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg transition-colors transition-transform active:scale-95 flex items-center justify-center gap-2 ${
               code === '404' || code === '403' ? config.btnStyle : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
             }`}
           >
@@ -171,14 +171,14 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
             </button>
 
             {showDetails && (
-              <div className="relative animate-in fade-in duration-200">
+              <div className="relative">
                 <pre className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[10px] font-mono text-rose-300/90 overflow-x-auto max-h-40 whitespace-pre-wrap break-all">
                   {details}
                 </pre>
                 <button
                   type="button"
                   onClick={handleCopyDetails}
-                  className="absolute right-2 top-2 p-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-300 text-[10px] flex items-center gap-1 shadow"
+                  className="absolute right-2 top-2 p-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-300 text-[10px] flex items-center gap-1 shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                   title="Salin Error"
                 >
                   {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}

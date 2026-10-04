@@ -83,8 +83,8 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
   };
 
   return (
-    <ModalPortal>
-      <div className="modal-backdrop-full animate-in fade-in">
+    <ModalPortal onClose={onClose}>
+      <div className="modal-backdrop-full">
         <div className="w-full max-w-lg rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[85vh] flex flex-col my-auto">
           {/* Header */}
           <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
@@ -102,6 +102,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
             <button
               type="button"
               onClick={onClose}
+              aria-label="Tutup dialog"
               className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 shrink-0 transition-colors"
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -117,50 +118,50 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
           {/* Form Body - Smooth Independent Scrolling */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto overscroll-contain touch-auto pr-1 py-3 space-y-3.5 sm:space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label htmlFor="components-events-eventformmodal-field-1" className="block text-xs font-semibold text-slate-300 mb-1">
                 Nama Kegiatan <span className="text-rose-400">*</span>
               </label>
-              <input
+              <input id="components-events-eventformmodal-field-1"
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="misal: Rapat Pleno Divisi 2026"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label htmlFor="components-events-eventformmodal-field-2" className="block text-xs font-semibold text-slate-300 mb-1">
                 Lokasi / Ruangan
               </label>
-              <input
+              <input id="components-events-eventformmodal-field-2"
                 type="text"
                 value={formData.location_name || ''}
                 onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
                 placeholder="misal: Aula Utama / Hall Lt. 2"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Waktu Mulai</label>
-                <input
+                <label htmlFor="components-events-eventformmodal-field-3" className="block text-xs font-semibold text-slate-300 mb-1">Waktu Mulai</label>
+                <input id="components-events-eventformmodal-field-3"
                   type="datetime-local"
                   value={formData.starts_at || ''}
                   onChange={(e) => setFormData({ ...formData, starts_at: e.target.value })}
-                  className="w-full px-3 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-500"
+                  className="w-full px-3 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Waktu Selesai</label>
-                <input
+                <label htmlFor="components-events-eventformmodal-field-4" className="block text-xs font-semibold text-slate-300 mb-1">Waktu Selesai</label>
+                <input id="components-events-eventformmodal-field-4"
                   type="datetime-local"
                   value={formData.ends_at || ''}
                   onChange={(e) => setFormData({ ...formData, ends_at: e.target.value })}
-                  className="w-full px-3 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-500"
+                  className="w-full px-3 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                 />
               </div>
             </div>
@@ -172,7 +173,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 <label
-                  className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border cursor-pointer transition-all ${
+                  className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border cursor-pointer transition-colors ${
                     formData.qr_policy === 'universal_allowed'
                       ? 'bg-sky-500/20 border-sky-500 text-white shadow-sm'
                       : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60'
@@ -195,14 +196,14 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                   </p>
                 </label>
 
-                <label
-                  className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border cursor-pointer transition-all ${
+                <label htmlFor="components-events-eventformmodal-field-5"
+                  className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border cursor-pointer transition-colors ${
                     formData.qr_policy === 'event_only'
                       ? 'bg-sky-500/20 border-sky-500 text-white shadow-sm'
                       : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60'
                   }`}
                 >
-                  <input
+                  <input id="components-events-eventformmodal-field-5"
                     type="radio"
                     name="qr_policy"
                     value="event_only"
@@ -223,11 +224,11 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Status</label>
-                <select
+                <label htmlFor="components-events-eventformmodal-field-6" className="block text-xs font-semibold text-slate-300 mb-1">Status</label>
+                <select id="components-events-eventformmodal-field-6"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as EventStatus })}
-                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                 >
                   <option value="draft">Draft (Belum Aktif)</option>
                   <option value="active">Active (Bisa Absen)</option>
@@ -237,22 +238,22 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label htmlFor="components-events-eventformmodal-field-7" className="block text-xs font-semibold text-slate-300 mb-1">
                   Toleransi Waktu (Menit)
                 </label>
-                <input
+                <input id="components-events-eventformmodal-field-7"
                   type="number"
                   min="0"
                   value={formData.grace_minutes}
                   onChange={(e) => setFormData({ ...formData, grace_minutes: parseInt(e.target.value, 10) || 0 })}
-                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-500"
+                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
                 />
               </div>
             </div>
 
             <div className="pt-1">
-              <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-300 cursor-pointer">
-                <input
+              <label htmlFor="components-events-eventformmodal-field-8" className="flex items-center gap-2.5 text-xs font-semibold text-slate-300 cursor-pointer">
+                <input id="components-events-eventformmodal-field-8"
                   type="checkbox"
                   checked={formData.allow_manual_attendance === 1}
                   onChange={(e) =>
@@ -276,7 +277,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform disabled:opacity-50"
               >
                 <Save className="w-4 h-4 shrink-0" />
                 <span>{loading ? 'Menyimpan...' : 'Simpan Kegiatan'}</span>

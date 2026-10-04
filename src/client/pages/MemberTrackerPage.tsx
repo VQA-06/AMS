@@ -201,7 +201,7 @@ export const MemberTrackerPage: React.FC = () => {
   const inactivePct = totalMbrs > 0 ? ((summary?.inactive_count || 0) / totalMbrs) * 100 : 0;
 
   return (
-    <div className="space-y-4 animate-in fade-in pb-12">
+    <div className="space-y-4 pb-12">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -258,17 +258,17 @@ export const MemberTrackerPage: React.FC = () => {
             <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden flex ring-1 ring-slate-800">
               <div
                 style={{ width: `${highlyActivePct}%` }}
-                className="bg-emerald-400 transition-all duration-300"
+                className="bg-emerald-400 transition-colors duration-300"
                 title={`Sangat Aktif: ${summary?.highly_active_count ?? 0} (${Math.round(highlyActivePct)}%)`}
               />
               <div
                 style={{ width: `${activePct}%` }}
-                className="bg-amber-400 transition-all duration-300"
+                className="bg-amber-400 transition-colors duration-300"
                 title={`Cukup Aktif: ${summary?.active_count ?? 0} (${Math.round(activePct)}%)`}
               />
               <div
                 style={{ width: `${inactivePct}%` }}
-                className="bg-slate-700 transition-all duration-300"
+                className="bg-slate-700 transition-colors duration-300"
                 title={`Belum Aktif: ${summary?.inactive_count ?? 0} (${Math.round(inactivePct)}%)`}
               />
             </div>
@@ -280,7 +280,7 @@ export const MemberTrackerPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setSelectedTier(selectedTier === 'highly_active' ? 'all' : 'highly_active')}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all ${
+            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-colors ${
               selectedTier === 'highly_active'
                 ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50 shadow-sm'
                 : 'bg-slate-900/60 text-slate-300 border-slate-800 hover:border-emerald-500/40 hover:text-white'
@@ -294,7 +294,7 @@ export const MemberTrackerPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setSelectedTier(selectedTier === 'active' ? 'all' : 'active')}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all ${
+            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-colors ${
               selectedTier === 'active'
                 ? 'bg-amber-950/80 text-amber-300 border-amber-500/50 shadow-sm'
                 : 'bg-slate-900/60 text-slate-300 border-slate-800 hover:border-amber-500/40 hover:text-white'
@@ -308,7 +308,7 @@ export const MemberTrackerPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setSelectedTier(selectedTier === 'inactive' ? 'all' : 'inactive')}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all ${
+            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-colors ${
               selectedTier === 'inactive'
                 ? 'bg-slate-800 text-white border-slate-600 shadow-sm'
                 : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-200'
@@ -397,6 +397,7 @@ export const MemberTrackerPage: React.FC = () => {
 
       {/* Desktop View: Workstation Table with Row Inspection Click */}
       <div className="hidden md:block glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-xs text-slate-300">
           <thead className="bg-slate-900/90 text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-slate-800">
             <tr>
@@ -503,6 +504,7 @@ export const MemberTrackerPage: React.FC = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Mobile View: High-Density Clickable Cards */}
@@ -526,18 +528,11 @@ export const MemberTrackerPage: React.FC = () => {
           />
         ) : (
           entries.map((entry, index) => (
-            <div
+            <button
               key={entry.member_id}
-              role="button"
-              tabIndex={0}
+              type="button"
               onClick={() => handleOpenInspect(entry)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleOpenInspect(entry);
-                }
-              }}
-              className="glass-panel-interactive rounded-2xl p-3.5 border border-slate-800 shadow-md space-y-2.5 cursor-pointer text-left focus-visible:ring-2 focus-visible:ring-sky-500"
+              className="glass-panel-interactive w-full rounded-2xl p-3.5 border border-slate-800 shadow-md space-y-2.5 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2.5">
@@ -545,7 +540,7 @@ export const MemberTrackerPage: React.FC = () => {
                     {index + 1}
                   </span>
                   <div>
-                    <h4 className="font-heading font-bold text-sm text-white">{entry.member_name}</h4>
+                    <h3 className="font-heading font-bold text-sm text-white">{entry.member_name}</h3>
                     <p className="font-mono text-xs text-slate-400">{entry.member_external_id}</p>
                   </div>
                 </div>
@@ -585,7 +580,7 @@ export const MemberTrackerPage: React.FC = () => {
                   <ChevronRight className="w-3.5 h-3.5" />
                 </span>
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>
@@ -600,12 +595,12 @@ export const MemberTrackerPage: React.FC = () => {
           />
 
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <aside className="w-screen max-w-md bg-slate-950 border-l border-slate-800 shadow-2xl flex flex-col justify-between p-5 sm:p-6 overflow-y-auto z-10 animate-in slide-in-from-right duration-200">
+            <aside className="w-screen max-w-md bg-slate-950 border-l border-slate-800 shadow-2xl flex flex-col justify-between p-5 sm:p-6 overflow-y-auto z-10">
               <div className="space-y-6">
                 {/* Drawer Header */}
                 <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white font-bold font-heading flex items-center justify-center text-base shadow-md shadow-sky-500/20">
+                    <div className="w-10 h-10 rounded-xl bg-sky-500 text-white font-bold font-heading flex items-center justify-center text-base shadow-md shadow-sky-500/20">
                       {inspectingMember.member_name.charAt(0).toUpperCase()}
                     </div>
                     <div>

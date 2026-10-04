@@ -37,7 +37,7 @@ export const OfflineBanner: React.FC = () => {
 
   if (showRestored) {
     return (
-      <div className="bg-emerald-500/90 text-white px-4 py-2 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 shadow-lg backdrop-blur-md sticky top-0 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+      <div className="bg-emerald-500/90 text-white px-4 py-2 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 shadow-lg backdrop-blur-md sticky top-0 z-50">
         <Wifi className="w-4 h-4 text-white animate-pulse" />
         <span>Koneksi internet kembali aktif. Sistem tersinkronisasi.</span>
       </div>
@@ -45,14 +45,14 @@ export const OfflineBanner: React.FC = () => {
   }
 
   return (
-    <div className="bg-amber-500/95 text-slate-950 px-4 py-2.5 text-xs sm:text-sm font-semibold flex items-center justify-between shadow-xl backdrop-blur-md sticky top-0 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+    <div className="bg-amber-500/95 text-slate-950 px-4 py-2.5 text-xs sm:text-sm font-semibold flex items-center justify-between shadow-xl backdrop-blur-md sticky top-0 z-50">
       <div className="flex items-center gap-2">
-        <WifiOff className="w-4 h-4 text-slate-950 animate-bounce" />
+        <WifiOff className="w-4 h-4 text-slate-950 animate-pulse" />
         <span>Koneksi internet terputus. Beberapa aksi mungkin tertunda.</span>
       </div>
       <button
         onClick={() => window.location.reload()}
-        className="px-2.5 py-1 bg-slate-950/20 hover:bg-slate-950/30 rounded text-xs font-bold transition-colors flex items-center gap-1.5"
+        className="px-2.5 py-1 bg-slate-950/20 hover:bg-slate-950/30 rounded text-xs font-bold transition-colors flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
         <RefreshCw className="w-3 h-3" />
         Coba Muat Ulang

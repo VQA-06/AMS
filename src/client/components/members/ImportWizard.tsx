@@ -161,7 +161,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
         </div>
         <button
           onClick={handleDownloadTemplate}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-sky-400 transition-colors shadow"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-sky-400 transition-colors shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
         >
           <Download className="w-4 h-4" />
           <span>Download Template CSV</span>
@@ -184,11 +184,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <label
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  mode === 'upsert'
-                    ? 'bg-sky-500/20 border-sky-500 text-white'
-                    : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60'
-                }`}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-colors ${ mode === 'upsert' ? 'bg-sky-500/20 border-sky-500 text-white' : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60' } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950`}
               >
                 <input
                   type="radio"
@@ -205,11 +201,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
               </label>
 
               <label
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  mode === 'create'
-                    ? 'bg-sky-500/20 border-sky-500 text-white'
-                    : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60'
-                }`}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-colors ${ mode === 'create' ? 'bg-sky-500/20 border-sky-500 text-white' : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60' } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950`}
               >
                 <input
                   type="radio"
@@ -226,11 +218,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
               </label>
 
               <label
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  mode === 'update'
-                    ? 'bg-sky-500/20 border-sky-500 text-white'
-                    : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60'
-                }`}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-colors ${ mode === 'update' ? 'bg-sky-500/20 border-sky-500 text-white' : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60' } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950`}
               >
                 <input
                   type="radio"
@@ -273,7 +261,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             >
               Batal
             </button>
@@ -300,7 +288,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
           </div>
 
           {/* Table of Rows */}
-          <div className="glass-panel rounded-2xl border border-slate-800 max-h-72 overflow-y-auto">
+          <div className="glass-panel rounded-2xl border border-slate-800 max-h-72 overflow-auto">
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-900/90 sticky top-0 uppercase font-bold text-slate-400 border-b border-slate-800">
                 <tr>
@@ -371,7 +359,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
             <button
               onClick={handleCommit}
               disabled={loading || previewReport.validCount === 0}
-              className="flex items-center gap-2 px-6 py-2.5 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             >
               <span>{loading ? 'Mengimpor Data...' : `Commit Import (${previewReport.validCount} Baris)`}</span>
               <ArrowRight className="w-4 h-4" />
@@ -383,7 +371,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
       {/* Step 3: Result Summary */}
       {step === 'result' && commitResult && (
         <div className="space-y-6 text-center py-6">
-          <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 flex items-center justify-center mx-auto animate-bounce">
+          <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 flex items-center justify-center mx-auto animate-pop-once">
             <CheckCircle className="w-8 h-8" />
           </div>
           <div>
@@ -413,7 +401,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
           <div className="pt-4">
             <button
               onClick={onSuccess}
-              className="px-6 py-3 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
+              className="px-6 py-3 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             >
               Lihat Daftar Anggota
             </button>

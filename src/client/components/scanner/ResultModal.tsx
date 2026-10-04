@@ -27,24 +27,24 @@ export const ResultModal: React.FC<ResultModalProps> = ({ result, onDismiss }) =
   if (!result) return null;
 
   return (
-    <ModalPortal>
+    <ModalPortal onClose={onDismiss}>
       <div
-        className="modal-backdrop-full transition-opacity animate-in fade-in"
+        className="modal-backdrop-full transition-opacity"
         onClick={onDismiss}
       >
       <div
-        className={`w-full max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border transition-transform animate-in zoom-in-95 my-auto ${
-          result.success
-            ? 'bg-gradient-to-b from-slate-900 via-slate-900 to-emerald-950/40 border-emerald-500/50 ring-4 ring-emerald-500/20'
-            : 'bg-gradient-to-b from-slate-900 via-slate-900 to-rose-950/40 border-rose-500/50 ring-4 ring-rose-500/20'
-        }`}
+        className={`w-full max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border transition-transform my-auto ${
+ result.success
+ ? 'bg-gradient-to-b from-slate-900 via-slate-900 to-emerald-950/40 border-emerald-500/50 ring-4 ring-emerald-500/20'
+ : 'bg-gradient-to-b from-slate-900 via-slate-900 to-rose-950/40 border-rose-500/50 ring-4 ring-rose-500/20'
+ }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with Icon */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             {result.success ? (
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 animate-bounce">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 animate-pop-once">
                 <CheckCircle2 className="w-7 h-7" />
               </div>
             ) : (
@@ -70,7 +70,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({ result, onDismiss }) =
 
           <button
             onClick={onDismiss}
-            className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800"
+            className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           >
             <X className="w-5 h-5" />
           </button>
@@ -144,11 +144,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({ result, onDismiss }) =
         {/* Action Button */}
         <button
           onClick={onDismiss}
-          className={`w-full mt-5 py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide shadow-lg transition-all active:scale-[0.98] ${
-            result.success
-              ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
-              : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
-          }`}
+          className={`w-full mt-5 py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide shadow-lg transition-colors transition-transform active:scale-[0.98] ${ result.success ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30' : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30' } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950`}
         >
           Lanjut Scan Berikutnya (OK)
         </button>

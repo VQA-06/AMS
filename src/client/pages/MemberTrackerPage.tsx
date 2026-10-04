@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
 import { Buildings } from '@phosphor-icons/react/Buildings';
-import { CaretRight } from '@phosphor-icons/react/CaretRight';
 import { ChartLineUp } from '@phosphor-icons/react/ChartLineUp';
 import { Check } from '@phosphor-icons/react/Check';
 import { Clock } from '@phosphor-icons/react/Clock';
@@ -26,11 +25,10 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { PageHeader } from '../components/ui/PageHeader';
-import { Table, TBody, TCell, THead, TRow } from '../components/ui/Table';
 import { DigitalPassCard } from '../components/qr/DigitalPassCard';
 import { ModalPortal } from '../components/ui/ModalPortal';
+import { RowList, type RowListItem } from '../components/ui/RowList';
 import { type MarkTone } from '../components/ui/Table';
-import { markToneClass } from '../components/ui/Table';
 
 const focusRing =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
@@ -48,14 +46,11 @@ const tierMark: Record<ActivityTier, MarkTone> = {
 const tierLabel: Record<ActivityTier, string> = {
   highly_active: 'Sangat Aktif',
   active: 'Cukup Aktif',
-  inactive: 'Belum / Kurang Aktif',
+  // Short enough to sit in a nowrap status column. The summary tiles below
+  // already call this tier "Belum Aktif"; the row label was the outlier.
+  inactive: 'Belum Aktif',
 };
 
-const tierText: Record<ActivityTier, string> = {
-  highly_active: 'text-seal-600',
-  active: 'text-pending-600',
-  inactive: 'text-ink-2',
-};
 
 export const MemberTrackerPage: React.FC = () => {
   const [entries, setEntries] = useState<MemberActivityEntry[]>([]);
@@ -228,6 +223,34 @@ export const MemberTrackerPage: React.FC = () => {
     totalMbrs > 0 ? ((summary?.active_count || 0) / totalMbrs) * 100 : 0;
   const inactivePct =
     totalMbrs > 0 ? ((summary?.inactive_count || 0) / totalMbrs) * 100 : 0;
+
+  // Attendance rate and last-seen are what an officer actually triages on, so
+  // they lead the meta line; the division badge went away with the column.
+  const entryItems: RowListItem[] = entries.map((entry) => {
+    const lastSeen = entry.last_attended_at
+      ? new Date(entry.last_attended_at).toLocaleString('id-ID', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        })
+      : 'Belum pernah hadir';
+
+    return {
+      id: entry.member_id,
+      title: entry.member_name,
+      meta: [
+        entry.member_external_id,
+        entry.member_division,
+        `${entry.total_events_attended} kegiatan · ${entry.attendance_rate}%`,
+        lastSeen,
+      ]
+        .filter(Boolean)
+        .join('  ·  '),
+      status: {
+        label: tierLabel[entry.activity_tier],
+        tone: tierMark[entry.activity_tier],
+      },
+    };
+  });
 
   return (
     <div className="space-y-5 pb-12 md:space-y-8">
@@ -475,251 +498,40 @@ export const MemberTrackerPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Desktop View: Workstation Table with Row Inspection Click */}
-      <div className="surface hidden overflow-hidden rounded-panel md:block">
-        <Table>
-          <THead>
-            <TCell header className="w-12 text-center">
-              No
-            </TCell>
-            <TCell header>Nama Anggota &amp; NIM</TCell>
-            <TCell header className="whitespace-nowrap">
-              Divisi
-            </TCell>
-            <TCell header className="text-center">
-              Status Keaktifan
-            </TCell>
-            <TCell header className="text-center">
-              Kegiatan Dihadiri
-            </TCell>
-            <TCell header>Terakhir Hadir</TCell>
-            <TCell header className="text-right">
-              Aksi
-            </TCell>
-          </THead>
-          <TBody>
-            {loading ? (
-              <TRow>
-                <TCell colSpan={7} className="py-12 text-center text-ink-2">
-                  <span className="flex items-center justify-center gap-2">
-                    <ArrowClockwise className="h-4 w-4 animate-spin text-ink-2" />
-                    <span>Memuat data keaktifan anggota...</span>
-                  </span>
-                </TCell>
-              </TRow>
-            ) : entries.length === 0 ? (
-              <TRow>
-                <TCell colSpan={7} className="py-12">
-                  <EmptyState
-                    icon={<ChartLineUp className="h-8 w-8 text-ink-2" />}
-                    title="Tidak ada anggota yang sesuai"
-                    description={
-                      hasActiveFilters
-                        ? 'Tidak ada anggota yang cocok dengan filter aktif. Coba ubah kata kunci atau reset filter.'
-                        : 'Belum ada data keaktifan anggota yang tercatat pada sistem presensi.'
-                    }
-                    actionText={hasActiveFilters ? 'Reset Filter' : undefined}
-                    onAction={hasActiveFilters ? handleResetFilters : undefined}
-                  />
-                </TCell>
-              </TRow>
-            ) : (
-              entries.map((entry, index) => (
-                <TRow
-                  key={entry.member_id}
-                  onClick={() => handleOpenInspect(entry)}
-                  selected={inspectingMember?.member_id === entry.member_id}
-                  mark={tierMark[entry.activity_tier]}
-                  className="group cursor-pointer"
-                >
-                  <TCell className="text-center font-oxanium font-semibold text-ink-2">
-                    {index + 1}
-                  </TCell>
-                  <TCell>
-                    <div className="truncate text-sm font-bold text-ink">
-                      {entry.member_name}
-                    </div>
-                    <div className="truncate font-oxanium text-[11px] text-ink-2">
-                      {entry.member_external_id}
-                    </div>
-                  </TCell>
-                  <TCell className="whitespace-nowrap">
-                    {entry.member_division ? (
-                      <Badge variant="pen" size="xs">
-                        {entry.member_division}
-                      </Badge>
-                    ) : (
-                      <span className="italic text-ink-2">-</span>
-                    )}
-                  </TCell>
-                  <TCell
-                    className={cn(
-                      'text-center font-semibold',
-                      tierText[entry.activity_tier],
-                    )}
-                  >
-                    {tierLabel[entry.activity_tier]}
-                  </TCell>
-                  <TCell className="text-center">
-                    <div className="font-oxanium text-sm font-bold text-ink">
-                      {entry.total_events_attended} Kegiatan
-                    </div>
-                    <div className="font-oxanium text-[10px] text-ink-2">
-                      {entry.attendance_rate}% kehadiran ({entry.total_checkins}{' '}
-                      presensi)
-                    </div>
-                  </TCell>
-                  <TCell className="font-oxanium text-[11px] text-ink-2">
-                    {entry.last_attended_at ? (
-                      <span className="truncate">
-                        {new Date(entry.last_attended_at).toLocaleString(
-                          'id-ID',
-                          {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          },
-                        )}
-                      </span>
-                    ) : (
-                      <span className="italic text-ink-2">
-                        Belum pernah hadir
-                      </span>
-                    )}
-                  </TCell>
-                  <TCell className="text-right">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenInspect(entry);
-                      }}
-                      aria-label={`Inspeksi detail ${entry.member_name}`}
-                      className={cn(
-                        'inline-flex min-h-[44px] items-center gap-1 rounded-chip px-2.5 py-1.5 text-xs font-semibold text-ink-2 transition-colors duration-120 hover:bg-pen-50/70 hover:text-ink-2',
-                        focusRing,
-                      )}
-                    >
-                      <span>Inspeksi</span>
-                      <CaretRight className="h-3.5 w-3.5" />
-                    </button>
-                  </TCell>
-                </TRow>
-              ))
-            )}
-          </TBody>
-        </Table>
-      </div>
+      {/* One list for both breakpoints. The rail is the tier; the status word
+          is its label; attendance and last-seen ride the meta line. The old
+          desktop table and mobile card list were the same data twice. */}
+      {loading ? (
+        <div className="surface flex items-center justify-center gap-2 rounded-panel p-8 text-center text-xs text-ink-2">
+          <ArrowClockwise className="h-4 w-4 animate-spin text-ink-2" />
+          <span>Memuat data keaktifan anggota...</span>
+        </div>
+      ) : entries.length === 0 ? (
+        <EmptyState
+          icon={<ChartLineUp className="h-8 w-8 text-ink-2" />}
+          title="Tidak ada anggota yang sesuai"
+          description={
+            hasActiveFilters
+              ? 'Tidak ada anggota yang cocok dengan filter aktif. Coba ubah kata kunci atau reset filter.'
+              : 'Belum ada data keaktifan anggota.'
+          }
+          actionText={hasActiveFilters ? 'Reset Filter' : undefined}
+          onAction={hasActiveFilters ? handleResetFilters : undefined}
+        />
+      ) : (
+        <RowList
+          items={entryItems}
+          onSelect={(id) => {
+            const entry = entries.find((e) => e.member_id === id);
+            if (entry) handleOpenInspect(entry);
+          }}
+          selectedIds={
+            inspectingMember ? new Set([inspectingMember.member_id]) : undefined
+          }
+          itemLabel="anggota"
+        />
+      )}
 
-      {/* Mobile View: High-Density Clickable Cards */}
-      <div className="space-y-2.5 md:hidden">
-        {loading ? (
-          <div className="surface flex items-center justify-center gap-2 rounded-panel p-8 text-center text-xs text-ink-2">
-            <ArrowClockwise className="h-4 w-4 animate-spin text-ink-2" />
-            <span>Memuat data keaktifan...</span>
-          </div>
-        ) : entries.length === 0 ? (
-          <EmptyState
-            icon={<ChartLineUp className="h-8 w-8 text-ink-2" />}
-            title="Tidak ada anggota yang sesuai"
-            description={
-              hasActiveFilters
-                ? 'Tidak ada anggota yang cocok dengan filter aktif. Coba ubah kata kunci atau reset filter.'
-                : 'Belum ada data keaktifan anggota.'
-            }
-            actionText={hasActiveFilters ? 'Reset Filter' : undefined}
-            onAction={hasActiveFilters ? handleResetFilters : undefined}
-          />
-        ) : (
-          entries.map((entry, index) => (
-            // The rail replaces the tier badge here: on a phone the officer is
-            // scanning a long list for disengaged members, and a colour column
-            // reads faster than a word repeated on every card.
-            <button
-              key={entry.member_id}
-              type="button"
-              onClick={() => handleOpenInspect(entry)}
-              className={cn(
-                'flex w-full cursor-pointer flex-col gap-2.5 rounded-panel border border-l-2 border-rule bg-paper p-3.5 text-left transition-colors duration-120 hover:bg-paper-raised',
-                markToneClass[tierMark[entry.activity_tier]],
-                focusRing,
-                'focus-visible:ring-offset-0',
-              )}
-            >
-              <span className="flex items-start justify-between gap-2">
-                <span className="flex min-w-0 items-start gap-2.5">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-chip border border-rule bg-ink font-oxanium text-[11px] font-bold text-ink-2">
-                    {index + 1}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-heading text-sm font-bold text-ink">
-                      {entry.member_name}
-                    </span>
-                    <span className="block truncate font-oxanium text-[10px] text-ink-2">
-                      {entry.member_external_id}
-                    </span>
-                  </span>
-                </span>
-                <span
-                  className={cn(
-                    'shrink-0 text-[10px] font-bold uppercase tracking-wider',
-                    tierText[entry.activity_tier],
-                  )}
-                >
-                  {tierLabel[entry.activity_tier]}
-                </span>
-              </span>
-
-              <span className="flex items-center justify-between gap-2">
-                <span className="min-w-0">
-                  <span className="block text-[10px] uppercase tracking-wider text-ink-2">
-                    Divisi:
-                  </span>
-                  {entry.member_division ? (
-                    <Badge variant="pen" size="xs">
-                      {entry.member_division}
-                    </Badge>
-                  ) : (
-                    <span className="text-xs font-semibold text-ink-2">
-                      Umum
-                    </span>
-                  )}
-                </span>
-                <span className="shrink-0 text-right">
-                  <span className="block text-[10px] uppercase tracking-wider text-ink-2">
-                    Kehadiran:
-                  </span>
-                  <span className="font-oxanium text-xs font-bold text-ink-2">
-                    {entry.total_events_attended} Kegiatan (
-                    {entry.attendance_rate}%)
-                  </span>
-                </span>
-              </span>
-
-              <span className="flex items-center justify-between gap-2 border-t border-rule pt-2 font-oxanium text-[11px] text-ink-2">
-                {entry.last_attended_at ? (
-                  <span className="flex min-w-0 items-center gap-1">
-                    <Clock className="h-3 w-3 shrink-0 text-ink-2" />
-                    <span className="truncate">
-                      Terakhir:{' '}
-                      {new Date(entry.last_attended_at).toLocaleDateString(
-                        'id-ID',
-                      )}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="italic text-ink-2">
-                    Belum pernah hadir
-                  </span>
-                )}
-                <span className="flex shrink-0 items-center gap-0.5 text-xs font-semibold text-ink-2">
-                  <span>Detail</span>
-                  <CaretRight className="h-3.5 w-3.5" />
-                </span>
-              </span>
-            </button>
-          ))
-        )}
-      </div>
 
       {/* Interactive Quick Inspect Side Drawer (Sliding Panel) */}
       {inspectingMember && (

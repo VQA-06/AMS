@@ -140,7 +140,10 @@ export const RowList: React.FC<RowListProps> = ({
           );
 
           return (
-            <li key={item.id} className="ledger-row">
+            // The status hue is part of the rendered contract: `TRow` and
+            // `Card` expose it the same way, so colour-semantics tests read
+            // one attribute off all three list surfaces.
+            <li key={item.id} data-mark={tone} className="ledger-row">
               {onSelect ? (
                 <button type="button" onClick={() => onSelect(item.id)} className={cn(rowClass, focusRing)}>
                   {content}

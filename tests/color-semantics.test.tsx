@@ -106,7 +106,7 @@ describe('Event status colour is identical in the list and the detail header', (
     ['closed', 'danger'],
   ] as const)('renders %s in the %s hue on both surfaces', (status, expectedHue) => {
     const listHtml = renderToString(
-      <EventList events={[makeEvent(status)]} viewMode="table" {...listProps} />
+      <EventList events={[makeEvent(status)]} {...listProps} />
     );
     const headerHtml = renderToString(
       <EventHeaderSummary event={makeEvent(status)} {...headerProps} />
@@ -128,7 +128,7 @@ describe('Event status colour is identical in the list and the detail header', (
         <EventHeaderSummary event={makeEvent(status)} {...headerProps} />
       );
       const listHtml = renderToString(
-        <EventList events={[makeEvent(status)]} viewMode="table" {...listProps} />
+        <EventList events={[makeEvent(status)]} {...listProps} />
       );
       expect(statusHues(headerHtml)).not.toContain('pending');
       expect(statusHues(listHtml)).not.toContain('pending');

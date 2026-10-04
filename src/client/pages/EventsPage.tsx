@@ -2,10 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
 import { CheckCircle } from '@phosphor-icons/react/CheckCircle';
 import { FunnelSimple } from '@phosphor-icons/react/FunnelSimple';
-import { ListBullets } from '@phosphor-icons/react/ListBullets';
 import { MagnifyingGlass } from '@phosphor-icons/react/MagnifyingGlass';
 import { Plus } from '@phosphor-icons/react/Plus';
-import { SquaresFour } from '@phosphor-icons/react/SquaresFour';
 import { Trash } from '@phosphor-icons/react/Trash';
 import { Warning } from '@phosphor-icons/react/Warning';
 import { X } from '@phosphor-icons/react/X';
@@ -52,45 +50,6 @@ export const EventsPage: React.FC<EventsPageProps> = ({
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // View Mode: Grid (cards) default for mobile/smartphone (< 768px), Table for desktop workstation (>= 768px)
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
-    if (typeof window !== 'undefined') {
-      const isMobile = window.innerWidth < 768;
-      const saved = localStorage.getItem(isMobile ? 'ams_event_view_mode_mobile' : 'ams_event_view_mode_desktop');
-      if (saved === 'table' || saved === 'grid') {
-        return saved;
-      }
-      return isMobile ? 'grid' : 'table';
-    }
-    return 'grid';
-  });
-
-  const handleSetViewMode = (mode: 'table' | 'grid') => {
-    setViewMode(mode);
-    try {
-      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-      localStorage.setItem(isMobile ? 'ams_event_view_mode_mobile' : 'ams_event_view_mode_desktop', mode);
-    } catch {
-      // Safe fallback if localStorage is restricted
-    }
-  };
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mediaQuery = window.matchMedia('(max-width: 767px)');
-    const handleMediaChange = (e: MediaQueryListEvent) => {
-      const isMobile = e.matches;
-      const saved = localStorage.getItem(isMobile ? 'ams_event_view_mode_mobile' : 'ams_event_view_mode_desktop');
-      if (saved === 'table' || saved === 'grid') {
-        setViewMode(saved);
-      } else {
-        setViewMode(isMobile ? 'grid' : 'table');
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleMediaChange);
-    return () => mediaQuery.removeEventListener('change', handleMediaChange);
-  }, []);
 
   // Search and Filter
   const [search, setSearch] = useState<string>('');
@@ -184,13 +143,6 @@ export const EventsPage: React.FC<EventsPageProps> = ({
     });
   };
 
-  const handleToggleSelectAll = () => {
-    if (selectedEventIds.size === events.length && events.length > 0) {
-      setSelectedEventIds(new Set());
-    } else {
-      setSelectedEventIds(new Set(events.map((e) => e.id)));
-    }
-  };
 
   const handleClearSelection = () => {
     setSelectedEventIds(new Set());
@@ -431,6 +383,23 @@ export const EventsPage: React.FC<EventsPageProps> = ({
     });
   }, [events, search, statusFilter]);
 
+  // Select-all must span exactly the rows on screen. Acting on every event
+  // would silently select rows a filter is hiding, and the "Pilih semua (N)"
+  // count would disagree with what is actually checked.
+  const handleToggleSelectAll = () => {
+    const visibleIds = filteredEvents.map((e) => e.id);
+    const allVisibleSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedEventIds.has(id));
+    setSelectedEventIds((prev) => {
+      const next = new Set(prev);
+      for (const id of visibleIds) {
+        if (allVisibleSelected) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  };
+
   const hasActiveFilters = search.trim() !== '' || statusFilter !== 'all';
 
   return (
@@ -541,46 +510,6 @@ export const EventsPage: React.FC<EventsPageProps> = ({
             <FunnelSimple className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-ink-2" />
           </div>
 
-          {/* View Mode Toggle: Table vs Grid */}
-          <div
-            className="flex shrink-0 items-center rounded-panel border border-rule bg-ink/80 p-0.5"
-            role="group"
-            aria-label="Pilihan tampilan data"
-          >
-            <button
-              type="button"
-              onClick={() => handleSetViewMode('table')}
-              className={cn(
-                'rounded-chip p-1.5 text-xs font-medium transition-colors',
-                viewMode === 'table'
-                  ? 'bg-paper-raised text-ink-2'
-                  : 'text-ink-2 hover:text-ink',
-                focusRing
-              )}
-              title="Tampilan Tabel Workstation"
-              aria-label="Tampilan Tabel Workstation"
-              aria-pressed={viewMode === 'table'}
-            >
-              <ListBullets className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSetViewMode('grid')}
-              className={cn(
-                'rounded-chip p-1.5 text-xs font-medium transition-colors',
-                viewMode === 'grid'
-                  ? 'bg-paper-raised text-ink-2'
-                  : 'text-ink-2 hover:text-ink',
-                focusRing
-              )}
-              title="Tampilan Kartu Grid"
-              aria-label="Tampilan Kartu Grid"
-              aria-pressed={viewMode === 'grid'}
-            >
-              <SquaresFour className="w-4 h-4" />
-            </button>
-          </div>
-
           {hasActiveFilters && (
             <button
               type="button"
@@ -605,10 +534,10 @@ export const EventsPage: React.FC<EventsPageProps> = ({
       <EventList
         events={filteredEvents}
         loading={loading}
-        viewMode={viewMode}
         canManage={isManager}
         selectedIds={selectedEventIds}
         onToggleSelect={handleToggleSelect}
+        onToggleSelectAll={handleToggleSelectAll}
         onSelectEvent={onSelectEvent}
         onScanEvent={onScanEvent}
         onEditEvent={(ev) => {

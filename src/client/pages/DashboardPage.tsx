@@ -294,7 +294,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <section className="min-w-0 space-y-4 lg:col-span-2" aria-labelledby="dashboard-page-active-events">
           <div className="flex items-center justify-between gap-3">
-            <h2 id="dashboard-page-active-events" className="font-heading text-base font-bold text-white">
+            <h2 id="dashboard-page-active-events" className="font-heading text-base font-bold text-ink">
               Kegiatan yang Sedang Aktif
             </h2>
             <button
@@ -349,7 +349,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper rounded-chip',
                       )}
                     >
-                      <h3 className="truncate text-base font-bold text-white transition-colors group-hover:text-ink-2">
+                      <h3 className="truncate text-base font-bold text-ink transition-colors group-hover:text-ink-2">
                         {ev.name}
                       </h3>
                       <p className="mt-0.5 truncate text-xs text-ink-2">
@@ -411,7 +411,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <span className="block text-[9px] font-bold uppercase tracking-wider text-seal-600">
                 Sangat Aktif
               </span>
-              <span className="font-oxanium text-lg font-bold tabular-nums text-white">
+              <span className="font-oxanium text-lg font-bold tabular-nums text-ink">
                 {trackerSummary?.highly_active_count ?? 0}
               </span>
             </div>
@@ -420,7 +420,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <span className="block text-[9px] font-bold uppercase tracking-wider text-pending-600">
                 Cukup Aktif
               </span>
-              <span className="font-oxanium text-lg font-bold tabular-nums text-white">
+              <span className="font-oxanium text-lg font-bold tabular-nums text-ink">
                 {trackerSummary?.active_count ?? 0}
               </span>
             </div>
@@ -429,7 +429,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <span className="block text-[9px] font-bold uppercase tracking-wider text-ink-2">
                 Belum Aktif
               </span>
-              <span className="font-oxanium text-lg font-bold tabular-nums text-white">
+              <span className="font-oxanium text-lg font-bold tabular-nums text-ink">
                 {trackerSummary?.inactive_count ?? 0}
               </span>
             </div>
@@ -439,7 +439,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             type="button"
             onClick={() => onNavigate('tracker')}
             className={cn(
-              'flex w-full items-center justify-center gap-1.5 rounded-chip py-2 text-xs font-semibold text-ink transition-colors hover:bg-paper-raised hover:text-white',
+              'flex w-full items-center justify-center gap-1.5 rounded-chip py-2 text-xs font-semibold text-ink transition-colors hover:bg-paper-raised hover:text-ink',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
             )}
           >

@@ -67,7 +67,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             onClick={onClose}
             aria-label="Tutup dialog"
             className={cn(
-              'absolute right-3 top-3 flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:text-white disabled:opacity-50',
+              'absolute right-3 top-3 flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:text-ink disabled:opacity-50',
               focusRing
             )}
           >
@@ -75,7 +75,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </button>
 
           <div className="pr-8">
-            <h3 className="font-heading text-base font-bold leading-snug text-white">{title}</h3>
+            <h3 className="font-heading text-base font-bold leading-snug text-ink">{title}</h3>
             <div className="mt-1 break-words text-xs leading-relaxed text-ink">{message}</div>
           </div>
 

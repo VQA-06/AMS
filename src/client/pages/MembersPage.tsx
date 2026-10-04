@@ -213,50 +213,6 @@ export const MembersPage: React.FC<MembersPageProps> = ({
     onRefreshGlobal?.();
   };
 
-  const handleDeactivate = (id: string, name?: string) => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Nonaktifkan Anggota',
-      message: (
-        <span>
-          Yakin ingin menonaktifkan status keanggotaan <strong>"{name || 'anggota ini'}"</strong>?
-          Akses tiket dan akun tim (jika ada) akan otomatis dinonaktifkan.
-        </span>
-      ),
-      type: 'warning',
-      confirmText: 'Ya, Nonaktifkan',
-      onConfirm: async () => {
-        setConfirmLoading(true);
-        try {
-          await fetchApi(`/api/members/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: 'inactive' }),
-          });
-          invalidateCache('/api/members');
-          invalidateCache('/api/attendances');
-          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
-          await loadMembers({ forceRefresh: true });
-          onRefreshGlobal?.();
-          setAlertModal({
-            isOpen: true,
-            title: 'Anggota Dinonaktifkan',
-            message: `Anggota "${name || id}" berhasil dinonaktifkan.`,
-            type: 'success',
-          });
-        } catch (err) {
-          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
-          setAlertModal({
-            isOpen: true,
-            title: 'Gagal Menonaktifkan',
-            message: err instanceof Error ? err.message : 'Gagal menonaktifkan anggota.',
-            type: 'error',
-          });
-        } finally {
-          setConfirmLoading(false);
-        }
-      },
-    });
-  };
 
   const handleDelete = (id: string, name: string) => {
     setConfirmDialog({
@@ -264,7 +220,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
       title: 'Hapus Anggota Permanen',
       message: (
         <span>
-          Yakin ingin <strong>MENGHAPUS PERMANEN</strong> anggota <strong className="text-white">"{name}"</strong> beserta seluruh riwayat QR, absensi, dan akun panitia terkait?
+          Yakin ingin <strong>MENGHAPUS PERMANEN</strong> anggota <strong className="text-ink">"{name}"</strong> beserta seluruh riwayat QR, absensi, dan akun panitia terkait?
         </span>
       ),
       type: 'danger',
@@ -678,7 +634,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
               }}
               aria-label="Reset semua filter"
               className={cn(
-                'flex shrink-0 items-center gap-1.5 rounded-chip border border-pen-200 bg-pen-50/70 px-3 py-2 text-xs font-semibold text-pen-deep transition-colors hover:bg-pen-50/70 hover:text-white',
+                'flex shrink-0 items-center gap-1.5 rounded-chip border border-pen-200 bg-pen-50/70 px-3 py-2 text-xs font-semibold text-pen-deep transition-colors hover:bg-pen-50/70 hover:text-ink',
                 focusRing
               )}
             >
@@ -692,7 +648,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
             onClick={() => loadMembers({ forceRefresh: true })}
             aria-label="Refresh daftar anggota"
             className={cn(
-              'flex min-h-[36px] min-w-[36px] shrink-0 items-center justify-center rounded-chip border border-rule-strong bg-paper px-2.5 py-2 text-ink-2 transition-colors hover:text-white',
+              'flex min-h-[36px] min-w-[36px] shrink-0 items-center justify-center rounded-chip border border-rule-strong bg-paper px-2.5 py-2 text-ink-2 transition-colors hover:text-ink',
               focusRing
             )}
             title="Refresh"
@@ -714,9 +670,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
           setEditingMember(m);
           setIsFormOpen(true);
         }}
-        onDeactivate={handleDeactivate}
         onDelete={handleDelete}
-        onGenerateQr={onGenerateQrForMember}
         onViewPass={handleViewPass}
       />
 

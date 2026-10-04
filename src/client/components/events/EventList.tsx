@@ -136,7 +136,7 @@ export const EventList: React.FC<EventListProps> = ({
                       identity that the mark colour is read against. */}
                   <TCell truncate>
 
-                    <div className="truncate font-heading text-sm font-bold text-white">
+                    <div className="truncate font-heading text-sm font-bold text-ink">
                       {event.name}
                     </div>
                     {event.location_name && (
@@ -245,7 +245,7 @@ export const EventList: React.FC<EventListProps> = ({
                             type="button"
                             onClick={() => onEditEvent(event)}
                             className={cn(
-                              'flex h-8 w-8 items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper-raised hover:text-white',
+                              'flex h-8 w-8 items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper-raised hover:text-ink',
                               focusRing
                             )}
                             title="Edit Event"
@@ -304,7 +304,7 @@ export const EventList: React.FC<EventListProps> = ({
                     />
                   )}
                   <div className="min-w-0">
-                    <h3 className="truncate font-heading text-base font-bold text-white">
+                    <h3 className="truncate font-heading text-base font-bold text-ink">
                       {event.name}
                     </h3>
                     {event.location_name && (
@@ -386,7 +386,7 @@ export const EventList: React.FC<EventListProps> = ({
                         type="button"
                         onClick={() => onEditEvent(event)}
                         className={cn(
-                          'flex h-10 w-10 items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper-raised hover:text-white',
+                          'flex h-10 w-10 items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper-raised hover:text-ink',
                           focusRing
                         )}
                         title="Edit Event"

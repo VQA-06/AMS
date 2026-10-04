@@ -120,7 +120,7 @@ export const AttendanceRosterTable: React.FC<AttendanceRosterTableProps> = ({
               'whitespace-nowrap rounded-chip px-3 py-1.5 text-xs font-bold transition-colors duration-120',
               sessionFilter === 'ALL'
                 ? 'border border-pen-200/70 bg-pen-50/70 text-ink-2'
-              : 'text-ink-2 hover:text-white'
+              : 'text-ink-2 hover:text-ink'
           )}
           >
             Semua ({attendances.length})
@@ -310,7 +310,7 @@ export const AttendanceRosterTable: React.FC<AttendanceRosterTableProps> = ({
                     <TCell className="font-oxanium font-bold text-ink-2">
                       {att.member_external_id}
                     </TCell>
-                    <TCell className="font-semibold text-white" truncate>
+                    <TCell className="font-semibold text-ink" truncate>
                       {att.member_name}
                     </TCell>
                     <TCell className="text-ink-2">
@@ -370,7 +370,7 @@ export const AttendanceRosterTable: React.FC<AttendanceRosterTableProps> = ({
                           />
                         )}
                         <div className="min-w-0">
-                          <h3 className="truncate text-sm font-bold text-white">
+                          <h3 className="truncate text-sm font-bold text-ink">
                             {att.member_name}
                           </h3>
                           <span className="font-oxanium text-xs text-ink-2">

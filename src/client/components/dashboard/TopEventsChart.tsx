@@ -116,7 +116,7 @@ const CustomPieTooltip: React.FC<CustomPieTooltipProps> = ({ active, payload, to
             style={{ backgroundColor: item.fill }}
             aria-hidden="true"
           />
-          <p className="line-clamp-1 font-heading text-xs font-bold text-white">{item.name}</p>
+          <p className="line-clamp-1 font-heading text-xs font-bold text-ink">{item.name}</p>
         </div>
         <div className="mt-1 flex items-center gap-2">
           <Badge variant={chip.variant} size="xs">
@@ -261,7 +261,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
                   className={cn(
                     'flex min-h-[32px] items-center rounded-chip px-2.5 py-1 font-semibold transition-colors',
                     focusRing,
-                    on ? 'bg-pen-500 font-bold text-paper' : 'text-ink-2 hover:bg-paper-raised/70 hover:text-white'
+                    on ? 'bg-pen-500 font-bold text-ink' : 'text-ink-2 hover:bg-paper-raised/70 hover:text-ink'
                   )}
                 >
                   {opt.label}
@@ -362,7 +362,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
                           #{idx + 1}
                         </span>
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-bold text-white">{ev.name}</p>
+                          <p className="truncate text-xs font-bold text-ink">{ev.name}</p>
                           {ev.location_name && (
                             <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-ink-2">
                               <MapPin size={12} className="shrink-0 text-ink-3" aria-hidden="true" />
@@ -424,7 +424,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
 
               {/* Centered Total Attendances Metric (Lower Z-Index, Unobtrusive) */}
               <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center text-center">
-                <span className="font-oxanium text-3xl font-extrabold tabular-nums tracking-tight text-white sm:text-4xl">
+                <span className="font-oxanium text-3xl font-extrabold tabular-nums tracking-tight text-ink sm:text-4xl">
                   {totalAttendees}
                 </span>
                 <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-ink-2">
@@ -474,7 +474,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
       {/* Footer Summary */}
       <div className="flex items-center justify-between border-t border-rule pt-3 font-oxanium text-[11px] tabular-nums text-ink-2">
         <span>
-          Total Terdata: <strong className="font-bold text-white">{totalAttendees}</strong> Presensi
+          Total Terdata: <strong className="font-bold text-ink">{totalAttendees}</strong> Presensi
         </span>
         <span>{filteredEvents.length} Kegiatan Terdaftar</span>
       </div>

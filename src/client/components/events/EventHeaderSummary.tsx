@@ -53,14 +53,14 @@ export const EventHeaderSummary: React.FC<EventHeaderSummaryProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="touch-target rounded-chip border border-rule-strong bg-paper-raised text-ink-2 transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper hover:bg-paper hover:text-white"
+            className="touch-target rounded-chip border border-rule-strong bg-paper-raised text-ink-2 transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper hover:bg-paper hover:text-ink"
             aria-label="Kembali ke Daftar Kegiatan"
           >
             <ArrowLeft size={20} />
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold font-heading text-white">{event.name}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold font-heading text-ink">{event.name}</h1>
               <Badge variant={eventStatusVariant(event.status)}>
                 {event.status === 'active' ? 'AKTIF' : event.status === 'closed' ? 'SELESAI' : 'DRAFT'}
               </Badge>

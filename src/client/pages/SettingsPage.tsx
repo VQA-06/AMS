@@ -587,7 +587,7 @@ const [isOnline, setIsOnline] = useState<boolean>(
                 {currentAdmin?.name?.charAt(0)?.toUpperCase() || 'A'}
               </div>
               <div className="min-w-0">
-                <h2 className="truncate font-heading text-base font-bold text-white">
+                <h2 className="truncate font-heading text-base font-bold text-ink">
                   {currentAdmin?.name}
                 </h2>
                 <p className="truncate font-oxanium text-xs text-ink-2">{currentAdmin?.email}</p>
@@ -625,7 +625,7 @@ const [isOnline, setIsOnline] = useState<boolean>(
 
           {/* Edit Profile & Password Form */}
           <Card className="space-y-5 p-5 sm:p-6 lg:col-span-2">
-            <h2 className="flex items-center gap-2 font-heading text-base font-bold text-white">
+            <h2 className="flex items-center gap-2 font-heading text-base font-bold text-ink">
               <LockKey className="h-4 w-4 text-ink-2" />
               <span>Kelola Profil & Ganti Password</span>
             </h2>
@@ -738,7 +738,7 @@ const [isOnline, setIsOnline] = useState<boolean>(
           <Card className="space-y-4 p-5 sm:p-6">
             <div className="flex flex-col justify-between gap-3 border-b border-rule pb-3 sm:flex-row sm:items-center">
               <div>
-                <h2 className="flex items-center gap-2 font-heading text-base font-bold text-white">
+                <h2 className="flex items-center gap-2 font-heading text-base font-bold text-ink">
                   <Users className="h-5 w-5 text-ink-2" />
                   <span>Daftar Akun Tim Panitia</span>
                 </h2>
@@ -810,7 +810,7 @@ const [isOnline, setIsOnline] = useState<boolean>(
                         </TCell>
                       )}
                       <TCell>
-                        <div className="max-w-[16rem] truncate font-semibold text-white">{adm.name}</div>
+                        <div className="max-w-[16rem] truncate font-semibold text-ink">{adm.name}</div>
                         <div className="max-w-[16rem] truncate font-oxanium text-[11px] text-ink-2">
                           {adm.email}
                         </div>
@@ -881,7 +881,7 @@ const [isOnline, setIsOnline] = useState<boolean>(
           <Card className="space-y-4 p-5 sm:p-6">
             <div className="flex flex-col justify-between gap-2 border-b border-rule pb-3 sm:flex-row sm:items-center">
               <div>
-                <h2 className="flex items-center gap-2 font-heading text-base font-bold text-white">
+                <h2 className="flex items-center gap-2 font-heading text-base font-bold text-ink">
                   <ShieldCheck className="h-5 w-5 text-seal-600" />
                   <span>Matriks Hak Akses Peran (RBAC Matrix)</span>
                 </h2>
@@ -913,7 +913,7 @@ const [isOnline, setIsOnline] = useState<boolean>(
                 {rbacMatrixData.map((row) => (
                   <TRow key={row.name}>
                     <TCell>
-                      <div className="max-w-[22rem] font-semibold text-white">{row.name}</div>
+                      <div className="max-w-[22rem] font-semibold text-ink">{row.name}</div>
                       <div className="mt-0.5 max-w-[22rem] text-[11px] text-ink-2">{row.desc}</div>
                     </TCell>
                     <TCell className="text-center">{renderCapabilityCell(row.owner)}</TCell>
@@ -934,7 +934,7 @@ const [isOnline, setIsOnline] = useState<boolean>(
                   <div className="flex items-center justify-between border-b border-rule pb-3">
                     <div className="flex items-center gap-2">
                       <UserPlus className="h-5 w-5 text-ink-2" />
-                      <h2 className="font-heading text-base font-bold text-white">
+                      <h2 className="font-heading text-base font-bold text-ink">
                         Tambah Akun Panitia Baru
                       </h2>
                     </div>
@@ -1046,7 +1046,7 @@ const [isOnline, setIsOnline] = useState<boolean>(
                   <div className="flex items-center justify-between border-b border-rule pb-3">
                     <div className="flex items-center gap-2">
                       <PencilSimple className="h-4 w-4 text-ink-2" />
-                      <h2 className="font-heading text-base font-bold text-white">Edit Akun Panitia</h2>
+                      <h2 className="font-heading text-base font-bold text-ink">Edit Akun Panitia</h2>
                     </div>
                     <button
                       type="button"
@@ -1059,7 +1059,7 @@ const [isOnline, setIsOnline] = useState<boolean>(
                   </div>
 
                   <div className="surface-raised space-y-1 rounded-panel p-3 text-xs">
-                    <div className="truncate font-semibold text-white">{editingAdmin.name}</div>
+                    <div className="truncate font-semibold text-ink">{editingAdmin.name}</div>
                     <div className="truncate font-oxanium text-ink-2">{editingAdmin.email}</div>
                     {editingAdmin.member_external_id && (
                       <div className="truncate font-oxanium text-[11px] text-ink-2">
@@ -1171,7 +1171,7 @@ const [isOnline, setIsOnline] = useState<boolean>(
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
           <Card className="space-y-4 p-5 sm:p-6 md:col-span-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="flex items-center gap-2 font-heading text-base font-bold text-white">
+              <h2 className="flex items-center gap-2 font-heading text-base font-bold text-ink">
                 <DeviceMobile className="h-4 w-4 text-seal-600" />
                 <span>Progressive Web App (PWA) &amp; Offline Shell</span>
               </h2>
@@ -1267,7 +1267,7 @@ const [isOnline, setIsOnline] = useState<boolean>(
           deletingAdmin ? (
             <span>
               Yakin ingin <strong>MENGHAPUS PERMANEN</strong> akun panitia{' '}
-              <strong className="text-white">"{deletingAdmin.name}"</strong> ({deletingAdmin.email})?
+              <strong className="text-ink">"{deletingAdmin.name}"</strong> ({deletingAdmin.email})?
               Akun ini tidak akan dapat login lagi ke sistem.
             </span>
           ) : (

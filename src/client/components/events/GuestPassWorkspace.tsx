@@ -97,7 +97,7 @@ export const GuestPassWorkspace: React.FC<GuestPassWorkspaceProps> = ({
       {/* Workspace Header Actions */}
       <div className="surface flex flex-wrap items-center justify-between gap-3 rounded-panel p-3.5 shadow-ambient sm:p-4">
         <div>
-          <h2 className="font-heading text-sm font-bold text-white">Kelola Tiket QR Kegiatan</h2>
+          <h2 className="font-heading text-sm font-bold text-ink">Kelola Tiket QR Kegiatan</h2>
           <p className="mt-0.5 text-[11px] text-ink-2">
             Tiket khusus yang digenerate untuk event ini atau tamu undangan sementara (guest passes).
           </p>
@@ -196,7 +196,7 @@ export const GuestPassWorkspace: React.FC<GuestPassWorkspaceProps> = ({
                   <TCell className="font-oxanium text-[11px] text-ink-2">
                     {tok.jti || tok.id.slice(0, 12)}
                   </TCell>
-                  <TCell className="font-semibold text-white" truncate>
+                  <TCell className="font-semibold text-ink" truncate>
                     <span className="flex items-center gap-1.5">
                       <span className="truncate">{tok.member_name || 'Peserta'}</span>
                       {isGuest && (

@@ -173,7 +173,7 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
             <div className="surface flex items-start gap-2.5 rounded-panel p-3.5 text-xs text-ink">
               <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-ink-2" />
               <div>
-                <span className="font-bold text-white">
+                <span className="font-bold text-ink">
                   Mode Peninjau (Auditor)
                 </span>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-ink-2">

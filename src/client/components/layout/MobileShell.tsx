@@ -135,7 +135,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               <img src="/logo.webp" alt="AMS Logo" className="h-full w-full object-contain" />
             </div>
             <div>
-              <h1 className="font-heading text-lg font-bold leading-tight text-white">AMS</h1>
+              <h1 className="font-heading text-lg font-bold leading-tight text-ink">AMS</h1>
               <p className="text-xs font-medium text-ink-2">Computer Community</p>
             </div>
           </div>
@@ -206,7 +206,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               <img src="/logo.webp" alt="AMS Logo" className="h-full w-full object-contain" />
             </div>
             <div>
-              <p className="font-heading text-base font-bold leading-tight text-white">AMS</p>
+              <p className="font-heading text-base font-bold leading-tight text-paper">AMS</p>
               <p className="text-[10px] font-semibold leading-none text-ink-2">
                 Computer Community
               </p>
@@ -239,7 +239,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
                 focusRing,
                 currentTab === 'settings'
                   ? 'bg-paper-raised text-ink-2'
-                  : 'text-ink-2 hover:bg-paper-raised/60 hover:text-white'
+                  : 'text-ink-2 hover:bg-paper-raised/60 hover:text-ink'
               )}
             >
               <Gear size={18} />

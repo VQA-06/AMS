@@ -53,7 +53,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           icon
         )}
       </div>
-      <Heading className="max-w-md font-heading text-base font-bold text-white sm:text-lg">
+      <Heading className="max-w-md font-heading text-base font-bold text-ink sm:text-lg">
         {title}
       </Heading>
       <p className="mt-1.5 max-w-md text-xs leading-relaxed text-ink-2 sm:text-sm">{description}</p>

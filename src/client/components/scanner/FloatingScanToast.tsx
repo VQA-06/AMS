@@ -93,7 +93,7 @@ export const FloatingScanToast: React.FC<FloatingScanToastProps> = ({
               {tone.icon}
               {/* Held one-handed in the field: the headline is the largest type
                 on the surface, because it is what gets read at arm's length. */}
-              <h3 className="font-heading text-base font-bold leading-none text-white sm:text-lg">
+              <h3 className="font-heading text-base font-bold leading-none text-ink sm:text-lg">
                 {accepted ? 'ABSENSI BERHASIL' : 'SCAN DITOLAK'}
               </h3>
               {accepted && a && (
@@ -109,7 +109,7 @@ export const FloatingScanToast: React.FC<FloatingScanToastProps> = ({
             </div>
 
             {accepted && a ? (
-              <p className="mt-1 truncate text-sm font-bold text-white sm:text-base">
+              <p className="mt-1 truncate text-sm font-bold text-ink sm:text-base">
                 {a.memberName}
               </p>
             ) : (
@@ -129,7 +129,7 @@ export const FloatingScanToast: React.FC<FloatingScanToastProps> = ({
             onClick={onDismiss}
             aria-label="Tutup notifikasi"
             className={cn(
-              'touch-target shrink-0 rounded-chip border border-rule bg-paper-raised text-ink-2 transition-colors duration-120 hover:text-white',
+              'touch-target shrink-0 rounded-chip border border-rule bg-paper-raised text-ink-2 transition-colors duration-120 hover:text-ink',
               focusRing,
             )}
           >

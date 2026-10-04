@@ -397,7 +397,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
                           className={cn(
                             'flex w-full items-center justify-between rounded-chip p-2 text-left text-xs transition-colors sm:p-2.5',
                             selected
-                              ? 'bg-pen-50/70 text-white'
+                              ? 'bg-pen-50/70 text-ink'
                               : 'text-ink hover:bg-paper-raised/60'
                           )}
                         >

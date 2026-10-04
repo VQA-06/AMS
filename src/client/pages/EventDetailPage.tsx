@@ -217,7 +217,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       title: 'Hapus Tiket Kegiatan',
       message: (
         <span>
-          Yakin ingin <strong>MENGHAPUS</strong> tiket untuk <strong className="text-white">"{name || 'peserta'}"</strong> dari kegiatan ini?
+          Yakin ingin <strong>MENGHAPUS</strong> tiket untuk <strong className="text-ink">"{name || 'peserta'}"</strong> dari kegiatan ini?
         </span>
       ),
       type: 'danger',
@@ -257,7 +257,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       title: 'Hapus Kegiatan Permanen',
       message: (
         <span>
-          Yakin ingin <strong>MENGHAPUS PERMANEN</strong> kegiatan <strong className="text-white">"{event.name}"</strong> beserta seluruh riwayat data absensi dan tiketnya?
+          Yakin ingin <strong>MENGHAPUS PERMANEN</strong> kegiatan <strong className="text-ink">"{event.name}"</strong> beserta seluruh riwayat data absensi dan tiketnya?
         </span>
       ),
       type: 'danger',
@@ -820,7 +820,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="surface space-y-4 rounded-panel p-6 shadow-ambient">
-            <h3 className="font-heading text-base font-bold text-white">Kebijakan Keamanan QR</h3>
+            <h3 className="font-heading text-base font-bold text-ink">Kebijakan Keamanan QR</h3>
             <div className="space-y-3 text-xs text-ink">
               <div className="rounded-panel border border-rule bg-paper-raised p-4">
                 <p className="mb-1 flex items-center gap-1.5 font-bold text-ink-2">
@@ -840,12 +840,12 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
               <div className="flex items-center justify-between rounded-chip border border-rule bg-paper-raised px-3 py-2.5">
                 <span>Toleransi Waktu Absen (Grace Period)</span>
-                <span className="font-oxanium font-bold tabular-nums text-white">{event.grace_minutes} Menit</span>
+                <span className="font-oxanium font-bold tabular-nums text-ink">{event.grace_minutes} Menit</span>
               </div>
 
               <div className="flex items-center justify-between rounded-chip border border-rule bg-paper-raised px-3 py-2.5">
                 <span>Absensi Manual</span>
-                <span className="font-bold text-white">
+                <span className="font-bold text-ink">
                   {event.allow_manual_attendance ? 'Diizinkan' : 'Dilarang'}
                 </span>
               </div>
@@ -853,7 +853,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
           </div>
 
           <div className="surface space-y-4 rounded-panel p-6 shadow-ambient">
-            <h3 className="font-heading text-base font-bold text-white">Statistik Kehadiran</h3>
+            <h3 className="font-heading text-base font-bold text-ink">Statistik Kehadiran</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="surface rounded-panel p-4">
                 <span className="text-[10px] text-ink-2 uppercase font-semibold">Total Hadir</span>
@@ -936,7 +936,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
               onSubmit={handleManualSubmit}
               className="bezel my-auto max-h-[92dvh] w-full max-w-md space-y-4 overflow-y-auto p-5"
             >
-              <h3 className="font-heading text-lg font-bold text-white">Input Absensi Manual</h3>
+              <h3 className="font-heading text-lg font-bold text-ink">Input Absensi Manual</h3>
               <p className="text-xs text-ink-2">
                 Gunakan jika kamera bermasalah atau anggota hadir secara fisik tanpa tiket QR.
               </p>
@@ -1008,7 +1008,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                     <UserCheck size={16} />
                   </div>
                   <div>
-                    <h3 className="font-heading text-base font-bold text-white">
+                    <h3 className="font-heading text-base font-bold text-ink">
                       Angkat Menjadi Anggota Resmi
                     </h3>
                     <p className="text-[11px] text-ink-2">
@@ -1022,7 +1022,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                   type="button"
                   onClick={() => setPromotingGuest(null)}
                   aria-label="Tutup dialog angkat anggota"
-                  className="touch-target rounded-chip p-1 text-ink-2 transition-colors hover:text-white"
+                  className="touch-target rounded-chip p-1 text-ink-2 transition-colors hover:text-ink"
                 >
                   <X size={16} />
                 </button>

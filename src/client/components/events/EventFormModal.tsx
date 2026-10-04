@@ -104,7 +104,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                 <CalendarBlank className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h3 className="truncate font-heading text-base font-bold text-white sm:text-lg">
+                <h3 className="truncate font-heading text-base font-bold text-ink sm:text-lg">
                   {event ? 'Edit Kegiatan / Event' : 'Buat Kegiatan Baru'}
                 </h3>
                 <p className="truncate text-[11px] text-ink-2 sm:text-xs">
@@ -117,7 +117,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
               onClick={onClose}
               aria-label="Tutup dialog"
               className={cn(
-                'shrink-0 rounded-chip bg-paper-raised p-1.5 text-ink-2 transition-colors hover:bg-paper-raised/80 hover:text-white sm:p-2',
+                'shrink-0 rounded-chip bg-paper-raised p-1.5 text-ink-2 transition-colors hover:bg-paper-raised/80 hover:text-ink sm:p-2',
                 focusRing
               )}
             >
@@ -190,7 +190,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                     'cursor-pointer rounded-panel border p-3 transition-colors',
                     focusRing,
                     formData.qr_policy === 'universal_allowed'
-                      ? 'border-pen-500 bg-pen-50/70 text-white'
+                      ? 'border-pen-500 bg-pen-50/70 text-ink'
                       : 'border-rule bg-paper text-ink-2 hover:bg-paper-raised'
                   )}
                 >
@@ -216,7 +216,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                     'cursor-pointer rounded-panel border p-3 transition-colors',
                     focusRing,
                     formData.qr_policy === 'event_only'
-                      ? 'border-pen-500 bg-pen-50/70 text-white'
+                      ? 'border-pen-500 bg-pen-50/70 text-ink'
                       : 'border-rule bg-paper text-ink-2 hover:bg-paper-raised'
                   )}
                 >

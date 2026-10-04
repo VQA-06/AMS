@@ -30,7 +30,7 @@ const STEPS: GuideStep[] = [
   {
     title: (
       <>
-        Tekan tombol <strong className="font-bold text-white">Bagikan (Share)</strong>
+        Tekan tombol <strong className="font-bold text-ink">Bagikan (Share)</strong>
       </>
     ),
     detail: 'Buka menu bagikan di bilah navigasi Safari bagian bawah layar.',
@@ -39,7 +39,7 @@ const STEPS: GuideStep[] = [
   {
     title: (
       <>
-        Pilih <strong className="font-bold text-white">Tambahkan ke Layar Utama</strong>
+        Pilih <strong className="font-bold text-ink">Tambahkan ke Layar Utama</strong>
       </>
     ),
     detail: (
@@ -52,7 +52,7 @@ const STEPS: GuideStep[] = [
   {
     title: (
       <>
-        Tekan <strong className="font-bold text-white">Tambah (Add)</strong> di pojok kanan atas
+        Tekan <strong className="font-bold text-ink">Tambah (Add)</strong> di pojok kanan atas
       </>
     ),
     detail: 'Ikon AMS akan muncul di layar utama perangkat Anda.',
@@ -77,7 +77,7 @@ export const IosInstallGuideModal: React.FC<IosInstallGuideModalProps> = ({ isOp
             type="button"
             onClick={onClose}
             aria-label="Tutup dialog"
-            className="absolute right-3 top-3 flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper-raised hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+            className="absolute right-3 top-3 flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           >
             <X size={16} aria-hidden="true" />
           </button>
@@ -87,7 +87,7 @@ export const IosInstallGuideModal: React.FC<IosInstallGuideModalProps> = ({ isOp
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-panel border border-rule bg-paper object-contain">
               <img src="/logo.webp" alt="" className="h-full w-full object-contain" />
             </div>
-            <h3 id="ios-install-guide-title" className="font-heading text-base font-bold text-white">
+            <h3 id="ios-install-guide-title" className="font-heading text-base font-bold text-ink">
               Pasang AMS | Computer Community di iOS
             </h3>
             <p className="text-xs leading-relaxed text-ink-2">

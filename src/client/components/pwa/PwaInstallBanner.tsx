@@ -97,7 +97,7 @@ export const PwaInstallBanner: React.FC = () => {
             className="h-8 w-8 shrink-0 rounded-chip border border-rule bg-paper object-contain"
           />
           <div className="min-w-0">
-            <p className="truncate font-heading text-xs font-bold text-white">
+            <p className="truncate font-heading text-xs font-bold text-ink">
               {updateAvailable ? 'Update AMS Siap' : 'AMS | Computer Community'}
             </p>
             <p className="mt-0.5 truncate text-[10px] text-ink-2">
@@ -128,7 +128,7 @@ export const PwaInstallBanner: React.FC = () => {
               type="button"
               onClick={() => dismissPrompt(7)}
               aria-label="Tutup ajakan pasang, ingatkan lagi dalam 7 hari"
-              className={`flex h-9 w-9 items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper hover:text-white ${focusRing}`}
+              className={`flex h-9 w-9 items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper hover:text-ink ${focusRing}`}
             >
               <X size={14} aria-hidden="true" />
             </button>

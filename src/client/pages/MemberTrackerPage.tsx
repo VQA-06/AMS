@@ -279,7 +279,7 @@ export const MemberTrackerPage: React.FC = () => {
                 Rata-Rata Kehadiran
               </span>
               <div className="mt-0.5 flex items-baseline gap-1.5">
-                <span className="font-oxanium text-2xl font-extrabold text-white">
+                <span className="font-oxanium text-2xl font-extrabold text-ink">
                   {summary?.average_attendance_rate ?? 0}%
                 </span>
                 <span className="text-[11px] text-ink-2 font-medium">
@@ -329,7 +329,7 @@ export const MemberTrackerPage: React.FC = () => {
             className={`px-3 py-1.5 rounded-panel border text-xs font-semibold flex items-center gap-2 transition-colors ${
               selectedTier === 'highly_active'
                 ? 'bg-seal-50 text-seal-800 border-seal-200 shadow-sm'
-                : 'bg-paper-sunk/60 text-ink border-rule-strong hover:border-seal-200/70 hover:text-white'
+                : 'bg-paper-sunk/60 text-ink border-rule-strong hover:border-seal-200/70 hover:text-ink'
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-seal-500" />
@@ -347,7 +347,7 @@ export const MemberTrackerPage: React.FC = () => {
             className={`px-3 py-1.5 rounded-panel border text-xs font-semibold flex items-center gap-2 transition-colors ${
               selectedTier === 'active'
                 ? 'bg-pending-50 text-pending-800 border-pending-200 shadow-sm'
-                : 'bg-paper-sunk/60 text-ink border-rule-strong hover:border-pending-200/70 hover:text-white'
+                : 'bg-paper-sunk/60 text-ink border-rule-strong hover:border-pending-200/70 hover:text-ink'
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-pending-500" />
@@ -364,7 +364,7 @@ export const MemberTrackerPage: React.FC = () => {
             }
             className={`px-3 py-1.5 rounded-panel border text-xs font-semibold flex items-center gap-2 transition-colors ${
               selectedTier === 'inactive'
-                ? 'bg-rule-strong text-white border-rule-strong shadow-sm'
+                ? 'bg-rule-strong text-ink border-rule-strong shadow-sm'
                 : 'bg-paper-sunk/60 text-ink-2 border-rule-strong hover:border-rule-strong hover:text-ink'
             }`}
           >
@@ -388,7 +388,7 @@ export const MemberTrackerPage: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={cn(
-              'min-h-[44px] w-full rounded-chip border border-rule-strong bg-ink py-2 pl-9 pr-8 text-xs text-white placeholder-ink-3 transition-colors duration-120 hover:border-rule-strong focus:border-pen-200',
+              'min-h-[44px] w-full rounded-chip border border-rule-strong bg-ink py-2 pl-9 pr-8 text-xs text-paper placeholder-ink-3 transition-colors duration-120 hover:border-rule-strong focus:border-pen-200',
               focusRing,
             )}
           />
@@ -398,7 +398,7 @@ export const MemberTrackerPage: React.FC = () => {
               onClick={() => setSearch('')}
               aria-label="Hapus teks pencarian"
               className={cn(
-                'touch-target absolute right-0.5 top-1/2 -translate-y-1/2 rounded-chip text-ink-2 transition-colors duration-120 hover:text-white',
+                'touch-target absolute right-0.5 top-1/2 -translate-y-1/2 rounded-chip text-ink-2 transition-colors duration-120 hover:text-ink',
                 focusRing,
               )}
             >
@@ -466,7 +466,7 @@ export const MemberTrackerPage: React.FC = () => {
               type="button"
               onClick={handleResetFilters}
               aria-label="Reset semua filter aktif"
-              className="px-3 py-2 rounded-panel bg-pen-50/70 border border-pen-200 text-pen-deep hover:text-white hover:bg-pen-50/70 text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
+              className="px-3 py-2 rounded-panel bg-pen-50/70 border border-pen-200 text-pen-deep hover:text-ink hover:bg-pen-50/70 text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
             >
               <X className="mx-auto h-3.5 w-3.5" />
               <span>Reset</span>
@@ -536,7 +536,7 @@ export const MemberTrackerPage: React.FC = () => {
                     {index + 1}
                   </TCell>
                   <TCell>
-                    <div className="truncate text-sm font-bold text-white">
+                    <div className="truncate text-sm font-bold text-ink">
                       {entry.member_name}
                     </div>
                     <div className="truncate font-oxanium text-[11px] text-ink-2">
@@ -561,7 +561,7 @@ export const MemberTrackerPage: React.FC = () => {
                     {tierLabel[entry.activity_tier]}
                   </TCell>
                   <TCell className="text-center">
-                    <div className="font-oxanium text-sm font-bold text-white">
+                    <div className="font-oxanium text-sm font-bold text-ink">
                       {entry.total_events_attended} Kegiatan
                     </div>
                     <div className="font-oxanium text-[10px] text-ink-2">
@@ -651,7 +651,7 @@ export const MemberTrackerPage: React.FC = () => {
                     {index + 1}
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate font-heading text-sm font-bold text-white">
+                    <span className="block truncate font-heading text-sm font-bold text-ink">
                       {entry.member_name}
                     </span>
                     <span className="block truncate font-oxanium text-[10px] text-ink-2">
@@ -745,7 +745,7 @@ export const MemberTrackerPage: React.FC = () => {
                       {inspectingMember.member_name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="font-heading font-bold text-base text-white">
+                      <h3 className="font-heading font-bold text-base text-ink">
                         {inspectingMember.member_name}
                       </h3>
                       <div className="flex items-center gap-2 mt-0.5">
@@ -775,7 +775,7 @@ export const MemberTrackerPage: React.FC = () => {
                     type="button"
                     onClick={handleCloseInspect}
                     aria-label="Tutup panel inspeksi"
-                    className="w-8 h-8 rounded-chip bg-paper-sunk border border-rule-strong text-ink-2 hover:text-white flex items-center justify-center transition-colors"
+                    className="w-8 h-8 rounded-chip bg-paper-sunk border border-rule-strong text-ink-2 hover:text-ink flex items-center justify-center transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -824,7 +824,7 @@ export const MemberTrackerPage: React.FC = () => {
                     <span className="text-[10px] font-bold text-ink-2 uppercase tracking-wider block">
                       Total Presensi
                     </span>
-                    <p className="text-xl font-heading font-black text-white">
+                    <p className="text-xl font-heading font-black text-ink">
                       {inspectingMember.total_checkins}
                     </p>
                     <p className="text-[10px] text-ink-2">
@@ -858,7 +858,7 @@ export const MemberTrackerPage: React.FC = () => {
                 {/* Universal QR Pass Section inside Drawer */}
                 <div className="space-y-3 pt-2 border-t border-rule">
                   <div className="flex items-center justify-between">
-                    <h3 className="flex items-center gap-1.5 font-heading text-xs font-bold uppercase tracking-wider text-white">
+                    <h3 className="flex items-center gap-1.5 font-heading text-xs font-bold uppercase tracking-wider text-ink">
                       <QrCode className="h-3.5 w-3.5 text-ink-2" />
                       <span>Kartu Pass QR Universal</span>
                     </h3>

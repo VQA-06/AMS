@@ -381,7 +381,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
       title: 'Hapus Kegiatan Permanen',
       message: (
         <span>
-          Yakin ingin <strong>MENGHAPUS PERMANEN</strong> kegiatan <strong className="text-white">"{name}"</strong> beserta seluruh riwayat absensi dan tiketnya?
+          Yakin ingin <strong>MENGHAPUS PERMANEN</strong> kegiatan <strong className="text-ink">"{name}"</strong> beserta seluruh riwayat absensi dan tiketnya?
         </span>
       ),
       type: 'danger',
@@ -499,7 +499,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={cn(
-              'w-full rounded-panel border border-rule bg-ink/80 py-2 pl-9 pr-8 text-xs text-white transition-colors placeholder:text-ink-2',
+              'w-full rounded-panel border border-rule bg-ink/80 py-2 pl-9 pr-8 text-xs text-paper transition-colors placeholder:text-ink-2',
               focusRing
             )}
           />
@@ -509,7 +509,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
               onClick={() => setSearch('')}
               aria-label="Hapus teks pencarian"
               className={cn(
-                'absolute right-2.5 top-1/2 -translate-y-1/2 rounded-chip p-1 text-ink-2 transition-colors hover:text-white',
+                'absolute right-2.5 top-1/2 -translate-y-1/2 rounded-chip p-1 text-ink-2 transition-colors hover:text-ink',
                 focusRing
               )}
             >
@@ -590,7 +590,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
               }}
               aria-label="Reset semua filter"
               className={cn(
-                'flex shrink-0 items-center gap-1.5 rounded-chip border border-pen-200 bg-pen-50/70 px-3 py-2 text-xs font-semibold text-pen-deep transition-colors hover:bg-pen-50/70 hover:text-white',
+                'flex shrink-0 items-center gap-1.5 rounded-chip border border-pen-200 bg-pen-50/70 px-3 py-2 text-xs font-semibold text-pen-deep transition-colors hover:bg-pen-50/70 hover:text-ink',
                 focusRing
               )}
             >

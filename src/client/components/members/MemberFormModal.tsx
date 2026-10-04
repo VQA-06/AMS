@@ -127,7 +127,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                 <UserPlus className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <h2 className="truncate font-heading text-base font-bold text-white sm:text-lg">
+                <h2 className="truncate font-heading text-base font-bold text-ink sm:text-lg">
                   {member ? 'Edit Data Anggota' : 'Tambah Anggota Baru'}
                 </h2>
                 <p className="truncate text-[11px] text-ink-2 sm:text-xs">
@@ -140,7 +140,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
               onClick={onClose}
               aria-label="Tutup dialog"
               className={cn(
-                'shrink-0 rounded-full bg-paper-raised p-1.5 text-ink-2 transition-colors hover:bg-paper hover:text-white sm:p-2',
+                'shrink-0 rounded-full bg-paper-raised p-1.5 text-ink-2 transition-colors hover:bg-paper hover:text-ink sm:p-2',
                 focusRing
               )}
             >

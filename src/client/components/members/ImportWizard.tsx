@@ -162,7 +162,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule pb-4">
         <div>
-          <h2 className="font-heading text-xl font-bold text-white">
+          <h2 className="font-heading text-xl font-bold text-ink">
             Import Data Anggota (CSV / JSON)
           </h2>
           <p className="mt-0.5 text-xs text-ink-2">
@@ -211,7 +211,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
                     'cursor-pointer rounded-panel border p-3.5 transition-colors duration-120 ease-out-expo',
                     focusRing,
                     mode === opt.value
-                      ? 'border-pen-500 bg-pen-50/70 text-white'
+                      ? 'border-pen-500 bg-pen-50/70 text-ink'
                       : 'border-rule-strong bg-paper-raised/40 text-ink-2 hover:bg-paper-raised'
                   )}
                 >
@@ -255,7 +255,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
           <div className="grid grid-cols-3 gap-3">
             <div className="surface rounded-panel p-3.5">
               <span className="text-[10px] font-semibold uppercase text-ink-2">Total Baris</span>
-              <p className="font-oxanium text-lg font-bold text-white">{previewReport.total}</p>
+              <p className="font-oxanium text-lg font-bold text-ink">{previewReport.total}</p>
             </div>
             <div className="rounded-panel border border-seal-200 bg-seal-50/70 p-3.5">
               <span className="text-[10px] font-semibold uppercase text-seal-600">Valid</span>
@@ -365,7 +365,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
             <CheckCircle className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="font-heading text-xl font-bold text-white">Proses Import Selesai</h3>
+            <h3 className="font-heading text-xl font-bold text-ink">Proses Import Selesai</h3>
             <p className="mt-1 text-xs text-ink-2">
               Ringkasan hasil import data anggota ke database D1
             </p>

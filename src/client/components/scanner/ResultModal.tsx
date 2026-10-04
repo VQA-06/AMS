@@ -159,7 +159,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
                   onClick={onDismiss}
                   aria-label="Tutup hasil pemindaian"
                   className={cn(
-                    'touch-target shrink-0 rounded-chip border border-rule bg-paper-raised text-ink-2 transition-colors duration-120 hover:text-white',
+                    'touch-target shrink-0 rounded-chip border border-rule bg-paper-raised text-ink-2 transition-colors duration-120 hover:text-ink',
                     focusRing,
                   )}
                 >
@@ -173,7 +173,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-2">
                       Nama Anggota
                     </span>
-                    <p className="flex items-center gap-2 text-lg font-bold text-white">
+                    <p className="flex items-center gap-2 text-lg font-bold text-ink">
                       <User className={cn('h-4 w-4 shrink-0', tone.text)} />
                       <span className="truncate">
                         {result.attendance.memberName}

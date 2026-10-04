@@ -270,7 +270,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                 <UserPlus size={20} />
               </div>
               <div className="min-w-0">
-                <h3 className="truncate font-heading text-base font-bold text-white sm:text-lg">
+                <h3 className="truncate font-heading text-base font-bold text-ink sm:text-lg">
                   {mode === 'import_events' ? 'Impor Tamu dari Kegiatan Lalu' : 'Buat Peserta Tamu / Sementara'}
                 </h3>
                 <p className="truncate text-[11px] text-ink-2 sm:text-xs">Khusus untuk event: {event.name}</p>
@@ -280,7 +280,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
               type="button"
               onClick={onClose}
               aria-label="Tutup dialog"
-              className="touch-target shrink-0 rounded-chip bg-paper-raised p-1.5 text-ink-2 transition-colors duration-120 hover:text-white sm:p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+              className="touch-target shrink-0 rounded-chip bg-paper-raised p-1.5 text-ink-2 transition-colors duration-120 hover:text-ink sm:p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             >
               <X size={18} />
             </button>
@@ -348,7 +348,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                     value={nameListText}
                     onChange={(e) => setNameListText(e.target.value)}
                     placeholder="Contoh:&#10;Dr. Hendra Wijaya, VIP&#10;Siti Aminah, Konsumsi&#10;Ahmad Fauzan"
-                    className="w-full px-3.5 py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs leading-relaxed text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                    className="w-full px-3.5 py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs leading-relaxed text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
                   />
                   <p className="text-[10px] sm:text-[11px] text-ink-2 mt-1">
                     Format: <code className="font-oxanium text-ink-2">Nama, Divisi (opsional)</code>
@@ -364,7 +364,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                     value={defaultDivision}
                     onChange={(e) => setDefaultDivision(e.target.value)}
                     placeholder="misal: Tamu / Undangan"
-                    className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-white transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
+                    className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-ink transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
                   />
                 </div>
               </>
@@ -381,7 +381,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                       value={batchPrefix}
                       onChange={(e) => setBatchPrefix(e.target.value)}
                       placeholder="misal: Tamu VIP"
-                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-white transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
+                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-ink transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
                     />
                   </div>
 
@@ -424,7 +424,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                       value={defaultDivision}
                       onChange={(e) => setDefaultDivision(e.target.value)}
                       placeholder="misal: Tamu / Undangan"
-                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-white transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
+                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-ink transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
                     />
                   </div>
                 </div>
@@ -484,7 +484,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                             <div className="flex items-start justify-between gap-1.5">
                               <span
                                 className={`font-semibold text-xs leading-snug line-clamp-1 ${
-                                  isSelected ? 'text-white' : 'text-ink'
+                                  isSelected ? 'text-ink' : 'text-ink'
                                 }`}
                               >
                                 {src.name}
@@ -519,7 +519,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="Cari nama / ID / divisi tamu..."
-                          className="w-full rounded-chip border border-rule-strong bg-paper-raised py-1.5 pl-8 pr-3 text-xs text-white transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper placeholder:text-ink-2"
+                          className="w-full rounded-chip border border-rule-strong bg-paper-raised py-1.5 pl-8 pr-3 text-xs text-ink transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper placeholder:text-ink-2"
                         />
                       </div>
                       <button
@@ -584,7 +584,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                                 />
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-xs text-white truncate">
+                                    <span className="font-semibold text-xs text-ink truncate">
                                       {cand.name}
                                     </span>
                                     {cand.division && (

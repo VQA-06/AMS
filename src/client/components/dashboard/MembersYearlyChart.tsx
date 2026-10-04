@@ -121,7 +121,7 @@ const CustomLineTooltip: React.FC<CustomTooltipProps & { filter: StatusFilter }>
   return (
     <div className="z-toast pointer-events-none min-w-[180px] space-y-2 rounded-panel border border-rule-strong bg-paper-raised px-3 py-2 text-xs shadow-ambient backdrop-blur-md">
       <div className="flex items-center justify-between gap-3 border-b border-rule pb-1.5">
-        <span className="font-heading text-xs font-bold text-white">Tahun {rawData.year || label}</span>
+        <span className="font-heading text-xs font-bold text-ink">Tahun {rawData.year || label}</span>
         <span className="font-oxanium text-[11px] font-semibold tabular-nums text-ink-2">
           {rawData.total_count} Total
         </span>
@@ -245,7 +245,7 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
                     focusRing,
                     on
                       ? 'bg-pen-500 text-paper'
-                      : 'text-ink-2 hover:bg-paper-raised/70 hover:text-white'
+                      : 'text-ink-2 hover:bg-paper-raised/70 hover:text-ink'
                   )}
                 >
                   {label}
@@ -257,7 +257,7 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
 
         {/* Big Number Headline */}
         <div className="mt-2 flex items-baseline gap-2">
-          <p className="font-oxanium text-2xl font-bold tabular-nums text-white sm:text-3xl">
+          <p className="font-oxanium text-2xl font-bold tabular-nums text-ink sm:text-3xl">
             {loading ? '...' : totalFilteredCount}
           </p>
           <span className="text-xs font-semibold text-ink-2">
@@ -386,7 +386,7 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
       {/* Footer Summary */}
       <div className="flex items-center justify-between border-t border-rule px-1 pt-3 font-oxanium text-[11px] tabular-nums text-ink-2">
         <span>{latestYear ? `Angkatan ${latestYear}` : 'Data Anggota'}</span>
-        <span className="font-semibold text-white">Total: {totalAllMembers} Anggota</span>
+        <span className="font-semibold text-ink">Total: {totalAllMembers} Anggota</span>
       </div>
     </div>
   );

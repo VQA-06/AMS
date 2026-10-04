@@ -127,7 +127,7 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
           </div>
 
           <div className="space-y-2">
-            <h1 className="font-heading text-xl font-bold text-white sm:text-2xl">{displayTitle}</h1>
+            <h1 className="font-heading text-xl font-bold text-ink sm:text-2xl">{displayTitle}</h1>
             <p className="mx-auto max-w-sm text-xs leading-relaxed text-ink sm:text-sm">{displayDesc}</p>
           </div>
 

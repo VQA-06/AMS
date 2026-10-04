@@ -1,6 +1,8 @@
-import React, { useEffect } from 'react';
-import { AlertTriangle, AlertCircle, Info, CheckCircle2, X } from 'lucide-react';
+import React from 'react';
+import { X } from '@phosphor-icons/react/X';
+import { cn } from '../../lib/cn';
 import { ModalPortal } from './ModalPortal';
+import { Button } from './Button';
 
 export type ModalType = 'danger' | 'warning' | 'info' | 'success';
 
@@ -15,6 +17,21 @@ export interface ConfirmModalProps {
   onClose: () => void;
   loading?: boolean;
 }
+
+/**
+ * A confirm panel is the one place a constant rail is legitimate: the rail's
+ * hue *is* the panel's type, and the confirm button's own `variant` changes
+ * with it, so the destructive action can never be mistaken for the safe one.
+ */
+const PANEL: Record<ModalType, { rail: string; confirm: 'danger' | 'primary' | 'outline' }> = {
+  danger: { rail: 'bg-pen-500', confirm: 'danger' },
+  warning: { rail: 'bg-pending-500', confirm: 'primary' },
+  success: { rail: 'bg-seal-500', confirm: 'primary' },
+  info: { rail: 'bg-info', confirm: 'outline' },
+};
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
@@ -33,99 +50,45 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   if (!isOpen) return null;
 
-  const getStyle = () => {
-    switch (type) {
-      case 'danger':
-        return {
-          icon: <AlertTriangle className="w-6 h-6 text-rose-400 shrink-0" />,
-          iconBg: 'bg-rose-950/80 border-rose-800/60 shadow-rose-950/50',
-          btnBg: 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30',
-        };
-      case 'warning':
-        return {
-          icon: <AlertCircle className="w-6 h-6 text-amber-400 shrink-0" />,
-          iconBg: 'bg-amber-950/80 border-amber-800/60 shadow-amber-950/50',
-          btnBg: 'bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold shadow-amber-600/30',
-        };
-      case 'success':
-        return {
-          icon: <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />,
-          iconBg: 'bg-emerald-950/80 border-emerald-800/60 shadow-emerald-950/50',
-          btnBg: 'bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold shadow-emerald-600/30',
-        };
-      case 'info':
-      default:
-        return {
-          icon: <Info className="w-6 h-6 text-sky-400 shrink-0" />,
-          iconBg: 'bg-sky-950/80 border-sky-800/60 shadow-sky-950/50',
-          btnBg: 'bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold shadow-sky-500/30',
-        };
-    }
-  };
-
-  const style = getStyle();
+  const panel = PANEL[type];
 
   return (
     <ModalPortal onClose={onClose} dismissOnEscape={!loading}>
       <div className="modal-backdrop-full">
         <div
-          className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 text-slate-100 relative my-auto"
           role="dialog"
           aria-modal="true"
+          className="bezel relative my-auto flex w-full max-w-md flex-col gap-4 p-5 text-ink sm:gap-5 sm:p-6"
         >
-        <button
-          type="button"
-          disabled={loading}
-          onClick={onClose}
-          className="absolute right-3 top-3 text-slate-400 hover:text-white min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
-          aria-label="Tutup dialog"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        <div className="flex items-start gap-4">
-          <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-lg ${style.iconBg}`}
-          >
-            {style.icon}
-          </div>
-          <div className="space-y-1 pt-1 pr-4">
-            <h3 className="font-heading font-bold text-base text-white leading-snug">
-              {title}
-            </h3>
-            <div className="text-xs text-slate-300 leading-relaxed">
-              {message}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800/80">
+          <span aria-hidden="true" className={cn('rail absolute bottom-6 left-0 top-6', panel.rail)} />
           <button
             type="button"
             disabled={loading}
             onClick={onClose}
-            className="px-4 py-2.5 min-h-[40px] rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-slate-400 focus:outline-none"
-          >
-            {cancelText}
-          </button>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={onConfirm}
-            className={`px-5 py-2.5 min-h-[40px] rounded-xl text-xs font-bold shadow-lg transition-colors transition-transform active:scale-95 flex items-center gap-2 ${style.btnBg} disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus:outline-none`}
-          >
-            {loading ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                <span>Memproses…</span>
-              </>
-            ) : (
-              <span>{confirmText}</span>
+            aria-label="Tutup dialog"
+            className={cn(
+              'absolute right-3 top-3 flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:text-white disabled:opacity-50',
+              focusRing
             )}
+          >
+            <X size={16} />
           </button>
+
+          <div className="pr-8">
+            <h3 className="font-heading text-base font-bold leading-snug text-white">{title}</h3>
+            <div className="mt-1 break-words text-xs leading-relaxed text-ink">{message}</div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 border-t border-rule pt-4">
+            <Button variant="secondary" size="md" disabled={loading} onClick={onClose}>
+              {cancelText}
+            </Button>
+            <Button variant={panel.confirm} size="md" disabled={loading} onClick={onConfirm}>
+              {loading ? 'Memproses…' : confirmText}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
-  </ModalPortal>
-);
+    </ModalPortal>
+  );
 };

@@ -43,6 +43,21 @@ const listProps = {
   onDeleteEvent: () => {},
 };
 
+/**
+ * Status marks only. The header also uses `pending` on the grace-period icon
+ * and on an `event_only` policy badge — both genuine warnings about something
+ * other than the event's status — so a blanket "no pending anywhere" would
+ * forbid correct usage. What must never happen is the *status* claiming the
+ * warning mark.
+ */
+function statusHues(html: string): string[] {
+  return [
+    ...new Set(
+      [...html.matchAll(/data-mark="([a-z]+)"|data-variant="([a-z]+)"/g)].map((m) => m[1] ?? m[2])
+    ),
+  ];
+}
+
 /** Palette hue a status badge actually renders, keyed by its visible text. */
 function badgeHuesByText(html: string): Record<string, string> {
   const MARKER = '<span class="inline-flex items-center gap-1.5 border';
@@ -52,49 +67,76 @@ function badgeHuesByText(html: string): Record<string, string> {
     const window = html
       .slice(i, next === -1 ? undefined : next)
       .replace(/<svg[\s\S]*?<\/svg>/g, '');
-    const hue = window.match(/bg-(emerald|sky|amber|rose|purple|slate)-\d+/);
+    // Read the rendered hue off the badge's own variant marker, so the test
+    // survives a repaint instead of pinning one Tailwind scale.
+    const hue = window.match(/data-variant="(seal|pen|pending|danger|info|neutral)"/);
     const text = window.match(/>([^<>]{2,30})</);
     if (hue && text) found[text[1].trim()] = hue[1];
   }
   return found;
 }
 
+/**
+ * The mark hue carried by the row whose text contains `marker`.
+ *
+ * In a dense list the row's mark is what encodes state — the design system
+ * removes the per-row badge precisely so colour is not duplicated. This reads
+ * the mark off the same `data-mark` attribute the `Card`/`TRow` primitives
+ * emit, so it tests the rendered contract rather than a Tailwind class name.
+ */
+function markHueFor(html: string, marker: string): string | undefined {
+  const idx = html.indexOf(marker);
+  if (idx === -1) return undefined;
+  // Walk back to the nearest mark marker at or before this row's text.
+  const before = html.slice(0, idx);
+  const mark = [...before.matchAll(/data-mark="([a-z]+)"/g)].pop();
+  return mark?.[1];
+}
+
 const STATUS_LABEL: Record<string, string> = {
   active: 'Aktif',
   draft: 'Draft',
-  closed: 'Selesai / Tutup',
+  closed: 'Selesai',
 };
 
-describe('Event status color is identical in the list and the detail header', () => {
+describe('Event status colour is identical in the list and the detail header', () => {
   it.each([
-    ['active', 'emerald'],
-    ['draft', 'slate'],
-    ['closed', 'rose'],
-  ] as const)('renders %s as %s in both components', (status, expectedHue) => {
+    ['active', 'seal'],
+    ['draft', 'pending'],
+    ['closed', 'danger'],
+  ] as const)('renders %s in the %s hue on both surfaces', (status, expectedHue) => {
     const listHtml = renderToString(
       <EventList events={[makeEvent(status)]} viewMode="table" {...listProps} />
     );
-    const headerHtml = renderToString(<EventHeaderSummary event={makeEvent(status)} {...headerProps} />);
+    const headerHtml = renderToString(
+      <EventHeaderSummary event={makeEvent(status)} {...headerProps} />
+    );
 
-    expect(badgeHuesByText(listHtml)[STATUS_LABEL[status]]).toBe(expectedHue);
-    expect(Object.values(badgeHuesByText(headerHtml))).toContain(expectedHue);
+    // The header keeps a badge (one-off, the text label is the message); the
+    // list uses a mark. Both must resolve to the same hue, or colour would
+    // encode which screen you are on rather than the state itself.
+    const headerBadge = Object.values(badgeHuesByText(headerHtml));
+    expect(headerBadge).toContain(expectedHue);
+    expect(markHueFor(listHtml, makeEvent(status).name)).toBe(expectedHue);
   });
 
-  it('never renders any event status badge in amber', () => {
-    for (const status of ['active', 'draft', 'closed'] as const) {
+  it('never renders a live or closed event in the warning hue', () => {
+    // `pending` is correct for `draft` (pending work) and wrong for a live or
+    // closed event, where it would read as a problem.
+    for (const status of ['active', 'closed'] as const) {
       const headerHtml = renderToString(
         <EventHeaderSummary event={makeEvent(status)} {...headerProps} />
       );
       const listHtml = renderToString(
         <EventList events={[makeEvent(status)]} viewMode="table" {...listProps} />
       );
-      expect(Object.values(badgeHuesByText(headerHtml))).not.toContain('amber');
-      expect(Object.values(badgeHuesByText(listHtml))).not.toContain('amber');
+      expect(statusHues(headerHtml)).not.toContain('pending');
+      expect(statusHues(listHtml)).not.toContain('pending');
     }
   });
 });
 
-describe('Session-type badges keep amber reserved for problems', () => {
+describe('Session-type colour keeps the warning hue reserved for problems', () => {
   const makeAttendance = (sessionType: Attendance['session_type']): Attendance => ({
     id: `att-${sessionType}`,
     event_id: 'event-1',
@@ -134,25 +176,51 @@ describe('Session-type badges keep amber reserved for problems', () => {
         onToggleSelectAttendance={() => {}}
         onSelectAllAttendances={() => {}}
         onDeleteAttendanceBatch={() => {}}
+        onOpenManualAttendance={() => {}}
         isManager={true}
       />
     );
 
+  it.each([
+    ['CHECKIN', 'seal'],
+    ['CHECKOUT', 'pen'],
+  ] as const)('encodes %s as %s in the roster mark', (sessionType, expectedMark) => {
+    // The mark replaces the per-row badge here, so this is the only place the
+    // session hue can appear. If it regresses to idle, the roster reads uniform.
+    expect(markHueFor(renderRoster(sessionType), 'MEM-001')).toBe(expectedMark);
+    expect(markHueFor(renderRoster(sessionType, 'card'), 'MEM-001')).toBe(expectedMark);
+  });
+
+  it.each(['BREAK_OUT', 'BREAK_IN'] as const)('never paints %s in the warning hue', (sessionType) => {
+    const hue = markHueFor(renderRoster(sessionType), 'MEM-001');
+    expect(hue).toBeDefined();
+    // A break is an interruption, never a warning — `pending` here would read
+    // as "something is wrong with this person".
+    expect(hue).not.toBe('pending');
+  });
+
   it.each(['table', 'card'] as const)(
-    'renders a break-out row in purple and a break-in row in slate in %s view',
+    'renders a break-out row and a break-in row in distinct hues in %s view',
     (view) => {
-      expect(badgeHuesByText(renderRoster('BREAK_OUT', view))['BREAK_OUT']).toBe('purple');
-      expect(badgeHuesByText(renderRoster('BREAK_IN', view))['BREAK_IN']).toBe('slate');
+      // A break-out and a break-in are both interruptions, but the operator
+      // still needs to tell them apart at a glance without reading the text.
+      const breakOut = markHueFor(renderRoster('BREAK_OUT', view), 'MEM-001');
+      const breakIn = markHueFor(renderRoster('BREAK_IN', view), 'MEM-001');
+      expect(breakOut).toBeDefined();
+      expect(breakIn).toBeDefined();
+      expect(breakOut).not.toBe(breakIn);
     }
   );
 
-  it('keeps check-in and check-out on their state hues with no amber present', () => {
+  it('keeps check-in and check-out on their state hues with no warning hue present', () => {
     const hues = [
-      ...Object.values(badgeHuesByText(renderRoster('CHECKIN'))),
-      ...Object.values(badgeHuesByText(renderRoster('CHECKOUT'))),
+      markHueFor(renderRoster('CHECKIN'), 'MEM-001'),
+      markHueFor(renderRoster('CHECKOUT'), 'MEM-001'),
+      markHueFor(renderRoster('BREAK_OUT'), 'MEM-001'),
+      markHueFor(renderRoster('BREAK_IN'), 'MEM-001'),
     ];
-    expect(hues).toContain('emerald');
-    expect(hues).toContain('sky');
-    expect(hues).not.toContain('amber');
+    expect(hues).toContain('seal');
+    expect(hues).toContain('pen');
+    expect(hues).not.toContain('pending');
   });
 });

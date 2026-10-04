@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { WifiOff, Wifi, RefreshCw } from 'lucide-react';
+import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
+import { WifiHigh } from '@phosphor-icons/react/WifiHigh';
+import { WifiSlash } from '@phosphor-icons/react/WifiSlash';
+import { FloatingSurface } from '../ui/FloatingSurface';
 
+/**
+ * The persistent top bar. It is genuinely ongoing state, so `animate-pulse`
+ * stays here — it is the one place a looping pulse carries information rather
+ * than decoration. `FloatingSurface` owns `role="status"` + `aria-live="polite"`
+ * so a screen-reader user hears the connection drop.
+ */
 export const OfflineBanner: React.FC = () => {
   const [isOnline, setIsOnline] = useState<boolean>(() => {
     return typeof navigator !== 'undefined' ? navigator.onLine : true;
@@ -37,26 +46,30 @@ export const OfflineBanner: React.FC = () => {
 
   if (showRestored) {
     return (
-      <div className="bg-emerald-500/90 text-white px-4 py-2 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 shadow-lg backdrop-blur-md sticky top-0 z-50">
-        <Wifi className="w-4 h-4 text-white animate-pulse" />
-        <span>Koneksi internet kembali aktif. Sistem tersinkronisasi.</span>
-      </div>
+      <FloatingSurface placement="top-bar" mark="seal">
+        <WifiHigh className="h-4 w-4 shrink-0 text-seal-800 animate-pulse" />
+        <span className="text-xs font-medium text-seal-800 sm:text-sm">
+          Koneksi internet kembali aktif. Sistem tersinkronisasi.
+        </span>
+      </FloatingSurface>
     );
   }
 
   return (
-    <div className="bg-amber-500/95 text-slate-950 px-4 py-2.5 text-xs sm:text-sm font-semibold flex items-center justify-between shadow-xl backdrop-blur-md sticky top-0 z-50">
-      <div className="flex items-center gap-2">
-        <WifiOff className="w-4 h-4 text-slate-950 animate-pulse" />
-        <span>Koneksi internet terputus. Beberapa aksi mungkin tertunda.</span>
-      </div>
+    <FloatingSurface placement="top-bar" mark="pending">
+      <WifiSlash className="h-4 w-4 shrink-0 text-pending-800 animate-pulse" />
+      <span className="text-xs font-semibold text-pending-800 sm:text-sm">
+        Koneksi internet terputus. Beberapa aksi mungkin tertunda.
+      </span>
       <button
+        type="button"
         onClick={() => window.location.reload()}
-        className="px-2.5 py-1 bg-slate-950/20 hover:bg-slate-950/30 rounded text-xs font-bold transition-colors flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+        aria-label="Muat ulang halaman"
+        className="ml-auto inline-flex items-center gap-1.5 rounded-chip bg-ink/30 px-2.5 py-1 text-xs font-bold text-pending-800 transition-colors duration-120 hover:bg-ink/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
       >
-        <RefreshCw className="w-3 h-3" />
-        Coba Muat Ulang
+        <ArrowClockwise className="h-3 w-3" />
+        <span>Coba Muat Ulang</span>
       </button>
-    </div>
+    </FloatingSurface>
   );
 };

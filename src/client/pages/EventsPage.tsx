@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Calendar, Plus, RefreshCw, Search, Filter, X, LayoutGrid, LayoutList } from 'lucide-react';
+import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
+import { CheckCircle } from '@phosphor-icons/react/CheckCircle';
+import { FunnelSimple } from '@phosphor-icons/react/FunnelSimple';
+import { ListBullets } from '@phosphor-icons/react/ListBullets';
+import { MagnifyingGlass } from '@phosphor-icons/react/MagnifyingGlass';
+import { Plus } from '@phosphor-icons/react/Plus';
+import { SquaresFour } from '@phosphor-icons/react/SquaresFour';
+import { Trash } from '@phosphor-icons/react/Trash';
+import { Warning } from '@phosphor-icons/react/Warning';
+import { X } from '@phosphor-icons/react/X';
 import { Event } from '@/shared/types';
 import { EventInput } from '@/shared/schemas/event.schema';
 import { fetchApi } from '../lib/api-client';
@@ -10,10 +19,15 @@ import { EventList } from '../components/events/EventList';
 import { EventFormModal } from '../components/events/EventFormModal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { AlertModal } from '../components/ui/AlertModal';
+import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 
 import { BulkActionBar, BulkActionItem } from '@/client/components/ui/BulkActionBar';
-import { CheckCircle, Trash2 } from 'lucide-react';
+import { cn } from '../lib/cn';
+
+/** The one focus quartet on every hand-rolled control in this file. */
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
 interface EventsPageProps {
   onSelectEvent: (event: Event) => void;
@@ -117,16 +131,23 @@ export const EventsPage: React.FC<EventsPageProps> = ({
     type: 'error',
   });
 
+  const [loadFailed, setLoadFailed] = useState<boolean>(false);
+
   const loadEvents = useCallback(async (force = false) => {
-    try {
-      setLoading(true);
-      const res = await fetchCached<{ events: Event[] }>('/api/agenda', { forceRefresh: force, ttlMs: 30_000 });
-      setEvents(res.events || []);
-    } catch (err) {
-      console.error('Failed to load events:', err);
-    } finally {
-      setLoading(false);
+    setLoading(true);
+    // A failed agenda fetch must never render as an empty list that reads like
+    // "there are no events"; it raises the banner instead.
+    const [res] = await Promise.allSettled([
+      fetchCached<{ events: Event[] }>('/api/agenda', { forceRefresh: force, ttlMs: 30_000 }),
+    ]);
+    if (res.status === 'fulfilled') {
+      setEvents(res.value.events || []);
+      setLoadFailed(false);
+    } else {
+      console.error('Failed to load events:', res.reason);
+      setLoadFailed(true);
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -267,7 +288,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
         },
         {
           label: 'Hapus',
-          icon: <Trash2 className="w-3.5 h-3.5" />,
+          icon: <Trash className="w-3.5 h-3.5" />,
           variant: 'danger' as const,
           onClick: handleBulkDeleteSelected,
         },
@@ -413,117 +434,150 @@ export const EventsPage: React.FC<EventsPageProps> = ({
   const hasActiveFilters = search.trim() !== '' || statusFilter !== 'all';
 
   return (
-    <div className="space-y-4 pb-20">
-      {/* Top Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold font-heading text-white flex items-center gap-2.5">
-            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-sky-400" />
-            <span>Manajemen Kegiatan / Event</span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Atur jadwal, status kegiatan, dan kebijakan QR (event-only atau universal)
-          </p>
-        </div>
+    <div className="space-y-5 pb-20 md:space-y-8">
+      <PageHeader
+        title="Manajemen Kegiatan / Event"
+        subtitle="Atur jadwal, status kegiatan, dan kebijakan QR (event-only atau universal)"
+        actions={
+          <>
+            {!isManager && (
+              <span className="rounded-chip border border-rule-strong bg-paper px-3 py-1.5 text-xs font-semibold text-ink-2">
+                Mode Read-Only
+              </span>
+            )}
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {!isManager && (
-            <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-700 text-slate-400">
-              Mode Read-Only
-            </span>
-          )}
-
-          {isManager && (
+            {isManager && (
+              <Button
+                variant="primary"
+                size="md"
+                icon={<Plus className="h-4 w-4" />}
+                onClick={() => {
+                  setEditingEvent(null);
+                  setIsFormOpen(true);
+                }}
+              >
+                Buat Kegiatan Baru
+              </Button>
+            )}
             <Button
-              variant="primary"
-              size="md"
-              icon={<Plus className="w-4 h-4" />}
-              onClick={() => {
-                setEditingEvent(null);
-                setIsFormOpen(true);
-              }}
+              variant="secondary"
+              size="icon"
+              onClick={() => loadEvents(true)}
+              title="Segarkan Data Kegiatan"
+              aria-label="Segarkan Data Kegiatan"
             >
-              Buat Kegiatan Baru
+              <ArrowClockwise className={cn('h-4 w-4 text-ink', loading && 'animate-spin')} />
             </Button>
-          )}
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={() => loadEvents(true)}
-            title="Segarkan Data Kegiatan"
-            aria-label="Segarkan Data Kegiatan"
-          >
-            <RefreshCw className={`w-4 h-4 text-slate-300 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+          </>
+        }
+      />
+
+      {loadFailed && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 rounded-panel border border-pending-200 bg-pending-50/70 px-4 py-3 text-xs text-pending-800"
+        >
+          <Warning className="h-4 w-4 shrink-0 text-pending-600" />
+          <span>
+            Daftar kegiatan gagal dimuat. Daftar di bawah mungkin tidak lengkap, bukan kosong.
+          </span>
         </div>
-      </div>
+      )}
 
       {/* Unified Command Toolbar */}
-      <div className="glass-panel p-2.5 sm:p-3 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 border border-slate-800">
+      <div className="surface flex flex-col items-stretch justify-between gap-2.5 rounded-panel p-2.5 sm:p-3 md:flex-row md:items-center">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-2" />
+          <label htmlFor="events-page-field-1" className="sr-only">
+            Cari kegiatan berdasarkan nama, lokasi, atau deskripsi
+          </label>
           <input
+            id="events-page-field-1"
             type="text"
-            aria-label="Cari kegiatan berdasarkan nama, lokasi, atau deskripsi"
             placeholder="Cari kegiatan atau lokasi..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-950/80 border border-slate-800/80 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none focus:border-sky-500/50 transition-colors"
+            className={cn(
+              'w-full rounded-panel border border-rule bg-ink/80 py-2 pl-9 pr-8 text-xs text-white transition-colors placeholder:text-ink-2',
+              focusRing
+            )}
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch('')}
               aria-label="Hapus teks pencarian"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded-full"
+              className={cn(
+                'absolute right-2.5 top-1/2 -translate-y-1/2 rounded-chip p-1 text-ink-2 transition-colors hover:text-white',
+                focusRing
+              )}
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+        <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
           {/* Status Filter */}
           <div className="relative min-w-[140px] flex-1 sm:flex-initial">
+            <label htmlFor="events-page-field-2" className="sr-only">
+              Filter status kegiatan
+            </label>
             <select
+              id="events-page-field-2"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'draft' | 'closed')}
-              aria-label="Filter status kegiatan"
-              className="w-full px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs font-medium text-slate-200 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none appearance-none cursor-pointer"
+              className={cn(
+                'w-full cursor-pointer appearance-none rounded-panel border border-rule bg-ink/80 px-3 py-2 text-xs font-medium text-ink transition-colors',
+                focusRing
+              )}
             >
-              <option value="all" className="bg-slate-900">Semua Status</option>
-              <option value="active" className="bg-slate-900">Sedang Aktif</option>
-              <option value="draft" className="bg-slate-900">Draft</option>
-              <option value="closed" className="bg-slate-900">Selesai / Tutup</option>
+              <option value="all" className="bg-paper">Semua Status</option>
+              <option value="active" className="bg-paper">Sedang Aktif</option>
+              <option value="draft" className="bg-paper">Draft</option>
+              <option value="closed" className="bg-paper">Selesai / Tutup</option>
             </select>
-            <Filter className="w-3 h-3 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <FunnelSimple className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-ink-2" />
           </div>
 
           {/* View Mode Toggle: Table vs Grid */}
-          <div className="flex items-center bg-slate-950/80 border border-slate-800/80 rounded-xl p-0.5 shrink-0" role="group" aria-label="Pilihan tampilan data">
+          <div
+            className="flex shrink-0 items-center rounded-panel border border-rule bg-ink/80 p-0.5"
+            role="group"
+            aria-label="Pilihan tampilan data"
+          >
             <button
               type="button"
               onClick={() => handleSetViewMode('table')}
-              className={`p-1.5 rounded-lg text-xs font-medium transition-colors ${
-                viewMode === 'table' ? 'bg-slate-800 text-sky-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={cn(
+                'rounded-chip p-1.5 text-xs font-medium transition-colors',
+                viewMode === 'table'
+                  ? 'bg-paper-raised text-ink-2'
+                  : 'text-ink-2 hover:text-ink',
+                focusRing
+              )}
               title="Tampilan Tabel Workstation"
               aria-label="Tampilan Tabel Workstation"
               aria-pressed={viewMode === 'table'}
             >
-              <LayoutList className="w-4 h-4" />
+              <ListBullets className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={() => handleSetViewMode('grid')}
-              className={`p-1.5 rounded-lg text-xs font-medium transition-colors ${
-                viewMode === 'grid' ? 'bg-slate-800 text-sky-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={cn(
+                'rounded-chip p-1.5 text-xs font-medium transition-colors',
+                viewMode === 'grid'
+                  ? 'bg-paper-raised text-ink-2'
+                  : 'text-ink-2 hover:text-ink',
+                focusRing
+              )}
               title="Tampilan Kartu Grid"
               aria-label="Tampilan Kartu Grid"
               aria-pressed={viewMode === 'grid'}
             >
-              <LayoutGrid className="w-4 h-4" />
+              <SquaresFour className="w-4 h-4" />
             </button>
           </div>
 
@@ -535,7 +589,10 @@ export const EventsPage: React.FC<EventsPageProps> = ({
                 setStatusFilter('all');
               }}
               aria-label="Reset semua filter"
-              className="px-3 py-2 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300 hover:text-white hover:bg-rose-900/60 text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
+              className={cn(
+                'flex shrink-0 items-center gap-1.5 rounded-chip border border-pen-200 bg-pen-50/70 px-3 py-2 text-xs font-semibold text-pen-deep transition-colors hover:bg-pen-50/70 hover:text-white',
+                focusRing
+              )}
             >
               <X className="w-3.5 h-3.5" />
               <span>Reset</span>

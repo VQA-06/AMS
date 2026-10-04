@@ -1,12 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import {
-  Download,
-  Printer,
-  Copy,
-  Check,
-  Loader2,
-} from 'lucide-react';
+import { Check } from '@phosphor-icons/react/Check';
+import { Copy } from '@phosphor-icons/react/Copy';
+import { DownloadSimple } from '@phosphor-icons/react/DownloadSimple';
+import { Printer } from '@phosphor-icons/react/Printer';
+import { Spinner } from '@phosphor-icons/react/Spinner';
 import { generateIdCardDataUrl, downloadIdCardImage } from '../../lib/idcard-canvas';
 
 export interface TemplateIdCardProps {
@@ -188,7 +186,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
   return (
     <div className="flex flex-col items-center w-full max-w-xs mx-auto">
       {/* Visual Template Card Preview (Square / Non-rounded 54mm x 85mm ratio) */}
-      <div className="relative w-full aspect-[54/85] rounded-none overflow-hidden shadow-2xl border border-slate-700 bg-slate-900 select-none group">
+      <div className="relative w-full aspect-[54/85] rounded-none overflow-hidden shadow-2xl border border-rule-strong bg-paper-sunk select-none group">
         {/* Template Background Image */}
         <img
           src="/templates/idcard-template.png"
@@ -221,12 +219,12 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
       </div>
 
       {/* Meta Information Tag */}
-      <div className="w-full mt-3 flex items-center justify-between text-xs text-slate-400 font-mono px-1">
-        <span className="font-bold text-sky-400 truncate">
+      <div className="mt-3 flex w-full items-center justify-between px-1 text-xs text-ink-2">
+        <span className="truncate font-oxanium font-bold text-ink-2">
           ID: {memberExternalId || 'AMS-MBR'}
         </span>
         {memberDivision && (
-          <span className="text-slate-300 font-medium truncate ml-2">
+          <span className="text-ink font-medium truncate ml-2">
             • {memberDivision}
           </span>
         )}
@@ -238,35 +236,35 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
           <button
             onClick={handleDownloadPng}
             disabled={downloading}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition-colors transition-transform shadow-md shadow-sky-500/20 active:scale-95 disabled:opacity-50 min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            className="flex min-w-0 items-center justify-center gap-1.5 rounded-chip bg-pen-500 px-2 py-2.5 text-xs font-bold text-paper shadow-ambient transition-transform duration-120 ease-spring active:scale-95 hover:bg-pen-400 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             title="Unduh ID Card gambar PNG HD"
           >
             {downloading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+              <Spinner className="shrink-0 animate-spin" />
             ) : (
-              <Download className="w-3.5 h-3.5 shrink-0" />
+              <DownloadSimple className="size-3.5 shrink-0" />
             )}
             <span className="truncate">Unduh</span>
           </button>
 
           <button
             onClick={handlePrintSingle}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-colors transition-transform border border-slate-700 active:scale-95 min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            className="flex min-w-0 items-center justify-center gap-1.5 rounded-chip border border-rule-strong bg-paper-raised px-2 py-2.5 text-xs font-bold text-white transition-transform duration-120 ease-spring hover:bg-paper-raised/70 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             title="Cetak ID Card ukuran 54x85 mm"
           >
-            <Printer className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            <Printer size={14} className="shrink-0 text-ink-2" />
             <span className="truncate">Cetak</span>
           </button>
 
           <button
             onClick={handleCopyToken}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-colors transition-transform border border-slate-800 active:scale-95 min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            className="flex min-w-0 items-center justify-center gap-1.5 rounded-chip border border-rule bg-ink px-2 py-2.5 text-xs font-bold text-ink transition-transform duration-120 ease-spring hover:text-white active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             title="Salin token QR"
           >
             {copied ? (
-              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <Check className="w-3.5 h-3.5 text-seal-600 shrink-0" />
             ) : (
-              <Copy className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <Copy className="w-3.5 h-3.5 text-ink-2 shrink-0" />
             )}
             <span className="truncate">{copied ? 'Tersalin' : 'Salin'}</span>
           </button>

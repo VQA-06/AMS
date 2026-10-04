@@ -1,25 +1,121 @@
 import React from 'react';
-import {
-  LayoutDashboard,
-  Users,
-  Calendar,
-  QrCode,
-  Settings,
-  LogOut,
-  Sparkles,
-  ShieldCheck,
-  Activity,
-} from 'lucide-react';
+import { CalendarBlank } from '@phosphor-icons/react/CalendarBlank';
+import { ChartLineUp } from '@phosphor-icons/react/ChartLineUp';
+import { Gear } from '@phosphor-icons/react/Gear';
+import { QrCode } from '@phosphor-icons/react/QrCode';
+import { SignOut } from '@phosphor-icons/react/SignOut';
+import { SquaresFour } from '@phosphor-icons/react/SquaresFour';
+import { Users } from '@phosphor-icons/react/Users';
 import { useAuth } from '../../hooks/useAuth';
 import { getRoleInfo } from '../../lib/permissions';
+import { cn } from '../../lib/cn';
+import { Badge } from '../ui/Badge';
+import type { Icon } from '@phosphor-icons/react';
 
-export type TabKey = 'dashboard' | 'members' | 'events' | 'tracker' | 'scanner' | 'settings' | '404' | '403' | 'offline';
+export type TabKey =
+  | 'dashboard'
+  | 'members'
+  | 'events'
+  | 'tracker'
+  | 'scanner'
+  | 'settings'
+  | '404'
+  | '403'
+  | 'offline';
 
 interface MobileShellProps {
   currentTab: TabKey;
   onTabChange: (tab: TabKey) => void;
   children: React.ReactNode;
 }
+export interface NavItem {
+  key: TabKey;
+  label: string;
+  Icon: Icon;
+  isScanner?: boolean;
+}
+
+export interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+
+const tabLabels: Record<TabKey, string> = {
+  dashboard: 'Beranda Operasional',
+  members: 'Manajemen Anggota',
+  scanner: 'Scanner QR Presensi',
+  events: 'Kegiatan & Agenda',
+  tracker: 'Pelacakan Keaktifan',
+  settings: 'Pengaturan Sistem',
+  '404': 'Halaman Tidak Ditemukan',
+  '403': 'Akses Ditolak',
+  offline: 'Mode Offline',
+};
+
+/**
+ * Desktop nav groups. Scanner is promoted out of OPERASIONAL into its own
+ * PERANGKAT group because it is the operator's highest-frequency action and
+ * sitting it beside low-frequency read-only views buried it.
+ */
+export const desktopNavGroups: NavGroup[] = [
+  {
+    title: 'OPERASIONAL',
+    items: [
+      { key: 'dashboard', label: 'Dasbor', Icon: SquaresFour },
+      { key: 'events', label: 'Kegiatan', Icon: CalendarBlank },
+      { key: 'tracker', label: 'Keaktifan', Icon: ChartLineUp },
+    ],
+  },
+  {
+    title: 'DATA',
+    items: [{ key: 'members', label: 'Anggota', Icon: Users }],
+  },
+  {
+    title: 'PERANGKAT',
+    items: [{ key: 'scanner', label: 'Scanner', Icon: QrCode }],
+  },
+  {
+    title: 'SISTEM',
+    items: [{ key: 'settings', label: 'Atur', Icon: Gear }],
+  },
+];
+
+/**
+ * The 5-item mobile dock with Scanner centred at index 2 — the scan-first
+ * affordance for a one-handed operator, with two items balanced on each side.
+ */
+export const mobileNavItems: NavItem[] = [
+  { key: 'dashboard', label: 'Dasbor', Icon: SquaresFour },
+  { key: 'members', label: 'Anggota', Icon: Users },
+  { key: 'scanner', label: 'Scanner', Icon: QrCode, isScanner: true },
+  { key: 'events', label: 'Kegiatan', Icon: CalendarBlank },
+  { key: 'tracker', label: 'Keaktifan', Icon: ChartLineUp },
+];
+
+export const tabLabelFor = (tab: TabKey): string => tabLabels[tab] || tab;
+
+/** One logout affordance for both layouts — the old build had two copies. */
+const LogoutButton: React.FC<{ onLogout: () => void; size?: 'sm' | 'md' }> = ({
+  onLogout,
+  size = 'md',
+}) => (
+  <button
+    type="button"
+    onClick={onLogout}
+    title="Keluar"
+    aria-label="Keluar dari akun"
+    className={cn(
+      'flex items-center justify-center rounded-chip text-ink-2 transition-colors hover:text-pen-deep hover:bg-pen-50/70',
+      focusRing,
+      size === 'sm' ? 'h-9 w-9' : 'h-10 w-10'
+    )}
+  >
+    <SignOut size={16} />
+  </button>
+);
 
 export const MobileShell: React.FC<MobileShellProps> = ({
   currentTab,
@@ -27,181 +123,139 @@ export const MobileShell: React.FC<MobileShellProps> = ({
   children,
 }) => {
   const { admin, logout } = useAuth();
-
-  // Desktop grouped navigation for enterprise workstation layout
-  const desktopNavGroups: Array<{
-    title: string;
-    items: Array<{ key: TabKey; label: string; icon: React.ReactNode }>;
-  }> = [
-    {
-      title: 'OPERASIONAL',
-      items: [
-        { key: 'dashboard', label: 'Beranda', icon: <LayoutDashboard className="w-4 h-4" /> },
-        { key: 'scanner', label: 'Scan QR Presensi', icon: <QrCode className="w-4 h-4" /> },
-        { key: 'events', label: 'Kegiatan', icon: <Calendar className="w-4 h-4" /> },
-      ],
-    },
-    {
-      title: 'DATA & KEAKTIFAN',
-      items: [
-        { key: 'members', label: 'Data Anggota', icon: <Users className="w-4 h-4" /> },
-        { key: 'tracker', label: 'Pelacakan Keaktifan', icon: <Activity className="w-4 h-4" /> },
-      ],
-    },
-    {
-      title: 'SISTEM',
-      items: [
-        { key: 'settings', label: 'Pengaturan', icon: <Settings className="w-4 h-4" /> },
-      ],
-    },
-  ];
-
-  const tabLabels: Record<TabKey, string> = {
-    dashboard: 'Beranda Operasional',
-    members: 'Manajemen Anggota',
-    scanner: 'Scanner QR Presensi',
-    events: 'Kegiatan & Agenda',
-    tracker: 'Pelacakan Keaktifan',
-    settings: 'Pengaturan Sistem',
-    '404': 'Halaman Tidak Ditemukan',
-    '403': 'Akses Ditolak',
-    offline: 'Mode Offline',
-  };
-
-  // Mobile bottom navigation (exact 5 items with Scan QR centered at index 2)
-  const mobileNavItems: Array<{ key: TabKey; label: string; icon: React.ReactNode; isScanner?: boolean }> = [
-    { key: 'dashboard', label: 'Beranda', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { key: 'members', label: 'Anggota', icon: <Users className="w-5 h-5" /> },
-    { key: 'scanner', label: 'Scan QR', icon: <QrCode className="w-6 h-6" />, isScanner: true },
-    { key: 'events', label: 'Kegiatan', icon: <Calendar className="w-5 h-5" /> },
-    { key: 'tracker', label: 'Keaktifan', icon: <Activity className="w-5 h-5" /> },
-  ];
+  const roleInfo = getRoleInfo(admin?.role);
 
   return (
-    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-950 flex flex-col md:flex-row text-slate-100">
-      {/* Desktop Sidebar (Sticky Full Height 100dvh) */}
-      <aside className="hidden md:flex flex-col w-64 h-full shrink-0 bg-slate-950/95 border-r border-slate-800 p-5 justify-between sticky top-0 z-30">
+    <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-ink text-ink md:flex-row">
+      {/* Desktop sidebar: fixed 264px, four zones, active item carries the rail */}
+      <aside className="sticky top-0 z-sticky hidden h-full w-64 shrink-0 flex-col justify-between border-r border-rule bg-ink/95 p-5 md:flex">
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-white via-slate-50 to-slate-100 p-1 flex items-center justify-center shadow-lg shadow-sky-500/10 border border-white/40 ring-1 ring-white/20 shrink-0">
-              <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-panel border border-rule-strong bg-paper-raised p-1">
+              <img src="/logo.webp" alt="AMS Logo" className="h-full w-full object-contain" />
             </div>
             <div>
-              <h1 className="font-heading font-bold text-lg leading-tight text-white">AMS</h1>
-              <p className="text-xs text-sky-400 font-medium">Computer Community</p>
+              <h1 className="font-heading text-lg font-bold leading-tight text-white">AMS</h1>
+              <p className="text-xs font-medium text-ink-2">Computer Community</p>
             </div>
           </div>
 
-          <nav className="space-y-4">
+          <nav className="space-y-5" aria-label="Navigasi utama">
             {desktopNavGroups.map((group) => (
-              <div key={group.title} className="space-y-1">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 pb-1">
+              <div key={group.title}>
+                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-ink-3">
                   {group.title}
                 </div>
-                {group.items.map((item) => {
-                  const active = currentTab === item.key;
-                  return (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => onTabChange(item.key)}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
-                        active
-                          ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30 shadow-sm font-semibold'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-                      }`}
-                    >
-                      <span className={active ? 'text-sky-400' : 'text-slate-400'}>{item.icon}</span>
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const active = currentTab === item.key;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => onTabChange(item.key)}
+                        aria-current={active ? 'page' : undefined}
+                        className={cn(
+                          'flex w-full items-center gap-2.5 rounded-chip px-3 py-2 text-xs font-medium transition-colors duration-120 ease-out-expo',
+                          focusRing,
+                          active
+                            ? 'bg-paper-raised font-semibold text-ink-2'
+                            : 'text-ink-2 hover:bg-paper/80 hover:text-ink'
+                        )}
+                      >
+                        {/* Rail encodes "you are here" — its hue is constant
+                            because "active nav" is itself the state. */}
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            'rail self-stretch',
+                            active ? 'bg-pen-500' : 'bg-transparent'
+                          )}
+                        />
+                        <item.Icon size={16} weight={active ? 'fill' : 'regular'} />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             ))}
           </nav>
         </div>
 
-        {/* User Card & Logout */}
-        <div className="pt-4 border-t border-slate-800/80">
-          <div className="flex items-center justify-between mb-3 px-2">
-            <div className="truncate pr-2">
-              <p className="text-xs font-semibold text-slate-200 truncate">{admin?.name || 'Admin'}</p>
-              <div className="mt-0.5">
-                <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded border font-mono ${getRoleInfo(admin?.role).badgeClass}`}>
-                  {getRoleInfo(admin?.role).label}
-                </span>
-              </div>
+        <div className="border-t border-rule pt-4">
+          <div className="flex items-center justify-between gap-2 px-1">
+            <div className="min-w-0 pr-2">
+              <p className="truncate text-xs font-semibold text-ink">
+                {admin?.name || 'Admin'}
+              </p>
+              <Badge variant={roleInfo.variant} size="xs" className="mt-1">
+                {roleInfo.label}
+              </Badge>
             </div>
-            <button
-              type="button"
-              onClick={() => logout()}
-              title="Logout"
-              aria-label="Keluar dari akun"
-              className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <LogoutButton onLogout={logout} size="sm" />
           </div>
         </div>
       </aside>
 
-      {/* Main Content Area (Independent Scroll Container) */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto overflow-x-hidden pb-24 md:pb-6">
-        {/* Desktop Workstation Header Bar */}
-        <header className="hidden md:flex items-center px-8 py-3 bg-slate-950/80 backdrop-blur border-b border-slate-800/80 sticky top-0 z-20 shrink-0">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-500 font-semibold tracking-wide uppercase text-[10px]">AMS</span>
-            <span className="text-slate-700">/</span>
-            <span className="text-slate-200 font-semibold">{tabLabels[currentTab] || currentTab}</span>
-          </div>
-        </header>
-
-        {/* Mobile Top Header */}
-        <header className="md:hidden bg-slate-900/95 backdrop-blur border-b border-slate-800/80 sticky top-0 z-30 px-4 py-2.5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-b from-white via-slate-50 to-slate-100 p-0.5 flex items-center justify-center shadow-lg shadow-sky-500/10 border border-white/40 ring-1 ring-white/20 shrink-0">
-              <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pb-24 md:pb-8">
+        {/* One header, both layouts: breadcrumb on desktop, identity + role on mobile. */}
+        <header className="sticky top-0 z-sticky flex shrink-0 items-center justify-between gap-3 border-b border-rule bg-ink/90 px-4 py-2.5 backdrop-blur-md sm:px-6 md:px-8">
+          <div className="flex items-center gap-2.5 md:hidden">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip border border-rule-strong bg-paper-raised p-0.5">
+              <img src="/logo.webp" alt="AMS Logo" className="h-full w-full object-contain" />
             </div>
             <div>
-              <h2 className="font-heading font-bold text-base leading-tight text-white">AMS</h2>
-              <p className="text-[10px] text-sky-400 leading-none font-semibold">Computer Community</p>
+              <p className="font-heading text-base font-bold leading-tight text-white">AMS</p>
+              <p className="text-[10px] font-semibold leading-none text-ink-2">
+                Computer Community
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border font-mono ${getRoleInfo(admin?.role).badgeClass}`}>
-              {getRoleInfo(admin?.role).label}
+
+          <div className="hidden min-w-0 items-center gap-2 text-xs md:flex">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+              AMS
             </span>
+            <span className="text-ink-3" aria-hidden="true">
+              /
+            </span>
+            <span className="truncate font-semibold text-ink">
+              {tabLabelFor(currentTab)}
+            </span>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Badge variant={roleInfo.variant} size="xs" className="hidden md:inline-flex">
+              {roleInfo.label}
+            </Badge>
             <button
               type="button"
               onClick={() => onTabChange('settings')}
-              className={`w-10 h-10 flex items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
-                currentTab === 'settings'
-                  ? 'text-sky-400 bg-sky-950/80 border border-sky-800'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-              title="Pengaturan"
               aria-label="Buka Pengaturan"
+              title="Pengaturan"
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded-chip transition-colors md:hidden',
+                focusRing,
+                currentTab === 'settings'
+                  ? 'bg-paper-raised text-ink-2'
+                  : 'text-ink-2 hover:bg-paper-raised/60 hover:text-white'
+              )}
             >
-              <Settings className="w-4 h-4" />
+              <Gear size={18} />
             </button>
-            <button
-              type="button"
-              onClick={() => logout()}
-              className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
-              title="Logout"
-              aria-label="Keluar dari akun"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <LogoutButton onLogout={logout} />
           </div>
         </header>
 
-        {/* Page Body */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1536px] w-full mx-auto">{children}</main>
+        <main className="mx-auto w-full max-w-[1536px] flex-1 p-4 sm:p-6 md:p-8">{children}</main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar (True 5-item Ergonomic Dock) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/80 z-40 px-3 py-1.5 pb-safe flex items-center justify-around shadow-2xl overflow-visible">
+      {/* Mobile dock: 5 items, Scanner centred, pb-safe, z above surfaces */}
+      <nav
+        aria-label="Navigasi bawah"
+        className="fixed inset-x-0 bottom-0 z-dock flex items-center justify-around border-t border-rule bg-ink/95 px-3 py-1.5 pb-safe shadow-ambient backdrop-blur-lg md:hidden"
+      >
         {mobileNavItems.map((item) => {
           const active = currentTab === item.key;
 
@@ -211,19 +265,29 @@ export const MobileShell: React.FC<MobileShellProps> = ({
                 key={item.key}
                 type="button"
                 onClick={() => onTabChange(item.key)}
-                className="relative -top-4 flex flex-col items-center group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-2xl overflow-visible shrink-0 touch-target"
                 aria-label="Buka Kamera Scanner QR Presensi"
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'touch-target relative -top-4 flex shrink-0 flex-col items-center overflow-visible rounded-panel',
+                  focusRing
+                )}
               >
-                <div
-                  className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition-colors transition-transform duration-200 ${
+                <span
+                  className={cn(
+                    'flex h-14 w-14 items-center justify-center rounded-panel border transition-transform duration-200 ease-spring',
                     active
-                      ? 'bg-sky-500 text-white shadow-sky-500/40 scale-105 ring-4 ring-sky-500/30 ring-offset-2 ring-offset-slate-950'
-                      : 'bg-slate-800 text-slate-300 shadow-sky-950 ring-2 ring-sky-500/20 hover:scale-105'
-                  }`}
+                      ? 'rail-pulse border-pen-400 bg-pen-500 text-paper shadow-lift'
+                      : 'border-rule-strong bg-paper-raised text-ink'
+                  )}
                 >
-                  <QrCode className="w-7 h-7" />
-                </div>
-                <span className={`text-[10px] font-bold mt-1 ${active ? 'text-sky-400' : 'text-slate-300'}`}>
+                  <item.Icon size={26} weight="bold" />
+                </span>
+                <span
+                  className={cn(
+                    'mt-1 text-[10px] font-bold',
+                    active ? 'text-ink-2' : 'text-ink-2'
+                  )}
+                >
                   {item.label}
                 </span>
               </button>
@@ -235,13 +299,18 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               key={item.key}
               type="button"
               onClick={() => onTabChange(item.key)}
-              className={`flex flex-col items-center justify-center min-w-[48px] min-h-[48px] py-1 px-2.5 rounded-xl transition-colors transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
-                active ? 'text-sky-400 font-semibold scale-105' : 'text-slate-400 hover:text-slate-200'
-              }`}
               aria-label={`Buka tab ${item.label}`}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'flex min-h-[48px] min-w-[52px] flex-col items-center justify-center rounded-chip px-2 py-1 transition-colors duration-120 ease-out-expo',
+                focusRing,
+                active ? 'text-ink-2' : 'text-ink-2 hover:text-ink'
+              )}
             >
-              <div className="p-0.5">{item.icon}</div>
-              <span className="text-[10px] font-medium tracking-tight mt-0.5">{item.label}</span>
+              <span className={cn('p-0.5', active && 'rail-pulse rounded-panel')}>
+                <item.Icon size={20} weight={active ? 'fill' : 'regular'} />
+              </span>
+              <span className="mt-0.5 text-[10px] font-medium tracking-tight">{item.label}</span>
             </button>
           );
         })}

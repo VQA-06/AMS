@@ -1,96 +1,138 @@
 import React from 'react';
-import { Share, PlusSquare, X, Smartphone, Sparkles, ArrowDown } from 'lucide-react';
+import { ArrowDown } from '@phosphor-icons/react/ArrowDown';
+import { CheckCircle } from '@phosphor-icons/react/CheckCircle';
+import { DeviceMobile } from '@phosphor-icons/react/DeviceMobile';
+import { PlusSquare } from '@phosphor-icons/react/PlusSquare';
+import { ShareNetwork } from '@phosphor-icons/react/ShareNetwork';
+import { X } from '@phosphor-icons/react/X';
 import { ModalPortal } from '../ui/ModalPortal';
+import { Button } from '../ui/Button';
 
 interface IosInstallGuideModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface GuideStep {
+  title: React.ReactNode;
+  detail: React.ReactNode;
+  icon: React.ReactNode;
+}
+
+/**
+ * A numbered procedure. Every step carries its number in text as well as in the
+ * marker badge, so the sequence survives with the icons stripped and reads
+ * correctly under a screen reader. `aria-current="step"` marks the first
+ * unverified step — the whole list is currently unverified, so that is step one
+ * rather than an arbitrary middle entry.
+ */
+const STEPS: GuideStep[] = [
+  {
+    title: (
+      <>
+        Tekan tombol <strong className="font-bold text-white">Bagikan (Share)</strong>
+      </>
+    ),
+    detail: 'Buka menu bagikan di bilah navigasi Safari bagian bawah layar.',
+    icon: <ShareNetwork size={14} className="text-ink-2" aria-hidden="true" />,
+  },
+  {
+    title: (
+      <>
+        Pilih <strong className="font-bold text-white">Tambahkan ke Layar Utama</strong>
+      </>
+    ),
+    detail: (
+      <>
+        Gulir ke bawah pada menu bagikan dan pilih <em>&quot;Add to Home Screen&quot;</em>.
+      </>
+    ),
+    icon: <PlusSquare size={14} className="text-ink-2" aria-hidden="true" />,
+  },
+  {
+    title: (
+      <>
+        Tekan <strong className="font-bold text-white">Tambah (Add)</strong> di pojok kanan atas
+      </>
+    ),
+    detail: 'Ikon AMS akan muncul di layar utama perangkat Anda.',
+    icon: <ArrowDown size={14} className="text-ink-2" aria-hidden="true" />,
+  },
+];
+
 export const IosInstallGuideModal: React.FC<IosInstallGuideModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
+    /* Escape, the scroll lock and the focus trap all belong to ModalPortal. */
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="glass-panel-elevated rounded-3xl p-6 max-w-sm w-full border border-slate-700 shadow-2xl relative space-y-5">
-          {/* Close Button */}
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ios-install-guide-title"
+          className="bezel relative my-auto flex w-full max-w-sm flex-col gap-5 p-6"
+        >
           <button
+            type="button"
             onClick={onClose}
             aria-label="Tutup dialog"
-            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl glass-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            className="absolute right-3 top-3 flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper-raised hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           >
-            <X className="w-4 h-4" />
+            <X size={16} aria-hidden="true" />
           </button>
 
           {/* Header */}
-          <div className="text-center space-y-2 pt-2">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-b from-white via-slate-50 to-slate-100 p-1.5 mx-auto flex items-center justify-center shadow-lg shadow-sky-500/10 border border-white/40 ring-1 ring-white/20">
-              <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
+          <div className="space-y-2 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-panel border border-rule bg-paper object-contain">
+              <img src="/logo.webp" alt="" className="h-full w-full object-contain" />
             </div>
-            <h3 className="text-base font-bold font-heading text-white">Pasang AMS | Computer Community di iOS</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Dapatkan pengalaman aplikasi mandiri (*full screen*), pemindai QR lebih cepat, dan akses instan tanpa bilah browser.
+            <h3 id="ios-install-guide-title" className="font-heading text-base font-bold text-white">
+              Pasang AMS | Computer Community di iOS
+            </h3>
+            <p className="text-xs leading-relaxed text-ink-2">
+              Dapatkan pengalaman aplikasi mandiri (*full screen*), pemindai QR lebih cepat, dan akses
+              instan tanpa bilah browser.
             </p>
           </div>
 
-          {/* Steps */}
-          <div className="space-y-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80 text-xs">
-            <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-xl bg-sky-500/20 border border-sky-500/30 text-sky-400 font-bold flex items-center justify-center shrink-0">
-                1
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-slate-200 flex items-center gap-1.5">
-                  <span>Tekan tombol <strong>Bagikan (Share)</strong></span>
-                  <Share className="w-3.5 h-3.5 text-sky-400" />
-                </p>
-                <p className="text-slate-400 text-[11px]">
-                  Buka menu bagikan di bilah navigasi Safari bagian bawah layar.
-                </p>
-              </div>
-            </div>
+          {/* Steps: an ordered list, so the sequence is in the markup, not in the
+              visual order of flex children. */}
+          <ol className="surface-raised space-y-3 rounded-panel border border-rule p-4 text-xs">
+            {STEPS.map((step, idx) => (
+              <li
+                key={idx}
+                aria-current={idx === 0 ? 'step' : undefined}
+                className="flex items-start gap-3"
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-chip border border-pen-200 bg-pen-50/70 font-oxanium text-[11px] font-bold tabular-nums text-ink-2">
+                  {/* Step number as text: the sequence never depends on the icon. */}
+                  <span aria-hidden="true">{idx + 1}</span>
+                  <span className="sr-only">
+                    Langkah {idx + 1} dari {STEPS.length}
+                  </span>
+                </span>
+                <div className="min-w-0 space-y-1">
+                  <p className="flex items-center gap-1.5 font-semibold text-ink">
+                    <span>{step.title}</span>
+                    {step.icon}
+                  </p>
+                  <p className="text-[11px] text-ink-2">{step.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
 
-            <div className="h-px bg-slate-800/60" />
-
-            <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-xl bg-sky-500/20 border border-sky-500/30 text-sky-400 font-bold flex items-center justify-center shrink-0">
-                2
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-slate-200 flex items-center gap-1.5">
-                  <span>Pilih <strong>Tambahkan ke Layar Utama</strong></span>
-                  <PlusSquare className="w-3.5 h-3.5 text-emerald-400" />
-                </p>
-                <p className="text-slate-400 text-[11px]">
-                  Gulir ke bawah pada menu bagikan dan pilih <em>"Add to Home Screen"</em>.
-                </p>
-              </div>
-            </div>
-
-            <div className="h-px bg-slate-800/60" />
-
-            <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-xl bg-sky-500/20 border border-sky-500/30 text-sky-400 font-bold flex items-center justify-center shrink-0">
-                3
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-slate-200">
-                  Tekan <strong>Tambah (Add)</strong> di pojok kanan atas
-                </p>
-                <p className="text-slate-400 text-[11px]">
-                  Aplikasi AMS siap dibuka langsung dari Home Screen perangkat Anda!
-                </p>
-              </div>
-            </div>
+          <div className="flex items-start gap-2 rounded-panel border border-rule bg-paper-raised/60 px-3 py-2.5">
+            <CheckCircle size={16} className="mt-0.5 shrink-0 text-seal-600" aria-hidden="true" />
+            <p className="text-[11px] text-ink-2">
+              Aplikasi AMS siap dibuka langsung dari Home Screen perangkat Anda!
+            </p>
           </div>
 
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-colors transition-transform shadow-lg shadow-sky-500/20 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-          >
+          <Button variant="primary" size="md" onClick={onClose}>
             Mengerti
-          </button>
+          </Button>
         </div>
       </div>
     </ModalPortal>

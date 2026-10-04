@@ -36,7 +36,7 @@ export default defineConfig({
           if (id.includes('node_modules/jsqr') || id.includes('node_modules/qrcode.react')) {
             return 'vendor-scanner';
           }
-          if (id.includes('node_modules/lucide-react')) {
+          if (id.includes('node_modules/@phosphor-icons')) {
             return 'vendor-icons';
           }
           if (

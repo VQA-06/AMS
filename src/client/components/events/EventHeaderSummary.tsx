@@ -1,19 +1,17 @@
 import React from 'react';
-import {
-  ArrowLeft,
-  Calendar,
-  MapPin,
-  Clock,
-  ShieldCheck,
-  ShieldAlert,
-  Building2,
-  RefreshCw,
-  Plus,
-  Printer,
-  Download,
-  Trash2,
-  QrCode,
-} from 'lucide-react';
+import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
+import { ArrowLeft } from '@phosphor-icons/react/ArrowLeft';
+import { Buildings } from '@phosphor-icons/react/Buildings';
+import { CalendarBlank } from '@phosphor-icons/react/CalendarBlank';
+import { Clock } from '@phosphor-icons/react/Clock';
+import { DownloadSimple } from '@phosphor-icons/react/DownloadSimple';
+import { MapPin } from '@phosphor-icons/react/MapPin';
+import { Plus } from '@phosphor-icons/react/Plus';
+import { Printer } from '@phosphor-icons/react/Printer';
+import { QrCode } from '@phosphor-icons/react/QrCode';
+import { ShieldCheck } from '@phosphor-icons/react/ShieldCheck';
+import { ShieldWarning } from '@phosphor-icons/react/ShieldWarning';
+import { Trash } from '@phosphor-icons/react/Trash';
 import { Event } from '@/shared/types';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -55,10 +53,10 @@ export const EventHeaderSummary: React.FC<EventHeaderSummaryProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-            title="Kembali ke Daftar Kegiatan"
+            className="touch-target rounded-chip border border-rule-strong bg-paper-raised text-ink-2 transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper hover:bg-paper hover:text-white"
+            aria-label="Kembali ke Daftar Kegiatan"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft size={20} />
           </button>
           <div>
             <div className="flex items-center gap-2">
@@ -67,7 +65,7 @@ export const EventHeaderSummary: React.FC<EventHeaderSummaryProps> = ({
                 {event.status === 'active' ? 'AKTIF' : event.status === 'closed' ? 'SELESAI' : 'DRAFT'}
               </Badge>
             </div>
-            {event.description && <p className="text-xs text-slate-400 mt-0.5">{event.description}</p>}
+            {event.description && <p className="text-xs text-ink-2 mt-0.5">{event.description}</p>}
           </div>
         </div>
 
@@ -77,7 +75,7 @@ export const EventHeaderSummary: React.FC<EventHeaderSummaryProps> = ({
             <Button
               variant="outline"
               size="sm"
-              icon={<RefreshCw className="w-3.5 h-3.5" />}
+              icon={<ArrowClockwise size={14} />}
               onClick={onRefresh}
               title="Perbarui Data"
             >
@@ -89,7 +87,7 @@ export const EventHeaderSummary: React.FC<EventHeaderSummaryProps> = ({
             <Button
               variant="outline"
               size="sm"
-              icon={<Plus className="w-3.5 h-3.5" />}
+              icon={<Plus size={14} />}
               onClick={onOpenManualAttendance}
               title="Input Presensi Manual"
             >
@@ -101,7 +99,7 @@ export const EventHeaderSummary: React.FC<EventHeaderSummaryProps> = ({
             <Button
               variant="outline"
               size="sm"
-              icon={<Printer className="w-3.5 h-3.5" />}
+              icon={<Printer size={14} />}
               onClick={onOpenPrintSheet}
               title="Cetak Tiket QR / Name Tag"
             >
@@ -113,7 +111,7 @@ export const EventHeaderSummary: React.FC<EventHeaderSummaryProps> = ({
             <Button
               variant="outline"
               size="sm"
-              icon={<Download className="w-3.5 h-3.5" />}
+              icon={<DownloadSimple size={14} />}
               onClick={onExportAttendance}
               title="Ekspor CSV Presensi"
             >
@@ -125,7 +123,7 @@ export const EventHeaderSummary: React.FC<EventHeaderSummaryProps> = ({
             <Button
               variant="danger"
               size="sm"
-              icon={<Trash2 className="w-3.5 h-3.5" />}
+              icon={<Trash size={14} />}
               onClick={onDeleteEvent}
               title="Hapus Kegiatan"
             >
@@ -137,7 +135,7 @@ export const EventHeaderSummary: React.FC<EventHeaderSummaryProps> = ({
             <Button
               variant="primary"
               size="sm"
-              icon={<QrCode className="w-3.5 h-3.5" />}
+              icon={<QrCode size={14} />}
               onClick={() => onScanEvent(event)}
               className="hidden md:inline-flex"
             >
@@ -148,41 +146,41 @@ export const EventHeaderSummary: React.FC<EventHeaderSummaryProps> = ({
       </div>
 
       {/* Event Details Ribbon */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-2xl glass-panel border border-slate-800/80 text-xs">
-        <div className="flex items-center gap-2.5 text-slate-300">
-          <Calendar className="w-4 h-4 text-sky-400 shrink-0" />
+      <div className="surface grid grid-cols-1 gap-3 rounded-panel p-4 text-xs shadow-ambient sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex items-center gap-2.5 text-ink">
+          <CalendarBlank size={16} className="shrink-0 text-ink-2" />
           <div>
-            <span className="text-[10px] text-slate-500 uppercase font-semibold block">Waktu Mulai</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-ink-2">Waktu Mulai</span>
             <span>{event.starts_at ? new Date(event.starts_at).toLocaleString('id-ID') : 'Tidak ditentukan'}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 text-slate-300">
-          <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+        <div className="flex items-center gap-2.5 text-ink">
+          <Clock size={16} className="shrink-0 text-pending-600" />
           <div>
-            <span className="text-[10px] text-slate-500 uppercase font-semibold block">Waktu Selesai & Toleransi</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-ink-2">Waktu Selesai & Toleransi</span>
             <span>
               {event.ends_at ? new Date(event.ends_at).toLocaleString('id-ID') : 'Fleksibel'} (+{event.grace_minutes || 30}m)
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 text-slate-300">
-          <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="flex items-center gap-2.5 text-ink">
+          <MapPin size={16} className="shrink-0 text-seal-600" />
           <div>
-            <span className="text-[10px] text-slate-500 uppercase font-semibold block">Lokasi</span>
-            <span className="truncate max-w-[180px]">{event.location_name || 'Lokasi Kegiatan'}</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-ink-2">Lokasi</span>
+            <span className="block truncate max-w-[180px]">{event.location_name || 'Lokasi Kegiatan'}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 text-slate-300">
+        <div className="flex items-center gap-2.5 text-ink">
           {event.qr_policy === 'event_only' ? (
-            <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+            <ShieldWarning size={16} className="shrink-0 text-pending-600" />
           ) : (
-            <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
+            <ShieldCheck size={16} className="shrink-0 text-seal-600" />
           )}
           <div>
-            <span className="text-[10px] text-slate-500 uppercase font-semibold block">Kebijakan QR</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-ink-2">Kebijakan QR</span>
             <span>
               {event.qr_policy === 'event_only'
                 ? 'Hanya Tiket Khusus Event'

@@ -113,17 +113,6 @@ describe('Dashboard Charts & UI Enhancements Tests', () => {
     });
   });
 
-  describe('FloatingScanToast Desktop & Mobile Placement Classes', () => {
-    it('should include top-right placement classes for desktop and center classes for mobile', () => {
-      const desktopTopRightClasses = 'md:top-6 md:right-6 md:left-auto md:translate-x-0 md:max-w-sm';
-      const mobileCenterClasses = 'top-4 inset-x-3 sm:top-5 sm:left-1/2 sm:-translate-x-1/2';
-
-      expect(desktopTopRightClasses).toContain('md:top-6');
-      expect(desktopTopRightClasses).toContain('md:right-6');
-      expect(desktopTopRightClasses).toContain('md:left-auto');
-      expect(mobileCenterClasses).toContain('inset-x-3');
-    });
-  });
 
   describe('EventRepository.list with Attendance Aggregations', () => {
     it('should query events with LEFT JOIN attendances and members', async () => {
@@ -156,17 +145,4 @@ describe('Dashboard Charts & UI Enhancements Tests', () => {
     });
   });
 
-  describe('Desktop Sticky 100dvh Shell Layout', () => {
-    it('should have 100dvh root container and independent scrollable content area', () => {
-      const shellClasses = 'h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-950 flex flex-col md:flex-row';
-      const sidebarClasses = 'hidden md:flex flex-col w-64 h-full shrink-0 glass-panel border-r border-slate-800 p-5 justify-between sticky top-0';
-      const contentClasses = 'flex-1 flex flex-col min-w-0 h-full overflow-y-auto overflow-x-hidden';
-
-      expect(shellClasses).toContain('h-[100dvh]');
-      expect(shellClasses).toContain('overflow-hidden');
-      expect(sidebarClasses).toContain('sticky');
-      expect(sidebarClasses).toContain('h-full');
-      expect(contentClasses).toContain('overflow-y-auto');
-    });
-  });
 });

@@ -4,17 +4,28 @@
 
 @layer base {
   html, body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;
     -webkit-overflow-scrolling: touch;
-    background-color: #020617;
-    color: #f8fafc;
+    background-color: #f4f1ea;
+    color: #1a1815;
   }
-  h1, h2, h3, h4, h5, h6, .font-heading {
-    font-family: 'Outfit', 'Inter', sans-serif;
+  h1, h2, h3, h4, h5, h6, .font-heading, .font-display {
+    font-family: 'Fraunces', 'Plus Jakarta Sans', serif;
   }
   .font-oxanium {
-    font-family: 'Oxanium', 'Outfit', sans-serif;
+    font-family: 'Oxanium', 'Fraunces', sans-serif;
+  }
+  /* Figures line up: attendance columns and machine readouts share one digit
+     width so a count never shifts sideways as it updates. */
+  table, .font-oxanium, .font-display {
+    font-variant-numeric: tabular-nums;
+  }
+  /* The paper is the app. Nothing sits on a dark fill, so the only light-on-
+     dark text in the app is the reversed action fill, which uses `paper`. */
+  ::selection {
+    background-color: #d8d3c7;
+    color: #1a1815;
   }
 }
 
@@ -25,14 +36,12 @@
   width: 100dvw;
   height: 100dvh;
   max-height: 100dvh;
-  z-index: 9999;
+  z-index: 60;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0.75rem; /* 12px for mobile */
-  background-color: rgba(2, 6, 23, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background-color: rgba(26, 24, 21, 0.55);
   overflow: hidden; /* Backdrop does not scroll, inner modal card handles scrolling */
   touch-action: none;
 }
@@ -48,24 +57,74 @@
   box-sizing: border-box;
 }
 
-/* Custom Scrollbars - Lightweight */
+/* Custom Scrollbars — a thumb that reads as a pencil-grey mark on paper */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #eae6dc;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #b9b2a2;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #8a8478;
 }
 
-/* GPU-Accelerated Laser Animations for Scanner */
-@keyframes laserSweepGpu {
+/* The ledger rule: one hairline between rows. A `border-b` rather than
+   `divide-y`, because `divide-y` skips the last row and a ledger without a
+   closing rule is not a ledger. */
+.ledger-row {
+  border-bottom: 1px solid #d8d3c7;
+}
+.ledger-row:last-child {
+  border-bottom: 0;
+}
+
+/* Display type helper — Fraunces with figures that do not jitter. */
+.display {
+  font-family: 'Fraunces', 'Plus Jakarta Sans', serif;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Page-shell reveal, fired once per shell and per KPI tile by one
+   IntersectionObserver. transform + opacity only. */
+.reveal-up {
+  animation: reveal-up 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes reveal-up {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Hidden scrollbar for horizontal chip/sheet strips. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* 44px minimum hit area — WCAG 2.5.5 target size for thumb use. */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Scanner sweep — the one looping animation, confined to CameraViewfinder */
+@keyframes scanSweepKeyframe {
   0% {
     transform: translateY(0px);
     opacity: 0.8;
@@ -80,10 +139,10 @@
   }
 }
 
-.scanner-laser {
+.scan-sweep {
   will-change: transform;
   transform: translateZ(0);
-  animation: laserSweepGpu 2s ease-in-out infinite;
+  animation: scanSweepKeyframe 2s ease-in-out infinite;
 }
 
 /* GPU-Accelerated Toast Progress Animation (0x React Re-render) */
@@ -96,41 +155,9 @@
   }
 }
 
-.animate-toast-progress {
+.toast-progress {
   will-change: width;
   animation: toastProgressKeyframe 3.5s linear forwards;
-}
-
-/* High-Performance Lightweight Dark Cards (Zero GPU Blur Lag, Cyber-Tactical Obsidian) */
-.glass-panel {
-  background: #0b1329;
-  border: 1px solid rgba(51, 65, 85, 0.45);
-}
-
-.glass-panel-elevated {
-  background: #0f172a;
-  border: 1px solid rgba(56, 189, 248, 0.2);
-  box-shadow: 0 10px 25px -5px rgba(2, 6, 23, 0.6), 0 8px 10px -6px rgba(2, 6, 23, 0.6);
-}
-
-.glass-panel-interactive {
-  background: #0b1329;
-  border: 1px solid rgba(51, 65, 85, 0.45);
-  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
-}
-.glass-panel-interactive:hover {
-  border-color: rgba(56, 189, 248, 0.4);
-  background: #0f172a;
-  transform: translateY(-1px);
-}
-
-/* WCAG 2.1 AA Compliant Focus Visible Ring */
-.focus-ring {
-  outline: none;
-}
-.focus-ring:focus-visible {
-  outline: 2px solid #0ea5e9;
-  outline-offset: 2px;
 }
 
 /* Safe area insets for modern mobile devices */
@@ -141,7 +168,7 @@
   padding-top: env(safe-area-inset-top, 1rem);
 }
 
-/* GPU-Accelerated Skeleton Shimmer Animations */
+/* Skeleton shimmer — the bars carry the ledger's own paper tones */
 @keyframes skeletonShimmerKeyframe {
   0% {
     background-position: -200% 0;
@@ -154,9 +181,9 @@
 .skeleton-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(30, 41, 59, 0.6) 25%,
-    rgba(51, 65, 85, 0.85) 50%,
-    rgba(30, 41, 59, 0.6) 75%
+    rgba(234, 230, 220, 0.9) 25%,
+    rgba(216, 211, 199, 0.95) 50%,
+    rgba(234, 230, 220, 0.9) 75%
   );
   background-size: 200% 100%;
   animation: skeletonShimmerKeyframe 1.6s ease-in-out infinite;
@@ -178,7 +205,7 @@
   }
 }
 
-.animate-pop-once {
+.pop-once {
   animation: popOnceKeyframe 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
@@ -190,9 +217,10 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .animate-pop-once,
-  .scanner-laser,
-  .animate-toast-progress,
+  .pop-once,
+  .scan-sweep,
+  .reveal-up,
+  .toast-progress,
   .skeleton-shimmer,
   .animate-pulse,
   .animate-spin {
@@ -205,4 +233,3 @@
   content-visibility: auto;
   contain-intrinsic-size: 0 120px;
 }
-

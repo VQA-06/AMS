@@ -1,23 +1,31 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import jsQR from 'jsqr';
-import {
-  RefreshCw,
-  Zap,
-  ZapOff,
-  Keyboard,
-  AlertCircle,
-  ShieldAlert,
-} from 'lucide-react';
+import { WarningCircle } from '@phosphor-icons/react/WarningCircle';
+import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
+import { Keyboard } from '@phosphor-icons/react/Keyboard';
+import { Lightning } from '@phosphor-icons/react/Lightning';
+import { LightningSlash } from '@phosphor-icons/react/LightningSlash';
+import { ShieldWarning } from '@phosphor-icons/react/ShieldWarning';
+import { cn } from '../../lib/cn';
+import { Button } from '../ui/Button';
+import { Field } from '../ui/Field';
 
 interface CameraViewfinderProps {
   onScan: (decodedText: string) => void;
   active: boolean;
 }
 
-export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, active }) => {
-  const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>([]);
+export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({
+  onScan,
+  active,
+}) => {
+  const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>(
+    [],
+  );
   const [currentCameraIndex, setCurrentCameraIndex] = useState<number>(0);
-  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>(
+    'environment',
+  );
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [hasTorch, setHasTorch] = useState<boolean>(false);
   const [torchOn, setTorchOn] = useState<boolean>(false);
@@ -25,6 +33,15 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
   const [showManualInput, setShowManualInput] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isInsecureContext, setIsInsecureContext] = useState<boolean>(false);
+  /**
+   * The viewfinder may only claim the state the hardware is actually in:
+   * `requesting` while the permission prompt is up, `granted` once a real
+   * MediaStream is attached, `denied` when the user refused, `unavailable`
+   * when this device has no camera we can open.
+   */
+  const [cameraPhase, setCameraPhase] = useState<
+    'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable'
+  >('idle');
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -135,6 +152,7 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
 
     setIsScanning(false);
     setTorchOn(false);
+    setCameraPhase('idle');
   }, []);
 
   const startDirectScanner = useCallback(
@@ -142,10 +160,12 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
       if (isStartingRef.current) return;
       isStartingRef.current = true;
 
-      const targetMode = modeOrDeviceId || facingModeRef.current || 'environment';
+      const targetMode =
+        modeOrDeviceId || facingModeRef.current || 'environment';
 
       try {
         setCameraError(null);
+        setCameraPhase('requesting');
 
         // Check if secure context
         const isSecure =
@@ -241,6 +261,7 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
         }
 
         setIsScanning(true);
+        setCameraPhase('granted');
 
         // List available cameras
         try {
@@ -264,9 +285,13 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
         let nativeDetector: any = null;
         if ('BarcodeDetector' in window) {
           try {
-            const formats = await (window as any).BarcodeDetector.getSupportedFormats?.();
+            const formats = await (
+              window as any
+            ).BarcodeDetector.getSupportedFormats?.();
             if (!formats || formats.includes('qr_code')) {
-              nativeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+              nativeDetector = new (window as any).BarcodeDetector({
+                formats: ['qr_code'],
+              });
             }
           } catch {
             // fallback
@@ -318,7 +343,12 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
                 canvas.height = Math.round(vh * scale);
 
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(
+                  0,
+                  0,
+                  canvas.width,
+                  canvas.height,
+                );
 
                 // Fast standard pass
                 const code = jsQR(imageData.data, canvas.width, canvas.height, {
@@ -328,9 +358,14 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
                   detectedResult = code.data;
                 } else {
                   // Inversion pass if standard missed
-                  const codeInverted = jsQR(imageData.data, canvas.width, canvas.height, {
-                    inversionAttempts: 'onlyInvert',
-                  });
+                  const codeInverted = jsQR(
+                    imageData.data,
+                    canvas.width,
+                    canvas.height,
+                    {
+                      inversionAttempts: 'onlyInvert',
+                    },
+                  );
                   if (codeInverted && codeInverted.data) {
                     detectedResult = codeInverted.data;
                   }
@@ -363,13 +398,30 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
           window.isSecureContext ||
           window.location.hostname === 'localhost' ||
           window.location.hostname === '127.0.0.1';
+        // A denied permission, a missing device, and an insecure context are
+        // three different failures; the viewfinder must not claim one when
+        // the hardware is in another.
+        const isDenied =
+          errObj?.name === 'NotAllowedError' ||
+          errObj?.name === 'PermissionDeniedError';
+        const isMissing =
+          errObj?.name === 'NotFoundError' ||
+          errObj?.name === 'DevicesNotFoundError' ||
+          errObj?.name === 'OverconstrainedError';
         if (!isSec) {
+          setCameraPhase('unavailable');
           setCameraError(
             'Akses kamera di HP diblokir oleh browser karena menggunakan HTTP biasa. Harap buka via HTTPS (misal: https://' +
               window.location.host +
-              ')'
+              ')',
+          );
+        } else if (isMissing) {
+          setCameraPhase('unavailable');
+          setCameraError(
+            'Tidak ada kamera yang bisa dibuka di perangkat ini. Gunakan Input Manual untuk mencatat token.',
           );
         } else {
+          setCameraPhase(isDenied ? 'denied' : 'unavailable');
           const msg =
             err instanceof Error
               ? err.message
@@ -381,7 +433,7 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
         isStartingRef.current = false;
       }
     },
-    [handleDecodedText]
+    [handleDecodedText],
   );
 
   // Synchronize camera hardware lifecycle with `active` prop
@@ -443,13 +495,14 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
     <div className="flex flex-col items-center justify-center w-full max-w-lg mx-auto">
       {/* Insecure Context Warning if opened over non-https LAN */}
       {isInsecureContext && (
-        <div className="w-full mb-3 p-3 rounded-2xl bg-amber-950 border border-amber-800 text-amber-300 text-xs flex items-start gap-2">
-          <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+        <div className="mb-3 flex items-start gap-2 rounded-panel border border-l-2 border-rule border-l-pending bg-paper-sunk p-3 text-xs text-pending-800">
+          <ShieldWarning className="mt-0.5 h-4 w-4 shrink-0 text-pending-600" />
           <div>
             <p className="font-bold">Peringatan Protokol Browser Mobile:</p>
-            <p className="text-[11px] text-amber-200/90 mt-0.5">
-              Browser smartphone membatasi akses kamera hanya pada koneksi HTTPS. Buka via{' '}
-              <span className="font-mono font-bold text-white">
+            <p className="mt-0.5 text-[11px] text-ink-2">
+              Browser smartphone membatasi akses kamera hanya pada koneksi
+              HTTPS. Buka via{' '}
+              <span className="font-oxanium font-bold text-ink">
                 https://{window.location.host}
               </span>{' '}
               jika kamera tidak muncul.
@@ -458,8 +511,15 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
         </div>
       )}
 
-      {/* Viewfinder Frame Container (Clean, Unified Precision Frame) */}
-      <div className="relative w-full aspect-square max-w-[320px] sm:max-w-[360px] rounded-3xl overflow-hidden bg-black border-2 border-slate-700 shadow-2xl flex items-center justify-center">
+      {/* Viewfinder frame. The reticle and the sweep are gated on a real
+          MediaStream — the frame never shows a "scanning" look the hardware
+          is not actually in. */}
+      <div
+        className={cn(
+          'relative flex aspect-square w-full max-w-[320px] items-center justify-center overflow-hidden rounded-panel border bg-ink sm:max-w-[360px]',
+          cameraPhase === 'granted' ? 'border-pen-200/70' : 'border-rule',
+        )}
+      >
         {/* Native HTML5 Video Element */}
         <video
           ref={videoRef}
@@ -468,6 +528,15 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
           muted
           className="w-full h-full object-cover"
         />
+
+        {/* Reticle + sweep. Both are gated on `isScanning`, which is only true
+            while a real MediaStream is decoding frames. */}
+        {isScanning && (
+          <span
+            aria-hidden="true"
+            className="scan-sweep pointer-events-none absolute inset-x-3 top-3 h-px bg-pen-100 sm:inset-x-4"
+          />
+        )}
 
         {/* Clean Vector SVG Reticle (No square boxes / No background artifacts) */}
         {isScanning && (
@@ -479,110 +548,154 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({ onScan, acti
             {/* Top Left */}
             <path
               d="M 5 22 L 5 9 A 4 4 0 0 1 9 5 L 22 5"
-              stroke="#38bdf8"
+              stroke="#C8A96A"
               strokeWidth="3.5"
               strokeLinecap="round"
             />
             {/* Top Right */}
             <path
               d="M 78 5 L 91 5 A 4 4 0 0 1 95 9 L 95 22"
-              stroke="#38bdf8"
+              stroke="#C8A96A"
               strokeWidth="3.5"
               strokeLinecap="round"
             />
             {/* Bottom Left */}
             <path
               d="M 5 78 L 5 91 A 4 4 0 0 0 9 95 L 22 95"
-              stroke="#38bdf8"
+              stroke="#C8A96A"
               strokeWidth="3.5"
               strokeLinecap="round"
             />
             {/* Bottom Right */}
             <path
               d="M 78 95 L 91 95 A 4 4 0 0 0 95 91 L 95 78"
-              stroke="#38bdf8"
+              stroke="#C8A96A"
               strokeWidth="3.5"
               strokeLinecap="round"
             />
           </svg>
         )}
 
-        {/* Camera Error / Placeholder */}
-        {cameraError && (
-          <div className="absolute inset-0 bg-slate-950 p-6 flex flex-col items-center justify-center text-center z-10">
-            <AlertCircle className="w-12 h-12 text-rose-400 mb-3" />
-            <p className="text-sm font-bold text-rose-300 mb-2">Kamera Belum Terbuka</p>
-            <p className="text-xs text-slate-400 mb-4 max-w-xs">{cameraError}</p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => startDirectScanner('environment')}
-                className="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform"
-              >
-                Minta Izin & Buka Kamera
-              </button>
-            </div>
+        {/* Camera state. Only one of these can be true, and each states the
+            real phase of the hardware rather than a generic failure. */}
+        {cameraPhase === 'requesting' && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/90 p-6 text-center">
+            <ArrowClockwise className="mb-3 h-8 w-8 animate-spin text-ink-2" />
+            <p className="mb-1 text-sm font-bold text-ink">
+              Meminta Izin Kamera...
+            </p>
+            <p className="max-w-xs text-xs text-ink-2">
+              Setujui permintaan izin kamera pada browser untuk mulai memindai.
+            </p>
           </div>
         )}
+
+        {(cameraPhase === 'denied' || cameraPhase === 'unavailable') &&
+          cameraError && (
+            <div
+              role="alert"
+              className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/95 p-6 text-center"
+            >
+              <WarningCircle
+                className={cn(
+                  'mb-3 h-10 w-10',
+                  cameraPhase === 'denied'
+                    ? 'text-pen'
+                    : 'text-pending-600',
+                )}
+              />
+              <p
+                className={cn(
+                  'mb-2 text-sm font-bold',
+                  cameraPhase === 'denied'
+                    ? 'text-pen-deep'
+                    : 'text-pending-800',
+                )}
+              >
+                {cameraPhase === 'denied'
+                  ? 'Izin Kamera Ditolak'
+                  : 'Kamera Tidak Tersedia'}
+              </p>
+              <p className="mb-4 max-w-xs text-xs text-ink-2">
+                {cameraError}
+              </p>
+              {cameraPhase === 'denied' && (
+                <Button
+                  size="sm"
+                  onClick={() => startDirectScanner('environment')}
+                >
+                  Minta Izin & Buka Kamera
+                </Button>
+              )}
+            </div>
+          )}
       </div>
 
       {/* Floating Control Toolbar */}
-      <div className="flex items-center justify-center gap-3 mt-4 w-full">
-        <button
+      <div className="mt-4 flex w-full items-center justify-center gap-2">
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={switchCamera}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl glass-panel text-xs font-semibold text-slate-300 hover:text-white active:scale-95 transition-colors transition-transform shadow"
+          disabled={cameraPhase !== 'granted'}
+          icon={<ArrowClockwise className="h-4 w-4 text-ink-2" />}
         >
-          <RefreshCw className="w-4 h-4 text-sky-400" />
-          <span>Ganti Kamera</span>
-        </button>
+          Ganti Kamera
+        </Button>
 
         {hasTorch && (
           <button
             onClick={toggleTorch}
-            className={`p-2.5 rounded-xl text-xs font-semibold active:scale-95 transition-colors transition-transform shadow ${
+            className={cn(
+              'touch-target rounded-chip border transition-colors duration-120',
               torchOn
-                ? 'bg-amber-400 text-slate-950 shadow-amber-400/30 font-bold'
-                : 'glass-panel text-slate-300 hover:text-white'
-            }`}
+                ? 'border-pending-500 bg-pending-500 font-bold text-paper'
+                : 'border-rule-strong bg-paper-raised text-ink hover:bg-paper-sunk hover:text-ink',
+            )}
+            aria-label={
+              torchOn ? 'Matikan lampu senter' : 'Nyalakan lampu senter'
+            }
+            aria-pressed={torchOn}
           >
-            {torchOn ? <ZapOff className="w-4 h-4" /> : <Zap className="w-4 h-4 text-amber-400" />}
+            {torchOn ? (
+              <LightningSlash className="h-4 w-4" />
+            ) : (
+              <Lightning className="h-4 w-4 text-pending-600" />
+            )}
           </button>
         )}
 
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setShowManualInput(!showManualInput)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl glass-panel text-xs font-semibold text-slate-300 hover:text-white active:scale-95 transition-colors transition-transform shadow"
+          aria-expanded={showManualInput}
+          icon={<Keyboard className="h-4 w-4 text-ink-2" />}
         >
-          <Keyboard className="w-4 h-4 text-sky-400" />
-          <span>Input Manual</span>
-        </button>
+          Input Manual
+        </Button>
       </div>
 
       {/* Manual Input Drawer / Dialog */}
       {showManualInput && (
         <form
           onSubmit={handleManualSubmit}
-          className="w-full mt-4 p-4 rounded-2xl glass-panel-elevated border border-slate-800"
+          className="mt-4 flex w-full items-end gap-2 rounded-panel border border-rule bg-paper-raised p-4"
         >
-          <label htmlFor="components-scanner-cameraviewfinder-field-1" className="block text-xs font-semibold text-slate-300 mb-1.5">
-            Tempel / Masukkan String Token JWE QR:
-          </label>
-          <div className="flex gap-2">
-            <input id="components-scanner-cameraviewfinder-field-1"
-              type="text"
-              value={manualToken}
-              onChange={(e) => setManualToken(e.target.value)}
-              placeholder="eyJhbGciOiJkaXIi..."
-              className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-white placeholder-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-              autoFocus
-            />
-            <button
-              type="submit"
-              disabled={!manualToken.trim()}
-              className="px-4 py-2 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow shrink-0"
-            >
-              Absen
-            </button>
-          </div>
+          <Field
+            id="components-scanner-cameraviewfinder-field-1"
+            label="Tempel / Masukkan String Token JWE QR:"
+            control="text"
+            value={manualToken}
+            onChange={setManualToken}
+            placeholder="eyJhbGciOiJkaXIi..."
+            autoComplete="off"
+            className="min-w-0 flex-1"
+            controlClassName="font-oxanium text-xs"
+          />
+          <Button type="submit" size="sm" disabled={!manualToken.trim()}>
+            Absen
+          </Button>
         </form>
       )}
     </div>

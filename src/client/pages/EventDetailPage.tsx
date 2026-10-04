@@ -1,33 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Calendar,
-  MapPin,
-  Clock,
-  ShieldAlert,
-  ShieldCheck,
-  AlertTriangle,
-  QrCode,
-  Users,
-  Download,
-  Plus,
-  ArrowLeft,
-  RefreshCw,
-  Building2,
-  CheckCircle,
-  LogOut,
-  LogIn,
-  Coffee,
-  Printer,
-  Eye,
-  UserPlus,
-  X,
-  Trash2,
-  UserCheck,
-  User,
-  LayoutGrid,
-  Table as TableIcon,
-  History,
-} from 'lucide-react';
+import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
+import { Buildings } from '@phosphor-icons/react/Buildings';
+import { CheckCircle } from '@phosphor-icons/react/CheckCircle';
+import { Printer } from '@phosphor-icons/react/Printer';
+import { QrCode } from '@phosphor-icons/react/QrCode';
+import { ShieldCheck } from '@phosphor-icons/react/ShieldCheck';
+import { ShieldWarning } from '@phosphor-icons/react/ShieldWarning';
+import { Trash } from '@phosphor-icons/react/Trash';
+import { UserCheck } from '@phosphor-icons/react/UserCheck';
+import { Warning } from '@phosphor-icons/react/Warning';
+import { X } from '@phosphor-icons/react/X';
 import { Event, Attendance, QrToken, Member, SessionType } from '@/shared/types';
 import { fetchApi } from '../lib/api-client';
 import { invalidateCache } from '../lib/swr-client';
@@ -35,15 +17,19 @@ import { useAuth } from '../hooks/useAuth';
 import { canManageEvents, canExportData, canGenerateQR } from '../lib/permissions';
 import { QrGeneratorModal } from '../components/qr/QrGeneratorModal';
 import { PrintBadgeSheet, PrintableToken } from '../components/qr/PrintBadgeSheet';
+import { filterPrintableTokens } from '../lib/qr-tokens';
 import { GuestPassModal } from '../components/events/GuestPassModal';
 import { DigitalPassCard } from '../components/qr/DigitalPassCard';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { AlertModal } from '../components/ui/AlertModal';
 import { ModalPortal } from '../components/ui/ModalPortal';
 import { BulkActionBar, BulkActionItem } from '@/client/components/ui/BulkActionBar';
+import { Tabs } from '../components/ui/Tabs';
+import { Field } from '../components/ui/Field';
+import { EventHeaderSummary } from '../components/events/EventHeaderSummary';
+import { AttendanceRosterTable } from '../components/events/AttendanceRosterTable';
+import { GuestPassWorkspace } from '../components/events/GuestPassWorkspace';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { EmptyState } from '../components/ui/EmptyState';
 
 interface EventDetailPageProps {
   eventId: string;
@@ -596,7 +582,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     ? [
         {
           label: 'Hapus',
-          icon: <Trash2 className="w-3.5 h-3.5" />,
+          icon: <Trash className="w-3.5 h-3.5" />,
           variant: 'danger' as const,
           onClick: handleBulkDeleteAttendances,
         },
@@ -649,7 +635,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       ? [
           {
             label: 'Cabut',
-            icon: <ShieldAlert className="w-3.5 h-3.5" />,
+            icon: <ShieldWarning className="w-3.5 h-3.5" />,
             variant: 'warning' as const,
             onClick: handleBulkRevokeSelectedTokens,
           },
@@ -659,7 +645,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       ? [
           {
             label: 'Hapus',
-            icon: <Trash2 className="w-3.5 h-3.5" />,
+            icon: <Trash className="w-3.5 h-3.5" />,
             variant: 'danger' as const,
             onClick: handleBulkDeleteSelectedTokens,
           },
@@ -680,32 +666,14 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
   if (!event) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[350px] text-slate-400 space-y-3">
-        <RefreshCw className="w-8 h-8 animate-spin text-sky-400" />
-        <p className="text-sm font-semibold text-slate-300">Memuat Detail Kegiatan...</p>
+      <div className="flex flex-col items-center justify-center min-h-[350px] text-ink-2 space-y-3">
+        <ArrowClockwise size={32} className="animate-spin text-ink-2" />
+        <p className="text-sm font-semibold text-ink">Memuat Detail Kegiatan...</p>
       </div>
     );
   }
 
-  // Only active, unrevoked tokens are printable
-  const printableTokens: PrintableToken[] = qrTokens
-    .filter(
-      (tok) =>
-        !tok.revoked_at &&
-        new Date(tok.expires_at).getTime() > Date.now() &&
-        Boolean(tok.qr_token)
-    )
-    .map((tok) => ({
-      id: tok.id,
-      member_id: tok.member_id,
-      member_name: tok.member_name || 'Peserta',
-      member_external_id: tok.member_external_id || tok.member_id,
-      member_division: tok.member_division || null,
-      qr_token: tok.qr_token || '',
-      scope: tok.scope,
-      expires_at: tok.expires_at,
-      event_name: event.name,
-    }));
+  const printableTokens = filterPrintableTokens(qrTokens, event.name);
 
   const isEventOnlyMode = event.qr_policy === 'event_only';
 
@@ -740,809 +708,142 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       {partialErrors.length > 0 && (
         <div
           role="status"
-          className="flex items-start gap-2.5 px-4 py-3 rounded-2xl bg-amber-950/40 border border-amber-700/50 text-amber-200 text-xs"
+          aria-live="polite"
+          className="flex items-start gap-2.5 rounded-panel border border-pending-200 bg-pending-50/70 px-4 py-3 text-xs text-pending-800"
         >
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <Warning size={16} className="mt-0.5 shrink-0 text-pending-600" />
           <span>
             Sebagian data gagal dimuat: {partialErrors.join(', ')}. Angka di bawah
             mungkin tidak lengkap, bukan nol.
           </span>
         </div>
       )}
-      {/* Top Navigation */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="p-2.5 rounded-xl glass-panel text-slate-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <div>
-            <h2 className="text-2xl font-bold font-heading text-white">{event.name}</h2>
-            <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
-              {event.location_name && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{event.location_name}</span>
-                </span>
-              )}
-              <span className="font-mono text-sky-400 font-bold uppercase">{event.status}</span>
-            </div>
-          </div>
-        </div>
+      {/* Header: title, status, and every event-level action live in one place. */}
+      <EventHeaderSummary
+        event={event}
+        onBack={onBack}
+        onRefresh={loadData}
+        onScanEvent={onScanEvent}
+        onOpenManualAttendance={() => setIsManualModalOpen(true)}
+        onOpenPrintSheet={() => {
+          setSelectedPrintTokens(null);
+          setIsPrintSheetOpen(true);
+        }}
+        onExportAttendance={handleExportAttendanceCsv}
+        onDeleteEvent={handleDeleteEvent}
+        printableTokensCount={printableTokens.length}
+        isManager={isManager}
+        canExport={canExport}
+      />
 
-        <div className="flex items-center gap-2">
-          {event.status === 'active' && onScanEvent && (
-            <button
-              type="button"
-              onClick={() => onScanEvent(event)}
-              className="hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-md shadow-sky-500/20 active:scale-95 transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-              title="Buka Pemindai QR untuk kegiatan ini"
-            >
-              <QrCode className="w-4 h-4" />
-              <span>Scan QR Presensi</span>
-            </button>
-          )}
-
-          {/* Delete Event Action */}
-          {isManager && (
-            <button
-              type="button"
-              onClick={handleDeleteEvent}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-950/40 border border-rose-900/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-              title="Hapus kegiatan beserta data terkait"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Hapus Kegiatan</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('attendance')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-            activeTab === 'attendance'
-              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-              : 'text-slate-400 hover:text-slate-200 glass-panel'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Daftar Hadir ({totalScanned})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('qr')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-            activeTab === 'qr'
-              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-              : 'text-slate-400 hover:text-slate-200 glass-panel'
-          }`}
-        >
-          <QrCode className="w-4 h-4" />
-          <span>Tiket QR Event ({qrTokens.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-            activeTab === 'overview'
-              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-              : 'text-slate-400 hover:text-slate-200 glass-panel'
-          }`}
-        >
-          <Calendar className="w-4 h-4" />
-          <span>Ringkasan & Kebijakan</span>
-        </button>
-      </div>
-
-      {/* Tab Content: Attendance List */}
+      <Tabs
+        items={[
+          { id: 'attendance', label: 'Daftar Hadir', badge: totalScanned },
+          { id: 'qr', label: 'Tiket QR Event', badge: qrTokens.length },
+          { id: 'overview', label: 'Ringkasan & Kebijakan' },
+        ]}
+        active={activeTab}
+        onChange={(id: string) => setActiveTab(id as 'attendance' | 'qr' | 'overview')}
+        variant="underline"
+        ariaLabel="Bagian detail kegiatan"
+      />
+      {/* Attendance: the roster component owns search, filters, both view modes
+          and the selection bar, so the page only supplies data and handlers. */}
       {activeTab === 'attendance' && (
-        <div className="space-y-4">
-          {/* KPI Attendance Metrics Card Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Target Total Members */}
-            <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-800 flex flex-col justify-between">
-              <span className="text-[10px] sm:text-xs text-slate-400 uppercase font-semibold">
-                Target Peserta
-              </span>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-2xl sm:text-3xl font-bold font-heading text-white">
-                  {totalTargetMembers}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">
-                  {event.qr_policy === 'universal_allowed' ? 'Master + Tamu' : 'Khusus'}
-                </span>
-              </div>
-            </div>
-
-            {/* Check-In Progress */}
-            <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-emerald-900/40 bg-emerald-950/20 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] sm:text-xs text-emerald-300 uppercase font-semibold flex items-center gap-1">
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>Check-In</span>
-                </span>
-                <span className="text-[11px] font-bold text-emerald-400 font-mono">
-                  {checkinPct}%
-                </span>
-              </div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span className="text-2xl sm:text-3xl font-bold font-heading text-emerald-400">
-                  {uniqueCheckins}
-                </span>
-                <span className="text-xs text-slate-400 font-semibold">/ {totalTargetMembers}</span>
-              </div>
-            </div>
-
-            {/* Check-Out Progress */}
-            <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-sky-900/40 bg-sky-950/20 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] sm:text-xs text-sky-300 uppercase font-semibold flex items-center gap-1">
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Check-Out</span>
-                </span>
-                <span className="text-[11px] font-bold text-sky-400 font-mono">
-                  {checkoutPct}%
-                </span>
-              </div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span className="text-2xl sm:text-3xl font-bold font-heading text-sky-400">
-                  {uniqueCheckouts}
-                </span>
-                <span className="text-xs text-slate-400 font-semibold">/ {totalTargetMembers}</span>
-              </div>
-            </div>
-
-            {/* Break Sessions */}
-            <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-purple-900/40 bg-purple-950/20 flex flex-col justify-between">
-              <span className="text-[10px] sm:text-xs text-purple-300 uppercase font-semibold flex items-center gap-1">
-                <Coffee className="w-3.5 h-3.5" />
-                <span>Istirahat</span>
-              </span>
-              <div className="mt-2 flex items-baseline justify-between text-xs text-slate-300">
-                <span className="font-bold text-purple-300 text-lg">
-                  {breakOutAttendances.length}{' '}
-                  <span className="text-xs text-slate-400 font-normal">Keluar</span>
-                </span>
-                <span className="font-bold text-purple-300 text-lg">
-                  {breakInAttendances.length}{' '}
-                  <span className="text-xs text-slate-400 font-normal">Masuk</span>
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Session Sub-Tabs & Action Bar */}
-          <div className="space-y-3">
-            {/* Session Sub-Tabs Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-900/60 p-1.5 rounded-2xl border border-slate-800/80 overflow-x-auto">
-              <button
-                onClick={() => setSessionFilter('ALL')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-                  sessionFilter === 'ALL'
-                    ? 'bg-slate-800 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Semua ({attendances.length})
-              </button>
-
-              <button
-                onClick={() => setSessionFilter('CHECKIN')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-                  sessionFilter === 'CHECKIN'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                    : 'text-slate-400 hover:text-emerald-400'
-                }`}
-              >
-                Check-In ({checkinAttendances.length})
-              </button>
-
-              <button
-                onClick={() => setSessionFilter('CHECKOUT')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-                  sessionFilter === 'CHECKOUT'
-                    ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20'
-                    : 'text-slate-400 hover:text-sky-400'
-                }`}
-              >
-                Check-Out ({checkoutAttendances.length})
-              </button>
-
-              <button
-                onClick={() => setSessionFilter('BREAK_OUT')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-                  sessionFilter === 'BREAK_OUT'
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-                    : 'text-slate-400 hover:text-purple-300'
-                }`}
-              >
-                Break-Out ({breakOutAttendances.length})
-              </button>
-
-              <button
-                onClick={() => setSessionFilter('BREAK_IN')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-                  sessionFilter === 'BREAK_IN'
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-                    : 'text-slate-400 hover:text-purple-400'
-                }`}
-              >
-                Break-In ({breakInAttendances.length})
-              </button>
-            </div>
-
-            {/* Search, Division, Mobile View Switcher & Actions */}
-            <div className="glass-panel-elevated rounded-2xl p-3 sm:p-4 border border-slate-800/80 flex flex-col md:flex-row gap-3 items-center justify-between">
-              <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari nama / ID peserta…"
-                  className="px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-xs text-white placeholder-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 w-full sm:w-60"
-                />
-
-                {divisions.length > 0 && (
-                  <div className="flex items-center gap-1.5 glass-panel px-3 py-1.5 rounded-xl text-xs">
-                    <Building2 className="w-3.5 h-3.5 text-sky-400" />
-                    <select
-                      value={selectedDivision}
-                      onChange={(e) => setSelectedDivision(e.target.value)}
-                      className="bg-transparent text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded text-xs"
-                      aria-label="Filter berdasarkan divisi"
-                    >
-                      <option value="" className="bg-slate-900">Semua Divisi</option>
-                      {divisions.map((div, i) => (
-                        <option key={i} value={div} className="bg-slate-900">
-                          {div}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Mobile View Toggle Switch */}
-                <div className="flex items-center gap-1 md:hidden bg-slate-900 border border-slate-700/80 rounded-xl p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setMobileViewMode('card')}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
-                      mobileViewMode === 'card'
-                        ? 'bg-sky-500 text-slate-950 font-bold shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                    aria-label="Tampilan Kartu Tiket Presensi"
-                  >
-                    <LayoutGrid className="w-3.5 h-3.5" />
-                    <span>Kartu</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMobileViewMode('table')}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
-                      mobileViewMode === 'table'
-                        ? 'bg-sky-500 text-slate-950 font-bold shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                    aria-label="Tampilan Tabel Mini"
-                  >
-                    <TableIcon className="w-3.5 h-3.5" />
-                    <span>Tabel</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-                {isManager && Boolean(event.allow_manual_attendance) && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={<Plus className="w-4 h-4 text-sky-400" />}
-                    onClick={() => setIsManualModalOpen(true)}
-                  >
-                    Absen Manual
-                  </Button>
-                )}
-
-                {canExport && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={<Download className="w-4 h-4 text-slate-400" />}
-                    onClick={handleExportAttendanceCsv}
-                  >
-                    Export CSV
-                  </Button>
-                )}
-
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  onClick={loadData}
-                  title="Segarkan Data"
-                  aria-label="Segarkan Data Presensi"
-                >
-                  <RefreshCw className={`w-4 h-4 text-slate-300 ${loading ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Attendance Records: Hybrid Adaptive View */}
-          {displayedAttendances.length === 0 ? (
-            <EmptyState
-              icon={<Users className="w-8 h-8 text-sky-400" />}
-              title={
-                sessionFilter === 'ALL'
-                  ? 'Belum ada data presensi tercatat'
-                  : `Belum ada data untuk sesi ${sessionFilter}`
-              }
-              description="Pindai tiket QR peserta melalui kamera scanner atau lakukan input absen manual jika peserta berhalangan membawa tiket."
-              actionText={event.status === 'active' && onScanEvent ? 'Buka Scanner QR' : undefined}
-              actionIcon={<QrCode className="w-4 h-4" />}
-              onAction={event.status === 'active' && onScanEvent ? () => onScanEvent(event) : undefined}
-            />
-          ) : (
-            <>
-              {/* Mobile Compact Pass Card View (Visible on < md when mobileViewMode === 'card') */}
-              <div className={`grid grid-cols-1 gap-3 ${mobileViewMode === 'card' ? 'md:hidden' : 'hidden'}`}>
-                {displayedAttendances.map((att) => {
-                  const isSelected = selectedAttendanceIds.has(att.id);
-                  const sessionVariant =
-                    att.session_type === 'CHECKIN'
-                      ? 'emerald'
-                      : att.session_type === 'CHECKOUT'
-                      ? 'sky'
-                      : att.session_type === 'BREAK_OUT'
-                      ? 'purple'
-                      : 'slate';
-
-                  return (
-                    <div
-                      key={att.id}
-                      className={`glass-panel-elevated rounded-2xl p-4 border transition-colors space-y-3 ${
-                        isSelected
-                          ? 'border-sky-500/80 bg-sky-950/20 shadow-lg shadow-sky-500/10'
-                          : 'border-slate-800/80 shadow-md'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3">
-                          {isManager && (
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleToggleSelectAttendance(att.id)}
-                              className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500 shrink-0"
-                              aria-label={`Pilih kehadiran ${att.member_name}`}
-                            />
-                          )}
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-heading font-bold text-base text-white">{att.member_name}</h3>
-                              <Badge variant={sessionVariant} size="sm">
-                                {att.session_type}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-sky-400 font-oxanium mt-0.5 font-semibold">
-                              ID: {att.member_external_id}
-                            </p>
-                          </div>
-                        </div>
-
-                        {att.is_manual ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950/80 text-amber-400 border border-amber-800/60 shrink-0 font-mono">
-                            Manual
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 shrink-0 font-mono">
-                            Scan QR
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/60 text-xs">
-                        {att.member_division && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-950/60 text-sky-300 border border-sky-800/40">
-                            <Building2 className="w-3 h-3 text-sky-400" />
-                            <span>{att.member_division}</span>
-                          </span>
-                        )}
-                        <span className="text-[11px] text-slate-300 font-mono flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-slate-500" />
-                          <span>{new Date(att.scanned_at).toLocaleString('id-ID')}</span>
-                        </span>
-                        {att.operator_name && (
-                          <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                            <User className="w-3 h-3 text-slate-500" />
-                            <span>Op: {att.operator_name}</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Table View (Desktop default or Mobile when switched to table) */}
-              <div
-                className={`glass-panel rounded-3xl overflow-hidden border border-slate-800/80 shadow-xl overflow-x-auto ${
-                  mobileViewMode === 'table' ? 'block' : 'hidden md:block'
-                }`}
-              >
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-slate-900/80 uppercase font-bold tracking-wider text-slate-400 border-b border-slate-800">
-                    <tr>
-                      {isManager && (
-                        <th className="w-10 px-4 py-3.5 text-center">
-                          <input
-                            type="checkbox"
-                            checked={displayedAttendances.length > 0 && selectedAttendanceIds.size === displayedAttendances.length}
-                            onChange={() => handleToggleSelectAllAttendances(displayedAttendances)}
-                            className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                            title={selectedAttendanceIds.size === displayedAttendances.length ? 'Batalkan pilih semua' : 'Pilih semua'}
-                            aria-label="Pilih semua baris kehadiran"
-                          />
-                        </th>
-                      )}
-                      <th className="px-5 py-3.5">ID Anggota</th>
-                      <th className="px-5 py-3.5">Nama</th>
-                      <th className="px-5 py-3.5 whitespace-nowrap">Divisi</th>
-                      <th className="px-5 py-3.5">Sesi</th>
-                      <th className="px-5 py-3.5">Waktu Scan</th>
-                      <th className="px-5 py-3.5">Operator</th>
-                      <th className="px-5 py-3.5">Metode</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
-                    {displayedAttendances.map((att) => {
-                      const sessionVariant =
-                        att.session_type === 'CHECKIN'
-                          ? 'emerald'
-                          : att.session_type === 'CHECKOUT'
-                          ? 'sky'
-                          : att.session_type === 'BREAK_OUT'
-                          ? 'purple'
-                          : 'slate';
-
-                      const isSelected = selectedAttendanceIds.has(att.id);
-
-                      return (
-                        <tr
-                          key={att.id}
-                          className={`transition-colors ${
-                            isSelected ? 'bg-sky-950/20 hover:bg-sky-950/30' : 'hover:bg-slate-900/40'
-                          }`}
-                        >
-                          {isManager && (
-                            <td className="w-10 px-4 py-3.5 text-center">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => handleToggleSelectAttendance(att.id)}
-                                className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                                aria-label={`Pilih ${att.member_name}`}
-                              />
-                            </td>
-                          )}
-                          <td className="px-5 py-3.5 font-bold text-sky-400 font-oxanium">{att.member_external_id}</td>
-                          <td className="px-5 py-3.5 font-sans font-semibold text-white">{att.member_name}</td>
-                          <td className="px-5 py-3.5 font-sans whitespace-nowrap">
-                            {att.member_division ? (
-                              <Badge variant="sky" size="xs" icon={<Building2 className="w-3 h-3 text-sky-400 shrink-0" />}>
-                                {att.member_division}
-                              </Badge>
-                            ) : (
-                              <span className="text-slate-500">-</span>
-                            )}
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <Badge variant={sessionVariant} size="sm">
-                              {att.session_type}
-                            </Badge>
-                          </td>
-                          <td className="px-5 py-3.5 text-slate-300">
-                            {new Date(att.scanned_at).toLocaleString('id-ID')}
-                          </td>
-                          <td className="px-5 py-3.5 font-sans text-slate-300">{att.operator_name || '-'}</td>
-                          <td className="px-5 py-3.5 font-sans">
-                            {att.is_manual ? (
-                              <span className="text-amber-400 font-semibold font-mono text-xs">Manual</span>
-                            ) : (
-                              <span className="text-emerald-400 font-semibold font-mono text-xs">Scan QR</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {/* Contextual Floating Bulk Action Bar for Attendances */}
-          <BulkActionBar
-            selectedCount={selectedAttendanceIds.size}
-            totalCount={displayedAttendances.length}
-            itemLabel="Presensi"
-            onClearSelection={handleClearAttendanceSelection}
-            onSelectAll={() => handleToggleSelectAllAttendances(displayedAttendances)}
-            isAllSelected={displayedAttendances.length > 0 && selectedAttendanceIds.size === displayedAttendances.length}
-            actions={attendanceBulkActions}
-          />
-        </div>
+        <AttendanceRosterTable
+          attendances={attendances}
+          displayedAttendances={displayedAttendances}
+          totalScanned={totalScanned}
+          sessionCounts={{
+            checkin: uniqueCheckins,
+            checkout: uniqueCheckouts,
+            breakOut: breakOutAttendances.length,
+            breakIn: breakInAttendances.length,
+          }}
+          sessionFilter={sessionFilter}
+          onSelectSessionFilter={setSessionFilter}
+          search={search}
+          onSearchChange={setSearch}
+          selectedDivision={selectedDivision}
+          onDivisionChange={setSelectedDivision}
+          divisions={divisions}
+          mobileViewMode={mobileViewMode}
+          onToggleMobileViewMode={setMobileViewMode}
+          selectedAttendanceIds={selectedAttendanceIds}
+          onToggleSelectAttendance={handleToggleSelectAttendance}
+          onSelectAllAttendances={() => handleToggleSelectAllAttendances(displayedAttendances)}
+          onDeleteAttendanceBatch={handleBulkDeleteAttendances}
+          onClearSelection={handleClearAttendanceSelection}
+          isManager={isManager}
+          onOpenManualAttendance={() => setIsManualModalOpen(true)}
+        />
       )}
-
-      {/* Tab Content: Event QR Tokens */}
+      {/* QR passes: the workspace owns token selection, bulk actions and both
+          the table and card views. */}
       {activeTab === 'qr' && (
-        <div className="space-y-4">
-          {/* Action Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/40 p-4 rounded-2xl border border-slate-800/80">
-            <div>
-              <h3 className="font-heading font-bold text-base text-white">Tiket QR Khusus Event</h3>
-              <p className="text-xs text-slate-400">
-                {!isEventOnlyMode
-                  ? 'Kegiatan ini menerima QR Universal. Anda dapat menambahkan tiket khusus untuk peserta tamu sementara.'
-                  : 'Mode QR Khusus: Hanya menerima tiket khusus yang dibuat untuk event ini.'}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              {isManager && (
-                <>
-                  <button
-                    onClick={() => setIsGuestModalOpen(true)}
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-colors transition-transform"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>+ Peserta Tamu</span>
-                  </button>
-
-                  {/* Only show "+ Anggota Master" when event_only policy is active */}
-                  {isEventOnlyMode && (
-                    <button
-                      onClick={() => setIsQrModalOpen(true)}
-                      className="flex items-center gap-1.5 px-3.5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>+ Anggota Master</span>
-                    </button>
-                  )}
-                </>
-              )}
-
-              {canGenerate && printableTokens.length > 0 && (
-                <button
-                  onClick={() => {
-                    setSelectedPrintTokens(null);
-                    setIsPrintSheetOpen(true);
-                  }}
-                  className="flex items-center gap-1.5 px-3.5 py-2.5 glass-panel text-slate-200 hover:text-white text-xs font-semibold rounded-xl shadow"
-                >
-                  <Printer className="w-4 h-4 text-sky-400" />
-                  <span>Cetak Lembar Tiket ({printableTokens.length})</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Tokens Table */}
-          {qrTokens.length === 0 ? (
-            <div className="glass-panel rounded-3xl p-10 text-center border border-slate-800 space-y-3">
-              <QrCode className="w-10 h-10 text-slate-600 mx-auto" />
-              <p className="text-sm font-semibold text-slate-300">
-                Belum ada tiket QR khusus yang dibuat untuk event ini
-              </p>
-              {!isEventOnlyMode && (
-                <p className="text-xs text-emerald-400/80 mt-1 max-w-md mx-auto">
-                  Anggota master dapat langsung memindai QR Universal mereka saat hadir.
-                </p>
-              )}
-              <div className="flex items-center justify-center gap-3 mt-4">
-                <button
-                  onClick={() => setIsGuestModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-xs font-semibold"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>Tambah Tamu Sementara</span>
-                </button>
-                {isEventOnlyMode && (
-                  <button
-                    onClick={() => setIsQrModalOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 text-xs font-semibold"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Pilih dari Master Anggota</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="glass-panel rounded-3xl overflow-hidden border border-slate-800 shadow-xl overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900/80 uppercase font-bold tracking-wider text-slate-400 border-b border-slate-800">
-                  <tr>
-                    <th className="w-10 px-4 py-3.5 text-center">
-                      <input
-                        type="checkbox"
-                        checked={qrTokens.length > 0 && selectedTokenIds.size === qrTokens.length}
-                        onChange={handleToggleSelectAllTokens}
-                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                        title={selectedTokenIds.size === qrTokens.length ? 'Batalkan pilih semua' : 'Pilih semua'}
-                      />
-                    </th>
-                    <th className="px-5 py-3.5">ID Peserta</th>
-                    <th className="px-5 py-3.5">Nama</th>
-                    <th className="px-5 py-3.5 whitespace-nowrap">Divisi</th>
-                    <th className="px-5 py-3.5">Masa Berlaku</th>
-                    <th className="px-5 py-3.5">Status Tiket</th>
-                    <th className="px-5 py-3.5 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {qrTokens.map((tok) => {
-                    const isExpired = new Date(tok.expires_at).getTime() < Date.now();
-                    const isRevoked = Boolean(tok.revoked_at);
-                    const isSelected = selectedTokenIds.has(tok.id);
-
-                    return (
-                      <tr
-                        key={tok.id}
-                        className={`transition-colors ${
-                          isSelected ? 'bg-sky-950/20 hover:bg-sky-950/30' : 'hover:bg-slate-900/40'
-                        }`}
-                      >
-                        <td className="w-10 px-4 py-3.5 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => handleToggleSelectToken(tok.id)}
-                            className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                          />
-                        </td>
-                        <td className="px-5 py-3.5 font-bold text-sky-400">{tok.member_external_id}</td>
-                        <td className="px-5 py-3.5 font-sans font-semibold text-white">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span>{tok.member_name}</span>
-                            {tok.note && tok.note.includes('Impor dari') && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-sans shadow-sm">
-                                <History className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
-                                <span>{tok.note}</span>
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5 font-sans whitespace-nowrap">
-                          {tok.member_division ? (
-                            <Badge variant="sky" size="xs" icon={<Building2 className="w-3 h-3 text-sky-400 shrink-0" />}>
-                              {tok.member_division}
-                            </Badge>
-                          ) : (
-                            <span className="text-slate-500">-</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3.5 text-slate-400">
-                          {tok.scope === 'universal' || new Date(tok.expires_at).getFullYear() >= 2090
-                            ? 'Permanen (Status Aktif)'
-                            : new Date(tok.expires_at).toLocaleString('id-ID')}
-                        </td>
-                        <td className="px-5 py-3.5 font-sans">
-                          {isRevoked ? (
-                            <span className="px-2 py-0.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800/50 text-[10px] font-bold">
-                              Dicabut (Revoked)
-                            </span>
-                          ) : isExpired ? (
-                            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-bold">
-                              Kedaluwarsa
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 text-[10px] font-bold">
-                              Aktif ({tok.uses_count}/{tok.max_uses || '∞'})
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3.5 text-right font-sans whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {tok.qr_token && !isRevoked && (
-                              <button
-                                onClick={() => setSelectedTokenForCard(tok)}
-                                className="flex items-center gap-1 px-2.5 py-1 text-xs text-sky-400 hover:bg-sky-950/50 rounded-lg transition-colors font-semibold"
-                                title="Lihat kartu atau cetak"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>Lihat</span>
-                              </button>
-                            )}
-
-                            {isManager && tok.member_external_id?.startsWith('GUEST-') && !isRevoked && (
-                              <button
-                                onClick={() => handleOpenPromoteSingle(tok)}
-                                className="flex items-center gap-1 px-2 py-1 text-xs bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800/60 rounded-lg transition-colors transition-transform font-semibold shadow-sm active:scale-95"
-                                title="Jadikan Anggota Resmi Organisasi"
-                              >
-                                <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                                <span>Angkat Resmi</span>
-                              </button>
-                            )}
-
-                            {isManager && (
-                              <>
-                                {!isRevoked && (
-                                  <button
-                                    onClick={() => handleRevokeToken(tok.id)}
-                                    className="px-2 py-1 text-xs text-amber-400 hover:bg-amber-950/40 rounded-lg transition-colors font-semibold"
-                                    title="Cabut masa berlaku tiket"
-                                  >
-                                    Cabut
-                                  </button>
-                                )}
-
-                                <button
-                                  onClick={() => handleDeleteToken(tok.id, tok.member_name)}
-                                  className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors"
-                                  title="Hapus tiket dari event"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Contextual Floating Bulk Action Bar for Tokens */}
-          <BulkActionBar
-            selectedCount={selectedTokenIds.size}
-            totalCount={qrTokens.length}
-            itemLabel="Tiket"
-            onClearSelection={handleClearTokenSelection}
-            onSelectAll={handleToggleSelectAllTokens}
-            isAllSelected={qrTokens.length > 0 && selectedTokenIds.size === qrTokens.length}
-            actions={tokenBulkActions}
-          />
-        </div>
+        <GuestPassWorkspace
+          event={event}
+          qrTokens={qrTokens}
+          selectedTokenIds={selectedTokenIds}
+          onToggleSelectToken={handleToggleSelectToken}
+          onSelectAllTokens={handleToggleSelectAllTokens}
+          onOpenGuestModal={() => setIsGuestModalOpen(true)}
+          onOpenQrModal={() => setIsQrModalOpen(true)}
+          onOpenPrintSheet={() => {
+            const targetTokens = filterPrintableTokens(qrTokens, event.name, selectedTokenIds);
+            if (targetTokens.length === 0) {
+              setAlertModal({
+                isOpen: true,
+                title: 'Tidak Ada Tiket Valid Terpilih',
+                message:
+                  'Tiket yang Anda pilih sudah dicabut (revoked), kedaluwarsa, atau tidak memiliki data QR valid.',
+                type: 'warning',
+              });
+              return;
+            }
+            setSelectedPrintTokens(targetTokens);
+            setIsPrintSheetOpen(true);
+          }}
+          onSelectTokenForCard={setSelectedTokenForCard}
+          onOpenPromoteSingle={handleOpenPromoteSingle}
+          onOpenPromoteBulk={handleOpenPromoteBulk}
+          onRevokeToken={handleRevokeToken}
+          onRevokeTokenBatch={handleBulkRevokeSelectedTokens}
+          onDeleteToken={handleDeleteToken}
+          onDeleteTokenBatch={handleBulkDeleteSelectedTokens}
+          onClearSelection={handleClearTokenSelection}
+          isManager={isManager}
+          canGenerate={canGenerate}
+        />
       )}
-
       {/* Tab Content: Overview */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="glass-panel-elevated rounded-3xl p-6 border border-slate-800 space-y-4">
-            <h3 className="font-heading font-bold text-base text-white">Kebijakan Keamanan QR</h3>
-            <div className="space-y-3 text-xs text-slate-300">
-              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <p className="font-bold text-sky-400 flex items-center gap-1.5 mb-1">
+          <div className="surface space-y-4 rounded-panel p-6 shadow-ambient">
+            <h3 className="font-heading text-base font-bold text-white">Kebijakan Keamanan QR</h3>
+            <div className="space-y-3 text-xs text-ink">
+              <div className="rounded-panel border border-rule bg-paper-raised p-4">
+                <p className="mb-1 flex items-center gap-1.5 font-bold text-ink-2">
                   {event.qr_policy === 'event_only' ? (
-                    <ShieldAlert className="w-4 h-4" />
+                    <ShieldWarning size={16} />
                   ) : (
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <ShieldCheck size={16} className="text-seal-600" />
                   )}
                   <span>Mode: {event.qr_policy}</span>
                 </p>
-                <p className="text-slate-400">
+                <p className="text-ink-2">
                   {event.qr_policy === 'event_only'
                     ? 'Hanya menerima QR khusus event ini. QR Universal ditolak untuk memastikan tiket tidak disalahgunakan.'
                     : 'Mengizinkan tiket QR Universal yang belum kedaluwarsa atau tiket khusus event.'}
                 </p>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-xl glass-panel">
+              <div className="flex items-center justify-between rounded-chip border border-rule bg-paper-raised px-3 py-2.5">
                 <span>Toleransi Waktu Absen (Grace Period)</span>
-                <span className="font-bold text-white font-mono">{event.grace_minutes} Menit</span>
+                <span className="font-oxanium font-bold tabular-nums text-white">{event.grace_minutes} Menit</span>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-xl glass-panel">
+              <div className="flex items-center justify-between rounded-chip border border-rule bg-paper-raised px-3 py-2.5">
                 <span>Absensi Manual</span>
                 <span className="font-bold text-white">
                   {event.allow_manual_attendance ? 'Diizinkan' : 'Dilarang'}
@@ -1551,16 +852,16 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             </div>
           </div>
 
-          <div className="glass-panel-elevated rounded-3xl p-6 border border-slate-800 space-y-4">
-            <h3 className="font-heading font-bold text-base text-white">Statistik Kehadiran</h3>
+          <div className="surface space-y-4 rounded-panel p-6 shadow-ambient">
+            <h3 className="font-heading text-base font-bold text-white">Statistik Kehadiran</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="glass-panel p-4 rounded-2xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Total Hadir</span>
-                <p className="text-3xl font-bold font-heading text-emerald-400 mt-1">{totalScanned}</p>
+              <div className="surface rounded-panel p-4">
+                <span className="text-[10px] text-ink-2 uppercase font-semibold">Total Hadir</span>
+                <p className="font-heading mt-1 text-3xl font-bold tabular-nums text-seal-800">{totalScanned}</p>
               </div>
-              <div className="glass-panel p-4 rounded-2xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Tiket Khusus Aktif</span>
-                <p className="text-3xl font-bold font-heading text-sky-400 mt-1">{printableTokens.length}</p>
+              <div className="surface rounded-panel p-4">
+                <span className="text-[10px] text-ink-2 uppercase font-semibold">Tiket Khusus Aktif</span>
+                <p className="font-heading mt-1 text-3xl font-bold tabular-nums text-ink-2">{printableTokens.length}</p>
               </div>
             </div>
           </div>
@@ -1626,78 +927,70 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
         </ModalPortal>
       )}
 
-      {/* Manual Attendance Modal */}
+      {/* Manual attendance: only offered when the event policy allows it, and the
+          form itself is a bezel panel inside the shared portal. */}
       {isManualModalOpen && (
         <ModalPortal onClose={() => setIsManualModalOpen(false)}>
           <div className="modal-backdrop-full">
             <form
               onSubmit={handleManualSubmit}
-              className="w-full max-w-md rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 space-y-3.5 sm:space-y-4 my-auto max-h-[92dvh] overflow-y-auto"
+              className="bezel my-auto max-h-[92dvh] w-full max-w-md space-y-4 overflow-y-auto p-5"
             >
-              <h3 className="font-heading font-bold text-lg text-white">Input Absensi Manual</h3>
-              <p className="text-xs text-slate-400">
+              <h3 className="font-heading text-lg font-bold text-white">Input Absensi Manual</h3>
+              <p className="text-xs text-ink-2">
                 Gunakan jika kamera bermasalah atau anggota hadir secara fisik tanpa tiket QR.
               </p>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Pilih Anggota:</label>
-                <select
-                  required
-                  value={manualMemberId}
-                  onChange={(e) => setManualMemberId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-                >
-                  <option value="">-- Pilih Anggota --</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({m.external_id}) {m.division ? `- ${m.division}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Field
+                id="event-detail-page-field-1"
+                label="Pilih Anggota"
+                control="select"
+                required
+                value={manualMemberId}
+                onChange={setManualMemberId}
+                options={[
+                  { value: '', label: '-- Pilih Anggota --' },
+                  ...members.map((m) => ({
+                    value: m.id,
+                    label: `${m.name} (${m.external_id}) ${m.division ? `- ${m.division}` : ''}`,
+                  })),
+                ]}
+              />
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Pilih Sesi:</label>
-                <select
-                  value={manualSessionType}
-                  onChange={(e) => setManualSessionType(e.target.value as SessionType)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-                >
-                  <option value="CHECKIN">CHECK-IN (Masuk)</option>
-                  <option value="CHECKOUT">CHECK-OUT (Keluar)</option>
-                  <option value="BREAK_OUT">BREAK OUT (Istirahat Keluar)</option>
-                  <option value="BREAK_IN">BREAK IN (Istirahat Masuk)</option>
-                </select>
-              </div>
+              <Field
+                id="event-detail-page-field-2"
+                label="Pilih Sesi"
+                control="select"
+                required
+                value={manualSessionType}
+                onChange={(v) => setManualSessionType(v as SessionType)}
+                options={[
+                  { value: 'CHECKIN', label: 'CHECK-IN (Masuk)' },
+                  { value: 'CHECKOUT', label: 'CHECK-OUT (Keluar)' },
+                  { value: 'BREAK_OUT', label: 'BREAK OUT (Istirahat Keluar)' },
+                  { value: 'BREAK_IN', label: 'BREAK IN (Istirahat Masuk)' },
+                ]}
+              />
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Alasan Pencatatan Manual <span className="text-rose-400">*</span>:
-                </label>
-                <textarea
-                  required
-                  value={manualReason}
-                  onChange={(e) => setManualReason(e.target.value)}
-                  placeholder="misal: Ponsel anggota mati / lupa membawa tiket QR fisik"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 min-h-[80px]"
-                />
-              </div>
+              <Field
+                id="event-detail-page-field-3"
+                label="Alasan Pencatatan Manual"
+                control="textarea"
+                required
+                hint="Tercatat di audit log alongside nama petugas."
+                value={manualReason}
+                onChange={setManualReason}
+                placeholder="misal: Ponsel anggota mati / lupa membawa tiket QR fisik"
+                controlClassName="min-h-[80px] text-xs"
+              />
 
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsManualModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
-                >
+              <div className="flex items-center justify-end gap-3 pt-1">
+                <Button variant="ghost" size="sm" onClick={() => setIsManualModalOpen(false)}>
                   Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={manualLoading}
-                  className="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20"
-                >
-                  {manualLoading ? 'Menyimpan...' : 'Catat Hadir Manual'}
-                </button>
+                </Button>
+                <Button type="submit" variant="primary" size="sm" loading={manualLoading}>
+                  Catat Hadir Manual
+                </Button>
               </div>
             </form>
           </div>
@@ -1708,17 +1001,17 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       {promotingGuest && (
         <ModalPortal onClose={() => setPromotingGuest(null)}>
           <div className="modal-backdrop-full">
-            <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 my-auto max-h-[92dvh] overflow-y-auto">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="bezel my-auto max-h-[92dvh] w-full max-w-md space-y-4 overflow-y-auto p-4 sm:p-6">
+              <div className="flex items-center justify-between border-b border-rule pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                    <UserCheck className="w-4 h-4" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip bg-seal-50/60 text-seal-800">
+                    <UserCheck size={16} />
                   </div>
                   <div>
-                    <h3 className="font-heading font-bold text-base text-white">
+                    <h3 className="font-heading text-base font-bold text-white">
                       Angkat Menjadi Anggota Resmi
                     </h3>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-[11px] text-ink-2">
                       {promotingGuest.isBulk
                         ? `Memproses ${promotingGuest.bulkCount} peserta tamu`
                         : promotingGuest.memberName}
@@ -1728,65 +1021,60 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 <button
                   type="button"
                   onClick={() => setPromotingGuest(null)}
-                  className="text-slate-400 hover:text-white p-1"
+                  aria-label="Tutup dialog angkat anggota"
+                  className="touch-target rounded-chip p-1 text-ink-2 transition-colors hover:text-white"
                 >
-                  <X className="w-4 h-4" />
+                  <X size={16} />
                 </button>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-800/40 text-xs text-emerald-300 space-y-1">
+              <div className="space-y-1 rounded-panel border border-seal-200 bg-seal-50/70 p-3.5 text-xs text-seal-800">
                 <p className="font-bold flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <CheckCircle size={16} className="shrink-0 text-seal-600" />
                   <span>Riwayat Presensi Tetap Tersimpan Utuh</span>
                 </p>
-                <p className="text-slate-300 text-[11px] leading-relaxed">
+                <p className="text-ink text-[11px] leading-relaxed">
                   Peserta akan diberikan <strong>ID Anggota resmi baru</strong> dan <strong>QR Universal permanen</strong>. Presensi pada kegiatan penerimaan ini otomatis diakui dan terhitung di Pelacak Keaktifan.
                 </p>
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="promote-division" className="block text-xs font-semibold text-slate-300">
-                  Pilih Divisi (Opsional):
-                </label>
-                <div className="flex items-center gap-2 glass-panel p-2.5 rounded-xl border border-slate-800">
-                  <Building2 className="w-4 h-4 text-sky-400 shrink-0" />
-                  <select
-                    id="promote-division"
-                    value={promoteDivision}
-                    onChange={(e) => setPromoteDivision(e.target.value)}
-                    className="w-full bg-transparent text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                  >
-                    <option value="" className="bg-slate-900">-- Tanpa Divisi / Pilih Nanti --</option>
-                    {divisions.map((div, i) => (
-                      <option key={i} value={div} className="bg-slate-900">
-                        {div}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <p className="text-[10px] text-slate-500">
+                <Field
+                  id="event-detail-page-field-4"
+                  label="Pilih Divisi (Opsional)"
+                  control="select"
+                  value={promoteDivision}
+                  onChange={setPromoteDivision}
+                  controlClassName="border-0 bg-transparent px-0 text-xs focus-visible:ring-0"
+                  leadingIcon={<Buildings className="h-4 w-4" />}
+                  options={[
+                    { value: '', label: '-- Tanpa Divisi / Pilih Nanti --' },
+                    ...divisions.map((div) => ({ value: div, label: div })),
+                  ]}
+                />
+                <p className="text-[10px] text-ink-2">
                   Email dan nomor HP dapat dilengkapi atau diedit manual kapan saja di menu Master Anggota.
                 </p>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-                <button
-                  type="button"
+              <div className="flex items-center justify-end gap-2 border-t border-rule pt-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setPromotingGuest(null)}
                   disabled={promoteLoading}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white rounded-xl"
                 >
                   Batal
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={handleConfirmPromote}
-                  disabled={promoteLoading}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 active:scale-95 transition-colors transition-transform"
+                  loading={promoteLoading}
+                  icon={<UserCheck size={14} />}
                 >
-                  <UserCheck className="w-4 h-4" />
-                  <span>{promoteLoading ? 'Memproses...' : 'Ya, Angkat Jadi Anggota'}</span>
-                </button>
+                  Ya, Angkat Jadi Anggota
+                </Button>
               </div>
             </div>
           </div>
@@ -1816,14 +1104,14 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
       {/* Contextual Floating Action Button for Mobile Viewport */}
       {event.status === 'active' && onScanEvent && (
-        <div className="md:hidden fixed bottom-24 right-4 z-30">
+        <div className="fixed bottom-24 right-4 z-bar md:hidden">
           <button
             type="button"
             onClick={() => onScanEvent(event)}
-            className="h-12 px-4 rounded-2xl bg-sky-500 hover:bg-sky-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-xl shadow-sky-950/60 border border-sky-300/30 transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            className="flex h-12 items-center gap-2 rounded-chip bg-pen-500 px-4 text-xs font-bold text-paper shadow-lift transition-transform duration-120 ease-spring active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper hover:bg-pen-400"
             aria-label="Scan Presensi"
           >
-            <QrCode className="w-4 h-4" />
+            <QrCode size={16} />
             <span>Scan Presensi</span>
           </button>
         </div>

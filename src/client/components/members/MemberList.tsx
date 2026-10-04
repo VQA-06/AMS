@@ -1,17 +1,17 @@
 import React from 'react';
-import {
-  User,
-  Building2,
-  Phone,
-  Mail,
-  Edit2,
-  Eye,
-  Trash2,
-} from 'lucide-react';
+import { Buildings } from '@phosphor-icons/react/Buildings';
+import { Envelope } from '@phosphor-icons/react/Envelope';
+import { Eye } from '@phosphor-icons/react/Eye';
+import { PencilSimple } from '@phosphor-icons/react/PencilSimple';
+import { Phone } from '@phosphor-icons/react/Phone';
+import { Trash } from '@phosphor-icons/react/Trash';
+import { User } from '@phosphor-icons/react/User';
 import { Member } from '@/shared/types';
+import { cn } from '../../lib/cn';
 import { SkeletonMemberList } from '../ui/Skeleton';
-import { Badge } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
+import { Card, markFillClass } from '../ui/Card';
+import { Table, THead, TBody, TRow, TCell } from '../ui/Table';
 
 interface MemberListProps {
   members: Member[];
@@ -27,6 +27,22 @@ interface MemberListProps {
   onToggleSelectAll?: () => void;
   isAllSelected?: boolean;
 }
+
+/** One focus quartet. Never `focus:outline-none` alone. */
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+
+const checkboxClass =
+  'w-4 h-4 shrink-0 cursor-pointer rounded border-rule-strong bg-paper-raised accent-pen-500';
+
+const iconButtonClass = (tone: 'pen' | 'neutral' | 'danger') =>
+  cn(
+    'flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip transition-colors duration-120 ease-out-expo',
+    focusRing,
+    tone === 'pen' && 'text-ink-2 hover:bg-pen-50/70 hover:text-ink-2',
+    tone === 'neutral' && 'text-ink-2 hover:bg-paper-raised hover:text-white',
+    tone === 'danger' && 'text-pen hover:bg-pen-50/70 hover:text-pen-deep'
+  );
 
 export const MemberList: React.FC<MemberListProps> = ({
   members,
@@ -62,202 +78,194 @@ export const MemberList: React.FC<MemberListProps> = ({
       {/* Mobile Card View (visible on < md screens) */}
       <div className="grid grid-cols-1 gap-3 md:hidden">
         {members.map((member) => {
-          const isSelected = selectedIds?.has(member.id);
+          const isSelected = selectedIds?.has(member.id) ?? false;
           return (
-            <div
+            <Card
               key={member.id}
-              className={`content-auto glass-panel-elevated rounded-2xl p-4 border transition-colors space-y-3 ${
-                isSelected ? 'border-sky-500/80 bg-sky-950/20 shadow-lg shadow-sky-500/10' : 'border-slate-800/80 shadow-md'
-              }`}
+              mark={isSelected ? 'pen' : member.status === 'active' ? 'seal' : 'idle'}
+              className={cn(
+                'transition-colors duration-120 ease-out-expo',
+                isSelected && 'bg-paper-sunk'
+              )}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-3">
-                  {onToggleSelect && (
-                    <input
-                      type="checkbox"
-                      checked={isSelected || false}
-                      onChange={() => onToggleSelect(member.id)}
-                      aria-label={`Pilih ${member.name}`}
-                      className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500 shrink-0"
-                    />
-                  )}
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-bold text-base text-white">{member.name}</h4>
-                      <Badge
-                        variant={member.status === 'active' ? 'emerald' : 'rose'}
-                        size="xs"
-                        dot
-                      >
-                        {member.status === 'active' ? 'Aktif' : 'Nonaktif'}
-                      </Badge>
+              <div className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3">
+                    {onToggleSelect && (
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => onToggleSelect(member.id)}
+                        aria-label={`Pilih ${member.name}`}
+                        className={checkboxClass}
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <h3 className="truncate font-heading text-base font-bold text-white">
+                        {member.name}
+                      </h3>
+                      <p className="mt-0.5 font-oxanium text-xs text-ink-2">
+                        ID: {member.external_id}
+                      </p>
                     </div>
-                    <p className="text-xs text-sky-400 font-mono mt-0.5">ID: {member.external_id}</p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onViewPass(member)}
+                      title="Lihat & Unduh QR Universal"
+                      aria-label={`Lihat Pass QR ${member.name}`}
+                      className={iconButtonClass('pen')}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    {canManage && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onEdit(member)}
+                          title="Edit Anggota"
+                          aria-label={`Edit ${member.name}`}
+                          className={iconButtonClass('neutral')}
+                        >
+                          <PencilSimple className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(member.id, member.name)}
+                          title="Hapus Anggota"
+                          aria-label={`Hapus ${member.name}`}
+                          className={iconButtonClass('danger')}
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => onViewPass(member)}
-                    title="Lihat & Unduh QR Universal"
-                    aria-label={`Lihat Pass QR ${member.name}`}
-                    className="min-w-[40px] min-h-[40px] flex items-center justify-center text-sky-400 hover:text-sky-300 hover:bg-sky-950/50 rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  {canManage && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => onEdit(member)}
-                        title="Edit Anggota"
-                        aria-label={`Edit ${member.name}`}
-                        className="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDelete(member.id, member.name)}
-                        title="Hapus Anggota"
-                        aria-label={`Hapus ${member.name}`}
-                        className="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus:outline-none"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
+                {/* Division, email & phone */}
+                <div className="space-y-1 border-t border-rule pt-2 text-xs text-ink-2">
+                  {member.division && (
+                    <p className="flex items-center gap-1.5 truncate">
+                      <Buildings className="w-3.5 h-3.5 shrink-0 text-ink-2" />
+                      <span className="truncate">{member.division}</span>
+                    </p>
                   )}
-                </div>
-              </div>
-
-              {/* Badges: Divisi & Group */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                {member.division ? (
-                  <Badge variant="sky" size="xs" icon={<Building2 className="w-3 h-3 text-sky-400 shrink-0" />}>
-                    Divisi: {member.division}
-                  </Badge>
-                ) : (
-                  <span className="text-[11px] text-slate-500 italic">Tanpa Divisi</span>
-                )}
-
-                {member.group_name && (
-                  <Badge variant="slate" size="xs">
-                    {member.group_name}
-                  </Badge>
-                )}
-              </div>
-
-              {/* Email & Phone info */}
-              {(member.email || member.phone) && (
-                <div className="pt-2 border-t border-slate-800/60 text-xs text-slate-400 space-y-1">
                   {member.email && (
                     <p className="flex items-center gap-1.5 truncate">
-                      <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <Envelope className="w-3.5 h-3.5 shrink-0 text-ink-2" />
                       <span className="truncate">{member.email}</span>
                     </p>
                   )}
                   {member.phone && (
                     <p className="flex items-center gap-1.5 truncate">
-                      <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span>{member.phone}</span>
+                      <Phone className="w-3.5 h-3.5 shrink-0 text-ink-2" />
+                      <span className="truncate">{member.phone}</span>
                     </p>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            </Card>
           );
         })}
       </div>
 
       {/* Desktop Table View (visible on md screens and up) */}
-      <div className="hidden md:block glass-panel rounded-3xl overflow-hidden border border-slate-800/80 shadow-xl">
-        <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm text-slate-300">
-          <thead className="bg-slate-900/80 text-xs uppercase font-bold tracking-wider text-slate-400 border-b border-slate-800">
+      <div className="surface hidden rounded-panel shadow-ambient md:block">
+        <Table>
+          <THead>
             <tr>
               {onToggleSelectAll && (
-                <th className="w-10 px-4 py-3.5 text-center">
+                <TCell header className="w-10 text-center">
                   <input
                     type="checkbox"
                     checked={isAllSelected}
                     onChange={onToggleSelectAll}
-                    className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
+                    className={checkboxClass}
                     title={isAllSelected ? 'Batalkan pilih semua' : 'Pilih semua'}
                     aria-label="Pilih semua anggota"
                   />
-                </th>
+                </TCell>
               )}
-              <th className="px-5 py-3.5">ID / Kode</th>
-              <th className="px-5 py-3.5">Nama Anggota</th>
-              <th className="px-5 py-3.5 whitespace-nowrap">Divisi</th>
-              <th className="px-5 py-3.5">Grup</th>
-              <th className="px-5 py-3.5">Kontak</th>
-              <th className="px-5 py-3.5">Status</th>
-              <th className="px-5 py-3.5 text-right">Aksi</th>
+              <TCell header className="w-3 p-0">
+                <span className="sr-only">Status</span>
+              </TCell>
+              <TCell header className="min-w-[12rem]">
+                Nama Lengkap
+              </TCell>
+              <TCell header className="min-w-[8rem]">
+                ID Anggota
+              </TCell>
+              <TCell header className="hidden min-w-[9rem] lg:table-cell">
+                Divisi / Grup
+              </TCell>
+              <TCell header className="hidden min-w-[11rem] lg:table-cell">
+                Kontak
+              </TCell>
+              <TCell header className="w-[10rem] text-right">
+                Aksi
+              </TCell>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800/60">
+          </THead>
+          <TBody>
             {members.map((member) => {
-              const isSelected = selectedIds?.has(member.id);
+              const isSelected = selectedIds?.has(member.id) ?? false;
               return (
-                <tr
-                  key={member.id}
-                  className={`transition-colors ${
-                    isSelected ? 'bg-sky-950/20 hover:bg-sky-950/30' : 'hover:bg-slate-900/40'
-                  }`}
-                >
-                  {onToggleSelect && (
-                    <td className="w-10 px-4 py-3.5 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isSelected || false}
-                        onChange={() => onToggleSelect(member.id)}
-                        aria-label={`Pilih ${member.name}`}
-                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                      />
-                    </td>
+                <TRow key={member.id} selected={isSelected}>
+                  {onToggleSelectAll && (
+                    <TCell className="text-center">
+                      {onToggleSelect && (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => onToggleSelect(member.id)}
+                          aria-label={`Pilih ${member.name}`}
+                          className={checkboxClass}
+                        />
+                      )}
+                    </TCell>
                   )}
-                  <td className="px-5 py-3.5 font-mono text-xs text-sky-400 font-semibold">
+                  <TCell className="w-3 p-0">
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        'h-full w-0.5 self-stretch',
+                        isSelected
+                          ? markFillClass.pen
+                          : member.status === 'active'
+                            ? markFillClass.seal
+                            : markFillClass.idle
+                      )}
+                    />
+                  </TCell>
+                  <TCell truncate>
+                    <span className="block font-semibold text-ink">{member.name}</span>
+                  </TCell>
+                  <TCell truncate className="font-oxanium text-xs text-ink-2">
                     {member.external_id}
-                  </td>
-                  <td className="px-5 py-3.5 font-semibold text-white">
-                    {member.name}
-                  </td>
-                  <td className="px-5 py-3.5 whitespace-nowrap">
-                    {member.division ? (
-                      <Badge variant="sky" size="xs" icon={<Building2 className="w-3 h-3 text-sky-400 shrink-0" />}>
-                        {member.division}
-                      </Badge>
+                  </TCell>
+                  <TCell truncate className="hidden lg:table-cell">
+                    {member.division || member.group_name ? (
+                      member.division || member.group_name
                     ) : (
-                      <span className="text-slate-500 text-xs">-</span>
+                      <span className="text-ink-3">&mdash;</span>
                     )}
-                  </td>
-                  <td className="px-5 py-3.5 text-xs text-slate-300">
-                    {member.group_name || '-'}
-                  </td>
-                  <td className="px-5 py-3.5 text-xs text-slate-400 space-y-0.5">
-                    {member.email && <div className="truncate max-w-[160px]">{member.email}</div>}
-                    {member.phone && <div className="text-slate-500">{member.phone}</div>}
-                    {!member.email && !member.phone && <span>-</span>}
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <Badge
-                      variant={member.status === 'active' ? 'emerald' : 'rose'}
-                      size="xs"
-                      dot
-                    >
-                      {member.status === 'active' ? 'Aktif' : 'Nonaktif'}
-                    </Badge>
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
+                  </TCell>
+                  <TCell truncate className="hidden lg:table-cell text-ink-2">
+                    {[member.email, member.phone].filter(Boolean).join(' · ') || (
+                      <span className="text-ink-3">&mdash;</span>
+                    )}
+                  </TCell>
+                  <TCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
                         onClick={() => onViewPass(member)}
                         title="Lihat & Unduh QR Universal"
                         aria-label={`Lihat Pass QR ${member.name}`}
-                        className="min-w-[36px] min-h-[36px] flex items-center justify-center text-sky-400 hover:text-sky-300 hover:bg-sky-950/60 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
+                        className={iconButtonClass('pen')}
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -268,29 +276,28 @@ export const MemberList: React.FC<MemberListProps> = ({
                             onClick={() => onEdit(member)}
                             title="Edit Anggota"
                             aria-label={`Edit ${member.name}`}
-                            className="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
+                            className={iconButtonClass('neutral')}
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <PencilSimple className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => onDelete(member.id, member.name)}
                             title="Hapus Anggota"
                             aria-label={`Hapus ${member.name}`}
-                            className="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus:outline-none"
+                            className={iconButtonClass('danger')}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash className="w-4 h-4" />
                           </button>
                         </>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TCell>
+                </TRow>
               );
             })}
-          </tbody>
-        </table>
-        </div>
+          </TBody>
+        </Table>
       </div>
     </div>
   );

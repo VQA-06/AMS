@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
-import {
-  Upload,
-  FileSpreadsheet,
-  Download,
-  CheckCircle,
-  AlertTriangle,
-  ArrowRight,
-  RefreshCw,
-  Building2,
-} from 'lucide-react';
+import { ArrowRight } from '@phosphor-icons/react/ArrowRight';
+import { Buildings } from '@phosphor-icons/react/Buildings';
+import { CheckCircle } from '@phosphor-icons/react/CheckCircle';
+import { DownloadSimple } from '@phosphor-icons/react/DownloadSimple';
+import { Warning } from '@phosphor-icons/react/Warning';
 import { fetchApi } from '../../lib/api-client';
+import { cn } from '../../lib/cn';
+import { Button } from '../ui/Button';
+import { Field } from '../ui/Field';
+import { Table, THead, TBody, TRow, TCell } from '../ui/Table';
+
+/** One focus quartet. Never `focus:outline-none` alone. */
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+
+
+const FILE_INPUT_ID = 'import-wizard-field-1';
 
 interface ImportWizardProps {
   onSuccess: () => void;
@@ -48,9 +54,11 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
     window.open('/api/members/template.csv', '_blank');
   };
 
-  // Handle file select
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  // Handle file select. `Field` owns the control, so the reader pulls the picked
+  // file back off the input it rendered rather than from a change event.
+  const handleFileChange = () => {
+    const input = document.getElementById(FILE_INPUT_ID);
+    const file = input instanceof HTMLInputElement ? input.files?.[0] : undefined;
     if (!file) return;
     setError(null);
 
@@ -150,26 +158,33 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
   };
 
   return (
-    <div className="glass-panel-elevated rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-700/60 shadow-2xl max-w-4xl mx-auto space-y-4 sm:space-y-6">
+    <div className="surface mx-auto max-w-4xl space-y-5 rounded-panel p-4 shadow-ambient sm:space-y-6 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule pb-4">
         <div>
-          <h3 className="font-heading font-bold text-xl text-white">Import Data Anggota (CSV / JSON)</h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <h2 className="font-heading text-xl font-bold text-white">
+            Import Data Anggota (CSV / JSON)
+          </h2>
+          <p className="mt-0.5 text-xs text-ink-2">
             Unggah data massal anggota lengkap dengan kolom divisi
           </p>
         </div>
-        <button
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          icon={<DownloadSimple className="w-4 h-4 text-ink-2" />}
           onClick={handleDownloadTemplate}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-sky-400 transition-colors shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
         >
-          <Download className="w-4 h-4" />
-          <span>Download Template CSV</span>
-        </button>
+          Download Template CSV
+        </Button>
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-950/50 border border-rose-800 text-xs text-rose-300">
+        <div
+          role="alert"
+          className="rounded-panel border border-pen-200 bg-pen-50/70 p-4 text-xs text-pen-deep"
+        >
           {error}
         </div>
       )}
@@ -178,93 +193,58 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
       {step === 'upload' && (
         <div className="space-y-6">
           {/* Mode Selector */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-2">
+          <fieldset>
+            <legend className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-ink-2">
               Mode Penanganan Duplikasi ID (external_id):
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <label
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-colors ${ mode === 'upsert' ? 'bg-sky-500/20 border-sky-500 text-white' : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60' } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950`}
-              >
-                <input
-                  type="radio"
-                  name="import-mode"
-                  value="upsert"
-                  checked={mode === 'upsert'}
-                  onChange={() => setMode('upsert')}
-                  className="hidden"
-                />
-                <p className="font-bold text-xs">Upsert (Direkomendasikan)</p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Insert jika baru, update data jika ID sudah ada.
-                </p>
-              </label>
-
-              <label
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-colors ${ mode === 'create' ? 'bg-sky-500/20 border-sky-500 text-white' : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60' } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950`}
-              >
-                <input
-                  type="radio"
-                  name="import-mode"
-                  value="create"
-                  checked={mode === 'create'}
-                  onChange={() => setMode('create')}
-                  className="hidden"
-                />
-                <p className="font-bold text-xs">Create Only</p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Hanya insert baru, lewati baris yang sudah ada.
-                </p>
-              </label>
-
-              <label
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-colors ${ mode === 'update' ? 'bg-sky-500/20 border-sky-500 text-white' : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60' } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950`}
-              >
-                <input
-                  type="radio"
-                  name="import-mode"
-                  value="update"
-                  checked={mode === 'update'}
-                  onChange={() => setMode('update')}
-                  className="hidden"
-                />
-                <p className="font-bold text-xs">Update Only</p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Hanya update anggota yang sudah terdaftar.
-                </p>
-              </label>
+            </legend>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {(
+                [
+                  { value: 'upsert', title: 'Upsert (Direkomendasikan)', body: 'Insert jika baru, update data jika ID sudah ada.' },
+                  { value: 'create', title: 'Create Only', body: 'Hanya insert anggota baru, abaikan ID yang sudah ada.' },
+                  { value: 'update', title: 'Update Only', body: 'Hanya update anggota yang sudah terdaftar.' },
+                ] as const
+              ).map((opt) => (
+                <label
+                  key={opt.value}
+                  className={cn(
+                    'cursor-pointer rounded-panel border p-3.5 transition-colors duration-120 ease-out-expo',
+                    focusRing,
+                    mode === opt.value
+                      ? 'border-pen-500 bg-pen-50/70 text-white'
+                      : 'border-rule-strong bg-paper-raised/40 text-ink-2 hover:bg-paper-raised'
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="import-mode"
+                    value={opt.value}
+                    checked={mode === opt.value}
+                    onChange={() => setMode(opt.value)}
+                    className="sr-only"
+                  />
+                  <p className="text-xs font-bold">{opt.title}</p>
+                  <p className="mt-1 text-[11px] text-ink-2">{opt.body}</p>
+                </label>
+              ))}
             </div>
-          </div>
+          </fieldset>
 
           {/* Drag and Drop Zone */}
-          <div className="border-2 border-dashed border-slate-700 hover:border-sky-500 rounded-3xl p-8 text-center bg-slate-900/40 transition-colors relative">
-            <input
-              type="file"
-              accept=".csv,.json"
-              onChange={handleFileChange}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            />
-            <div className="flex flex-col items-center justify-center pointer-events-none">
-              <div className="w-14 h-14 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center mb-3 shadow-lg shadow-sky-500/10">
-                <FileSpreadsheet className="w-7 h-7" />
-              </div>
-              <p className="text-sm font-bold text-slate-200">
-                Klik atau Tarik File CSV / JSON ke Sini
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                Format kolom: <code className="text-sky-400">external_id, name, email, phone, group_name, division, status, metadata</code>
-              </p>
-            </div>
-          </div>
+          <Field
+            id={FILE_INPUT_ID}
+            label="Berkas CSV / JSON"
+            control="file"
+            accept=".csv,.json"
+            value=""
+            onChange={handleFileChange}
+            hint="Format kolom: external_id, name, email, phone, group_name, division, status, metadata"
+          />
 
           <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-            >
+            <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
               Batal
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -273,138 +253,147 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
       {step === 'preview' && previewReport && (
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
-            <div className="glass-panel p-3.5 rounded-2xl border border-slate-800">
-              <span className="text-[10px] text-slate-400 uppercase font-semibold">Total Baris</span>
-              <p className="text-lg font-bold text-white">{previewReport.total}</p>
+            <div className="surface rounded-panel p-3.5">
+              <span className="text-[10px] font-semibold uppercase text-ink-2">Total Baris</span>
+              <p className="font-oxanium text-lg font-bold text-white">{previewReport.total}</p>
             </div>
-            <div className="glass-panel p-3.5 rounded-2xl border border-emerald-900/40 bg-emerald-950/20">
-              <span className="text-[10px] text-emerald-400 uppercase font-semibold">Valid</span>
-              <p className="text-lg font-bold text-emerald-400">{previewReport.validCount}</p>
+            <div className="rounded-panel border border-seal-200 bg-seal-50/70 p-3.5">
+              <span className="text-[10px] font-semibold uppercase text-seal-600">Valid</span>
+              <p className="font-oxanium text-lg font-bold text-seal-800">{previewReport.validCount}</p>
             </div>
-            <div className="glass-panel p-3.5 rounded-2xl border border-rose-900/40 bg-rose-950/20">
-              <span className="text-[10px] text-rose-400 uppercase font-semibold">Bermasalah</span>
-              <p className="text-lg font-bold text-rose-400">{previewReport.invalidCount}</p>
+            <div className="rounded-panel border border-pen-200 bg-pen-50/70 p-3.5">
+              <span className="text-[10px] font-semibold uppercase text-pen">Bermasalah</span>
+              <p className="font-oxanium text-lg font-bold text-pen-deep">
+                {previewReport.invalidCount}
+              </p>
             </div>
           </div>
 
           {/* Table of Rows */}
-          <div className="glass-panel rounded-2xl border border-slate-800 max-h-72 overflow-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-900/90 sticky top-0 uppercase font-bold text-slate-400 border-b border-slate-800">
+          <div className="surface max-h-72 overflow-auto rounded-panel">
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-3.5 py-2.5">Baris</th>
-                  <th className="px-3.5 py-2.5">Status</th>
-                  <th className="px-3.5 py-2.5">Kode</th>
-                  <th className="px-3.5 py-2.5">Nama</th>
-                  <th className="px-3.5 py-2.5">Divisi</th>
-                  <th className="px-3.5 py-2.5">Catatan / Error</th>
+                  <TCell header>Baris</TCell>
+                  <TCell header>Status</TCell>
+                  <TCell header>Kode</TCell>
+                  <TCell header>Nama</TCell>
+                  <TCell header>Divisi</TCell>
+                  <TCell header>Catatan / Error</TCell>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
+              </THead>
+              <TBody className="font-oxanium">
                 {previewReport.results.map((res) => (
-                  <tr
+                  <TRow
                     key={res.row}
-                    className={res.valid ? 'hover:bg-slate-900/40' : 'bg-rose-950/20 text-rose-300'}
+                    className={cn(
+                      res.valid ? 'hover:bg-paper-raised/50' : 'bg-pen-50/70 text-pen-deep'
+                    )}
                   >
-                    <td className="px-3.5 py-2">{res.row}</td>
-                    <td className="px-3.5 py-2">
+                    <TCell>{res.row}</TCell>
+                    <TCell>
                       {res.valid ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-400 text-[11px] font-sans font-semibold">
+                        <span className="inline-flex items-center gap-1 font-sans text-[11px] font-semibold text-seal-600">
                           <CheckCircle className="w-3.5 h-3.5" /> Valid
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-rose-400 text-[11px] font-sans font-semibold">
-                          <AlertTriangle className="w-3.5 h-3.5" /> Error
+                        <span className="inline-flex items-center gap-1 font-sans text-[11px] font-semibold text-pen">
+                          <Warning className="w-3.5 h-3.5" /> Error
                         </span>
                       )}
-                    </td>
-                    <td className="px-3.5 py-2 font-semibold">
+                    </TCell>
+                    <TCell truncate className="font-semibold">
                       {(res.data?.external_id as string) || '-'}
-                    </td>
-                    <td className="px-3.5 py-2 font-sans font-medium">
+                    </TCell>
+                    <TCell truncate className="font-sans font-medium">
                       {(res.data?.name as string) || '-'}
-                    </td>
-                    <td className="px-3.5 py-2 font-sans">
+                    </TCell>
+                    <TCell className="font-sans">
                       {res.data?.division ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-sky-950/80 text-sky-300 border border-sky-800/40 text-[11px]">
-                          <Building2 className="w-3 h-3 text-sky-400 shrink-0" />
+                        <span className="inline-flex items-center gap-1 rounded-chip border border-rule-strong bg-paper-raised px-2 py-0.5 text-[11px] text-ink">
+                          <Buildings className="w-3 h-3 shrink-0 text-ink-2" />
                           <span>{res.data.division as string}</span>
                         </span>
                       ) : (
-                        <span className="text-slate-500">-</span>
+                        <span className="text-ink-2">-</span>
                       )}
-                    </td>
-                    <td className="px-3.5 py-2 text-[11px] font-sans">
+                    </TCell>
+                    <TCell truncate className="font-sans text-[11px]">
                       {res.valid ? (
-                        <span className="text-slate-400">Siap diimpor</span>
+                        <span className="text-ink-2">Siap diimpor</span>
                       ) : (
-                        <span className="text-rose-400 font-semibold">
+                        <span className="font-semibold text-pen">
                           {res.errors?.map((e) => `${e.field}: ${e.message}`).join(', ')}
                         </span>
                       )}
-                    </td>
-                  </tr>
+                    </TCell>
+                  </TRow>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-            <button
+          <div className="flex items-center justify-between border-t border-rule pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setStep('upload')}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
             >
               Kembali Pilih File
-            </button>
-            <button
-              onClick={handleCommit}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
               disabled={loading || previewReport.validCount === 0}
-              className="flex items-center gap-2 px-6 py-2.5 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              loading={loading}
+              loadingText="Mengimpor Data..."
+              icon={<ArrowRight className="w-4 h-4" />}
+              onClick={handleCommit}
             >
-              <span>{loading ? 'Mengimpor Data...' : `Commit Import (${previewReport.validCount} Baris)`}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+              {`Commit Import (${previewReport.validCount} Baris)`}
+            </Button>
           </div>
         </div>
       )}
 
       {/* Step 3: Result Summary */}
       {step === 'result' && commitResult && (
-        <div className="space-y-6 text-center py-6">
-          <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 flex items-center justify-center mx-auto animate-pop-once">
+        <div className="space-y-6 py-6 text-center">
+          <div className="pop-once mx-auto flex h-16 w-16 items-center justify-center rounded-panel border border-seal-200 bg-seal-50/70 text-seal-800">
             <CheckCircle className="w-8 h-8" />
           </div>
           <div>
-            <h4 className="text-xl font-bold font-heading text-white">Proses Import Selesai</h4>
-            <p className="text-xs text-slate-400 mt-1">Ringkasan hasil import data anggota ke database D1</p>
+            <h3 className="font-heading text-xl font-bold text-white">Proses Import Selesai</h3>
+            <p className="mt-1 text-xs text-ink-2">
+              Ringkasan hasil import data anggota ke database D1
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto">
-            <div className="glass-panel p-3.5 rounded-2xl border border-slate-800">
-              <span className="text-[10px] text-slate-400 uppercase font-semibold">Dibuat</span>
-              <p className="text-lg font-bold text-emerald-400">+{commitResult.created}</p>
+          <div className="mx-auto grid max-w-lg grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="surface rounded-panel p-3.5">
+              <span className="text-[10px] font-semibold uppercase text-ink-2">Dibuat</span>
+              <p className="font-oxanium text-lg font-bold text-seal-600">+{commitResult.created}</p>
             </div>
-            <div className="glass-panel p-3.5 rounded-2xl border border-slate-800">
-              <span className="text-[10px] text-slate-400 uppercase font-semibold">Diperbarui</span>
-              <p className="text-lg font-bold text-sky-400">{commitResult.updated}</p>
+            <div className="surface rounded-panel p-3.5">
+              <span className="text-[10px] font-semibold uppercase text-ink-2">Diperbarui</span>
+              <p className="font-oxanium text-lg font-bold text-ink-2">{commitResult.updated}</p>
             </div>
-            <div className="glass-panel p-3.5 rounded-2xl border border-slate-800">
-              <span className="text-[10px] text-slate-400 uppercase font-semibold">Dilewati</span>
-              <p className="text-lg font-bold text-slate-400">{commitResult.skipped}</p>
+            <div className="surface rounded-panel p-3.5">
+              <span className="text-[10px] font-semibold uppercase text-ink-2">Dilewati</span>
+              <p className="font-oxanium text-lg font-bold text-ink-2">{commitResult.skipped}</p>
             </div>
-            <div className="glass-panel p-3.5 rounded-2xl border border-slate-800">
-              <span className="text-[10px] text-slate-400 uppercase font-semibold">Gagal</span>
-              <p className="text-lg font-bold text-rose-400">{commitResult.failed}</p>
+            <div className="surface rounded-panel p-3.5">
+              <span className="text-[10px] font-semibold uppercase text-ink-2">Gagal</span>
+              <p className="font-oxanium text-lg font-bold text-pen">{commitResult.failed}</p>
             </div>
           </div>
 
           <div className="pt-4">
-            <button
-              onClick={onSuccess}
-              className="px-6 py-3 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-            >
+            <Button type="button" variant="primary" size="md" onClick={onSuccess}>
               Lihat Daftar Anggota
-            </button>
+            </Button>
           </div>
         </div>
       )}

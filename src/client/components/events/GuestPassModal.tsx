@@ -1,8 +1,18 @@
+import { cn } from '../../lib/cn';
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, UserPlus, Sparkles, Users, ListOrdered, History, Search, Calendar, RefreshCw } from 'lucide-react';
+import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
+import { CalendarBlank } from '@phosphor-icons/react/CalendarBlank';
+import { ClockCounterClockwise } from '@phosphor-icons/react/ClockCounterClockwise';
+import { ListNumbers } from '@phosphor-icons/react/ListNumbers';
+import { MagnifyingGlass } from '@phosphor-icons/react/MagnifyingGlass';
+import { Sparkle } from '@phosphor-icons/react/Sparkle';
+import { UserPlus } from '@phosphor-icons/react/UserPlus';
+import { Users } from '@phosphor-icons/react/Users';
+import { X } from '@phosphor-icons/react/X';
 import { Event } from '@/shared/types';
 import { fetchApi } from '../../lib/api-client';
 import { ModalPortal } from '../ui/ModalPortal';
+import { Button } from '../ui/Button';
 
 interface GuestPassModalProps {
   isOpen: boolean;
@@ -252,32 +262,32 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="w-full max-w-lg rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[88vh] flex flex-col my-auto">
+        <div className="surface my-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-bezel p-4 shadow-ambient sm:max-h-[88vh] sm:p-6">
           {/* Header */}
-          <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
-                <UserPlus className="w-5 h-5" />
+          <div className="flex shrink-0 items-center justify-between border-b border-rule pb-3 sm:pb-4">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-chip bg-pen-50/70 text-ink-2">
+                <UserPlus size={20} />
               </div>
               <div className="min-w-0">
-                <h3 className="font-heading font-bold text-base sm:text-lg text-white truncate">
+                <h3 className="truncate font-heading text-base font-bold text-white sm:text-lg">
                   {mode === 'import_events' ? 'Impor Tamu dari Kegiatan Lalu' : 'Buat Peserta Tamu / Sementara'}
                 </h3>
-                <p className="text-[11px] sm:text-xs text-slate-400 truncate">Khusus untuk event: {event.name}</p>
+                <p className="truncate text-[11px] text-ink-2 sm:text-xs">Khusus untuk event: {event.name}</p>
               </div>
             </div>
             <button
               type="button"
               onClick={onClose}
               aria-label="Tutup dialog"
-              className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 shrink-0 transition-colors"
+              className="touch-target shrink-0 rounded-chip bg-paper-raised p-1.5 text-ink-2 transition-colors duration-120 hover:text-white sm:p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             >
-              <X className="w-4 h-4 sm:w-5 sm:h-5" />
+              <X size={18} />
             </button>
           </div>
 
           {error && (
-            <div className="mt-3 p-3 rounded-xl bg-rose-950/50 border border-rose-800/50 text-xs text-rose-300 shrink-0">
+            <div role="alert" className="mt-3 shrink-0 rounded-panel border border-pen-200 bg-pen-50/70 p-3 text-xs text-pen-deep">
               {error}
             </div>
           )}
@@ -287,39 +297,39 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
             <button
               type="button"
               onClick={() => setMode('names')}
-              className={`py-2 px-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
+              className={`py-2 px-2 rounded-chip text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
                 mode === 'names'
-                  ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                  : 'glass-panel text-slate-400 hover:text-slate-200'
+                  ? 'bg-pen-500 text-paper shadow-ambient'
+                  : 'border border-rule-strong bg-paper-raised text-ink-2 hover:text-ink'
               }`}
             >
-              <Users className="w-4 h-4 shrink-0" />
+              <Users size={16} className="shrink-0" />
               <span className="truncate">Daftar Nama</span>
             </button>
 
             <button
               type="button"
               onClick={() => setMode('batch')}
-              className={`py-2 px-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
+              className={`py-2 px-2 rounded-chip text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
                 mode === 'batch'
-                  ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                  : 'glass-panel text-slate-400 hover:text-slate-200'
+                  ? 'bg-pen-500 text-paper shadow-ambient'
+                  : 'border border-rule-strong bg-paper-raised text-ink-2 hover:text-ink'
               }`}
             >
-              <ListOrdered className="w-4 h-4 shrink-0" />
+              <ListNumbers size={16} className="shrink-0" />
               <span className="truncate">Nomor Tiket</span>
             </button>
 
             <button
               type="button"
               onClick={() => setMode('import_events')}
-              className={`py-2 px-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
+              className={`py-2 px-2 rounded-chip text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
                 mode === 'import_events'
-                  ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                  : 'glass-panel text-slate-400 hover:text-slate-200'
+                  ? 'bg-pen-500 text-paper shadow-ambient'
+                  : 'border border-rule-strong bg-paper-raised text-ink-2 hover:text-ink'
               }`}
             >
-              <History className="w-4 h-4 shrink-0" />
+              <ClockCounterClockwise size={16} className="shrink-0" />
               <span className="truncate">Kegiatan Lalu</span>
             </button>
           </div>
@@ -329,7 +339,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
             {mode === 'names' ? (
               <>
                 <div>
-                  <label htmlFor="components-events-guestpassmodal-field-1" className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label htmlFor="components-events-guestpassmodal-field-1" className="block text-xs font-semibold text-ink mb-1">
                     Ketik Daftar Nama (1 Baris = 1 Peserta):
                   </label>
                   <textarea id="components-events-guestpassmodal-field-1"
@@ -338,15 +348,15 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                     value={nameListText}
                     onChange={(e) => setNameListText(e.target.value)}
                     placeholder="Contoh:&#10;Dr. Hendra Wijaya, VIP&#10;Siti Aminah, Konsumsi&#10;Ahmad Fauzan"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono leading-relaxed"
+                    className="w-full px-3.5 py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs leading-relaxed text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
                   />
-                  <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1">
-                    Format: <code className="text-sky-400">Nama, Divisi (opsional)</code>
+                  <p className="text-[10px] sm:text-[11px] text-ink-2 mt-1">
+                    Format: <code className="font-oxanium text-ink-2">Nama, Divisi (opsional)</code>
                   </p>
                 </div>
 
                 <div>
-                  <label htmlFor="components-events-guestpassmodal-field-2" className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label htmlFor="components-events-guestpassmodal-field-2" className="block text-xs font-semibold text-ink mb-1">
                     Divisi / Kategori Default:
                   </label>
                   <input id="components-events-guestpassmodal-field-2"
@@ -354,7 +364,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                     value={defaultDivision}
                     onChange={(e) => setDefaultDivision(e.target.value)}
                     placeholder="misal: Tamu / Undangan"
-                    className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
+                    className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-white transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
                   />
                 </div>
               </>
@@ -362,7 +372,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
               <>
                 <div className="space-y-3">
                   <div>
-                    <label htmlFor="components-events-guestpassmodal-field-3" className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label htmlFor="components-events-guestpassmodal-field-3" className="block text-xs font-semibold text-ink mb-1">
                       Prefix / Nama Label Tiket:
                     </label>
                     <input id="components-events-guestpassmodal-field-3"
@@ -371,19 +381,19 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                       value={batchPrefix}
                       onChange={(e) => setBatchPrefix(e.target.value)}
                       placeholder="misal: Tamu VIP"
-                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
+                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-white transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label className="block text-xs font-semibold text-ink mb-1">
                       Jumlah Tiket Tamu:
                     </label>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
                         onClick={() => setBatchCount(Math.max(1, batchCount - 5))}
-                        className="px-3 py-1.5 sm:py-2 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-slate-700 active:scale-95 text-xs"
+                        className="px-3 py-1.5 sm:py-2 rounded-chip bg-rule-strong text-ink font-bold hover:bg-ink-3 active:scale-95 text-xs"
                       >
                         -5
                       </button>
@@ -393,12 +403,12 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                         max="100"
                         value={batchCount}
                         onChange={(e) => setBatchCount(parseInt(e.target.value, 10) || 1)}
-                        className="w-24 text-center px-3 py-1.5 sm:py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                        className="w-24 rounded-chip border border-rule-strong bg-paper-raised text-center font-oxanium text-sm font-bold tabular-nums text-ink-2 transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper px-3 py-1.5 sm:py-2"
                       />
                       <button
                         type="button"
                         onClick={() => setBatchCount(Math.min(100, batchCount + 5))}
-                        className="px-3 py-1.5 sm:py-2 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-slate-700 active:scale-95 text-xs"
+                        className="px-3 py-1.5 sm:py-2 rounded-chip bg-rule-strong text-ink font-bold hover:bg-ink-3 active:scale-95 text-xs"
                       >
                         +5
                       </button>
@@ -406,7 +416,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                   </div>
 
                   <div>
-                    <label htmlFor="components-events-guestpassmodal-field-4" className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label htmlFor="components-events-guestpassmodal-field-4" className="block text-xs font-semibold text-ink mb-1">
                       Divisi / Kategori Default:
                     </label>
                     <input id="components-events-guestpassmodal-field-4"
@@ -414,7 +424,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                       value={defaultDivision}
                       onChange={(e) => setDefaultDivision(e.target.value)}
                       placeholder="misal: Tamu / Undangan"
-                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
+                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-white transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
                     />
                   </div>
                 </div>
@@ -425,26 +435,26 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                 {/* Source Events Selection (Strictly 2 Previous Events) */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-slate-300">
+                    <label className="block text-xs font-semibold text-ink">
                       Pilih Kegiatan Sumber (Maksimal 2 Sebelumnya):
                     </label>
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="text-[10px] text-ink-2 font-mono">
                       {sources.length} kegiatan ditemukan
                     </span>
                   </div>
 
                   {loadingSources ? (
-                    <div className="py-6 text-center text-xs text-slate-500 flex flex-col items-center gap-2">
-                      <RefreshCw className="w-4 h-4 animate-spin text-sky-400" />
+                    <div className="py-6 text-center text-xs text-ink-2 flex flex-col items-center gap-2">
+                      <ArrowClockwise size={16} className="animate-spin text-ink-2" />
                       <span>Memeriksa kegiatan sebelumnya...</span>
                     </div>
                   ) : sources.length === 0 ? (
-                    <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-center py-5">
-                      <Calendar className="w-7 h-7 text-slate-600 mx-auto mb-2" />
-                      <p className="text-xs font-semibold text-slate-300">
+                    <div className="rounded-panel border border-rule bg-paper-raised p-5 text-center">
+                      <CalendarBlank className="w-7 h-7 text-ink-3 mx-auto mb-2" />
+                      <p className="text-xs font-semibold text-ink">
                         Tidak ada kegiatan sebelumnya yang memiliki data tiket tamu
                       </p>
-                      <p className="text-[11px] text-slate-500 mt-1 max-w-xs mx-auto">
+                      <p className="text-[11px] text-ink-2 mt-1 max-w-xs mx-auto">
                         Gunakan tab "Daftar Nama" atau "Nomor Tiket" untuk membuat tiket tamu baru untuk kegiatan ini.
                       </p>
                     </div>
@@ -465,30 +475,30 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                             key={src.id}
                             type="button"
                             onClick={() => setSelectedSourceId(src.id)}
-                            className={`p-3 rounded-2xl text-left transition-colors border flex flex-col justify-between gap-1.5 ${
+                            className={cn(`flex flex-col justify-between gap-1.5 rounded-panel border p-3 text-left transition-colors ${
                               isSelected
-                                ? 'bg-sky-950/40 border-sky-500/80 ring-1 ring-sky-500/30'
-                                : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 text-slate-300'
-                            }`}
+                                ? 'border-pen-300 bg-pen-50/70 ring-1 ring-pen-500/30'
+                                : 'border-rule-strong bg-paper-raised text-ink hover:border-rule-strong'
+                            }`)}
                           >
                             <div className="flex items-start justify-between gap-1.5">
                               <span
                                 className={`font-semibold text-xs leading-snug line-clamp-1 ${
-                                  isSelected ? 'text-white' : 'text-slate-300'
+                                  isSelected ? 'text-white' : 'text-ink'
                                 }`}
                               >
                                 {src.name}
                               </span>
                               <span
                                 className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
-                                  isSelected ? 'bg-sky-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                                  isSelected ? 'bg-pen-500 text-paper' : 'bg-paper-raised text-ink-2'
                                 }`}
                               >
                                 {src.guest_count} Tamu
                               </span>
                             </div>
-                            <span className="text-[10px] text-slate-500 flex items-center gap-1 font-mono">
-                              <Calendar className="w-3 h-3 text-slate-500" />
+                            <span className="flex items-center gap-1 font-oxanium text-[10px] text-ink-2">
+                              <CalendarBlank size={12} className="text-ink-2" />
                               <span>{dateStr}</span>
                             </span>
                           </button>
@@ -503,42 +513,42 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                   <div className="space-y-2 pt-1">
                     <div className="flex items-center justify-between gap-2">
                       <div className="relative flex-1">
-                        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <MagnifyingGlass className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ink-2" />
                         <input
                           type="text"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="Cari nama / ID / divisi tamu..."
-                          className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700/80 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 placeholder:text-slate-500"
+                          className="w-full rounded-chip border border-rule-strong bg-paper-raised py-1.5 pl-8 pr-3 text-xs text-white transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper placeholder:text-ink-2"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={handleToggleSelectAll}
                         disabled={unimportedFiltered.length === 0}
-                        className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold whitespace-nowrap disabled:opacity-40 transition-colors"
+                        className="px-2.5 py-1.5 rounded-chip bg-rule-strong hover:bg-ink-3 text-ink text-[11px] font-semibold whitespace-nowrap disabled:opacity-40 transition-colors"
                       >
                         {isAllSelected ? 'Batal Semua' : 'Pilih Semua'}
                       </button>
                     </div>
 
                     {/* QR Reusability Notice */}
-                    <div className="px-3 py-2 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-[11px] text-emerald-300 flex items-center justify-between">
+                    <div className="px-3 py-2 rounded-chip bg-seal-50/70 border border-seal-200 text-[11px] text-seal-800 flex items-center justify-between">
                       <span className="leading-tight">QR tamu tetap sama & langsung aktif untuk kegiatan ini.</span>
-                      <span className="font-bold text-emerald-400 font-mono text-xs shrink-0 ml-2">
+                      <span className="font-bold text-seal-600 font-mono text-xs shrink-0 ml-2">
                         {selectedMemberIds.size} dipilih
                       </span>
                     </div>
 
                     {/* Scrollable List of Candidates */}
-                    <div className="max-h-52 overflow-y-auto overscroll-contain divide-y divide-slate-800/60 rounded-2xl border border-slate-800 bg-slate-900/40 p-1">
+                    <div className="max-h-52 overflow-y-auto overscroll-contain divide-y divide-rule-strong/60 rounded-panel border border-rule-strong bg-paper-sunk/40 p-1">
                       {loadingCandidates ? (
-                        <div className="py-8 text-center text-xs text-slate-500 flex flex-col items-center gap-2">
-                          <RefreshCw className="w-4 h-4 animate-spin text-sky-400" />
+                        <div className="py-8 text-center text-xs text-ink-2 flex flex-col items-center gap-2">
+                          <ArrowClockwise size={16} className="animate-spin text-ink-2" />
                           <span>Memuat daftar tamu dari kegiatan sumber...</span>
                         </div>
                       ) : filteredCandidates.length === 0 ? (
-                        <div className="py-8 text-center text-xs text-slate-500">
+                        <div className="py-8 text-center text-xs text-ink-2">
                           {searchQuery
                             ? 'Tidak ada peserta tamu yang cocok dengan pencarian.'
                             : 'Tidak ada data peserta tamu di kegiatan ini.'}
@@ -550,15 +560,15 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                             <label
                               key={cand.member_id}
                               htmlFor={`guest-cand-${cand.member_id}`}
-                              className={`flex items-center justify-between p-2.5 sm:p-3 min-h-[44px] rounded-xl transition-colors ${
+                              className={`flex items-center justify-between p-2.5 sm:p-3 min-h-[44px] rounded-chip transition-colors ${
                                 cand.already_imported
-                                  ? 'opacity-40 cursor-not-allowed bg-slate-900/20'
+                                  ? 'opacity-40 cursor-not-allowed bg-paper-sunk/20'
                                   : isSelected
-                                  ? 'bg-sky-950/30 cursor-pointer hover:bg-sky-950/40'
-                                  : 'hover:bg-slate-800/40 cursor-pointer'
+                                  ? 'cursor-pointer bg-pen-50/70 hover:bg-pen-50/70'
+                                  : 'hover:bg-rule/40 cursor-pointer'
                               }`}
                             >
-                              <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="flex min-w-0 items-center gap-2.5">
                                 <input
                                   id={`guest-cand-${cand.member_id}`}
                                   type="checkbox"
@@ -570,7 +580,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                                     }
                                   }}
                                   aria-label={`Pilih peserta tamu ${cand.name}`}
-                                  className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500 shrink-0"
+                                  className="h-4 w-4 shrink-0 cursor-pointer rounded border-rule-strong bg-paper-raised accent-pen-500"
                                 />
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
@@ -578,23 +588,23 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                                       {cand.name}
                                     </span>
                                     {cand.division && (
-                                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-medium truncate">
+                                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-rule-strong text-ink font-medium truncate">
                                         {cand.division}
                                       </span>
                                     )}
                                   </div>
-                                  <span className="text-[10px] text-slate-500 font-mono">
+                                  <span className="text-[10px] text-ink-2 font-mono">
                                     {cand.external_id}
                                   </span>
                                 </div>
                               </div>
                               <div className="shrink-0 ml-2">
                                 {cand.already_imported ? (
-                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
+                                  <span className="rounded-chip bg-paper-raised px-2 py-0.5 text-[10px] font-semibold text-ink-2">
                                     Sudah Ada
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/50">
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-seal-50 text-seal-800 border border-seal-200">
                                     Siap Impor
                                   </span>
                                 )}
@@ -610,23 +620,19 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
             )}
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-2.5 sm:gap-3 pt-3 sm:pt-4 border-t border-slate-800 shrink-0">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 sm:py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
-              >
+            <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
+              <Button variant="ghost" size="sm" onClick={onClose}>
                 Batal
-              </button>
+              </Button>
               <button
                 type="submit"
                 disabled={
                   loading ||
                   (mode === 'import_events' && (selectedMemberIds.size === 0 || sources.length === 0))
                 }
-                className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform disabled:opacity-50 disabled:pointer-events-none"
+                className="flex items-center gap-2 rounded-chip bg-pen-500 px-4 py-2 text-xs font-bold text-paper shadow-ambient transition-transform duration-120 ease-spring active:scale-95 hover:bg-pen-400 disabled:pointer-events-none disabled:opacity-50 sm:px-5 sm:py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
               >
-                <Sparkles className="w-4 h-4 shrink-0" />
+                <Sparkle size={16} className="shrink-0" />
                 <span>
                   {loading
                     ? mode === 'import_events'

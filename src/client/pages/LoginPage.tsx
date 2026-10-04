@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { LogIn, ShieldCheck, AlertCircle, Eye, EyeOff, KeyRound, Mail, QrCode, Sparkles, Smartphone, Download } from 'lucide-react';
+import { DeviceMobile } from '@phosphor-icons/react/DeviceMobile';
+import { DownloadSimple } from '@phosphor-icons/react/DownloadSimple';
+import { ShieldCheck } from '@phosphor-icons/react/ShieldCheck';
+import { SignIn } from '@phosphor-icons/react/SignIn';
+import { Sparkle } from '@phosphor-icons/react/Sparkle';
+import { WarningCircle } from '@phosphor-icons/react/WarningCircle';
 import { useAuth } from '../hooks/useAuth';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import { feedback } from '../lib/audio-haptic';
 import { CameraViewfinder } from '../components/scanner/CameraViewfinder';
 import { IosInstallGuideModal } from '../components/pwa/IosInstallGuideModal';
+import { Field } from '../components/ui/Field';
+import { Tabs } from '../components/ui/Tabs';
 
 interface LoginPageProps {
   onLoginSuccess?: () => void;
@@ -19,7 +26,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [loginMode, setLoginMode] = useState<'password' | 'qr'>('password');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [qrStatus, setQrStatus] = useState<string | null>(null);
@@ -78,143 +84,105 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden text-slate-100">
 
-      <div className="w-full max-w-md rounded-3xl glass-panel-elevated border border-slate-800 p-6 sm:p-8 shadow-2xl relative z-10 space-y-6 transition-colors duration-300 ease-out">
+  return (
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-ink p-4 text-ink">
+      <div className="bezel bezel-core w-full max-w-md space-y-6 p-6 shadow-ambient sm:p-8">
         {/* Brand Header */}
-        <div className="text-center space-y-1.5">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-b from-white via-slate-50 to-slate-100 p-2 flex items-center justify-center mx-auto shadow-lg shadow-sky-500/10 border border-white/40 ring-1 ring-white/20">
-            <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
+        <div className="space-y-1.5 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-panel border border-rule-strong bg-paper-raised p-2">
+            <img src="/logo.webp" alt="AMS Logo" className="h-full w-full object-contain" />
           </div>
-          <h2 className="text-2xl font-bold font-heading text-white pt-1">AMS</h2>
-          <p className="text-xs font-semibold text-sky-400">
+          <h1 className="pt-1 font-heading text-2xl font-bold text-paper-raised">AMS</h1>
+          <p className="text-xs font-semibold text-ink-2">
             Attendance Management System • Computer Community
           </p>
         </div>
 
         {/* Mode Switcher Tabs */}
-        <div className="flex p-1.5 bg-slate-900/90 rounded-2xl border border-slate-800 relative">
-          <button
-            type="button"
-            onClick={() => {
-              setLoginMode('password');
-              setError(null);
-            }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-colors transition-transform duration-300 ${
-              loginMode === 'password'
-                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/25 scale-[1.02]'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <KeyRound className="w-4 h-4" />
-            <span>Email & Password</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setLoginMode('qr');
-              setError(null);
-            }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-colors transition-transform duration-300 ${
-              loginMode === 'qr'
-                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/25 scale-[1.02]'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <QrCode className="w-4 h-4" />
-            <span>Scan QR Pass</span>
-          </button>
-        </div>
+        <Tabs
+          items={[
+            { id: 'password', label: 'Email & Password' },
+            { id: 'qr', label: 'Scan QR Pass' },
+          ]}
+          active={loginMode}
+          onChange={(id) => {
+            setLoginMode(id === 'qr' ? 'qr' : 'password');
+            setError(null);
+          }}
+          ariaLabel="Metode masuk"
+        />
 
         {error && (
-          <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-800/60 flex items-start gap-2.5 text-xs text-rose-300">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div
+            role="alert"
+            className="flex items-start gap-2.5 rounded-panel border border-pen-200 bg-pen-50/70 px-3.5 py-3 text-xs text-pen-deep"
+          >
+            <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-pen" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Mode 1: Email & Password Form */}
         {loginMode === 'password' && (
-          <div className=" space-y-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="pages-loginpage-field-1" className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 mb-1.5">
-                  <Mail className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Email / Username:</span>
-                </label>
-                <input id="pages-loginpage-field-1"
-                  type="text"
-                  required
-                  autoComplete="username email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Masukkan email / username"
-                  className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
-                />
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Field
+              id="pages-loginpage-field-1"
+              label="Email / Username:"
+              control="text"
+              required
+              autoComplete="username email"
+              value={email}
+              onChange={setEmail}
+              placeholder="Masukkan email / username"
+            />
 
-              <div>
-                <label htmlFor="pages-loginpage-field-2" className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 mb-1.5">
-                  <KeyRound className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Password:</span>
-                </label>
-                <div className="relative">
-                  <input id="pages-loginpage-field-2"
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Masukkan password"
-                    className="w-full px-4 py-3 pr-12 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
-                    aria-label={showPassword ? 'Sembunyikan password' : 'Lihat password'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
+            <Field
+              id="pages-loginpage-field-2"
+              label="Password:"
+              control="password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={setPassword}
+              placeholder="Masukkan password"
+            />
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 px-4 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm rounded-xl shadow-lg shadow-sky-500/25 active:scale-[0.98] transition-colors transition-transform flex items-center justify-center gap-2 mt-4"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>{loading ? 'Memverifikasi...' : 'Masuk ke Sistem'}</span>
-              </button>
-            </form>
-          </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-chip bg-pen-500 px-4 py-3.5 text-sm font-bold text-paper transition-colors duration-120 hover:bg-pen-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:opacity-60"
+            >
+              <SignIn className="h-4 w-4" />
+              <span>{loading ? 'Memverifikasi...' : 'Masuk ke Sistem'}</span>
+            </button>
+          </form>
         )}
 
         {/* Mode 2: QR Scanner Mode */}
         {loginMode === 'qr' && (
-          <div className=" space-y-3">
-            <div className="text-center space-y-1">
-              <p className="text-xs text-slate-300">
+          <div className="space-y-3">
+            <div className="space-y-1 text-center">
+              <p className="text-xs text-ink">
                 Arahkan kamera ke <strong>QR Universal Anggota</strong> Anda untuk login instan.
               </p>
               {qrStatus && (
-                <div className="p-2 rounded-xl bg-sky-950/80 border border-sky-800 text-xs text-sky-300 flex items-center justify-center gap-1.5 animate-pulse">
-                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="flex items-center justify-center gap-1.5 rounded-chip border border-pen-200 bg-pen-50/70 px-2 py-2 text-xs text-ink-2"
+                >
+                  <Sparkle className="h-3.5 w-3.5 text-ink-2" />
                   <span>{qrStatus}</span>
                 </div>
               )}
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-slate-800 shadow-xl bg-slate-950">
-              <CameraViewfinder
-                active={loginMode === 'qr' && !loading}
-                onScan={handleQrScan}
-              />
+            <div className="overflow-hidden rounded-panel border border-rule bg-ink">
+              <CameraViewfinder active={loginMode === 'qr' && !loading} onScan={handleQrScan} />
             </div>
 
-            <p className="text-[11px] text-slate-500 text-center italic">
+            <p className="text-center text-[11px] italic text-ink-2">
               * Login menggunakan QR hanya melakukan autentikasi masuk dan tidak mencatat absensi kegiatan.
             </p>
           </div>
@@ -222,22 +190,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
         {/* Quick PWA Install Button on Login Screen */}
         {!isInstalled && isInstallable && (
-          <div className="pt-3 border-t border-slate-800/80">
+          <div className="border-t border-rule pt-3">
             <button
               type="button"
               onClick={handlePwaInstall}
               disabled={installing}
-              className="w-full py-2.5 px-3 rounded-2xl glass-panel text-slate-300 hover:text-white hover:bg-slate-900/80 border border-sky-500/20 text-xs font-semibold flex items-center justify-center gap-2 transition-colors transition-transform active:scale-98 shadow-sm"
+              className="flex w-full items-center justify-center gap-2 rounded-chip border border-pen-200 bg-paper-raised px-3 py-2.5 text-xs font-semibold text-ink transition-colors duration-120 hover:text-paper-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             >
-              <Smartphone className="w-4 h-4 text-sky-400" />
+              <DeviceMobile className="h-4 w-4 text-ink-2" />
               <span>{installing ? 'Memproses...' : 'Pasang Aplikasi AMS di Perangkat'}</span>
-              <Download className="w-3.5 h-3.5 text-sky-400" />
+              <DownloadSimple className="h-3.5 w-3.5 text-ink-2" />
             </button>
           </div>
         )}
 
-        <div className="pt-3 border-t border-slate-800 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-sky-400" />
+        <div className="flex items-center justify-center gap-1.5 border-t border-rule pt-3 text-center text-xs text-ink-2">
+          <ShieldCheck className="h-4 w-4 text-ink-2" />
           <span>Computer Community • Database-Secured Authentication</span>
         </div>
       </div>

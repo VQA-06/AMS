@@ -1,23 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Users,
-  Search,
-  Building2,
-  Plus,
-  Upload,
-  Download,
-  Filter,
-  RefreshCw,
-  Printer,
-  QrCode,
-  X,
-  Trash2,
-  UserX,
-} from 'lucide-react';
-import { Member, QrToken } from '@/shared/types';
+import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
+import { Buildings } from '@phosphor-icons/react/Buildings';
+import { DownloadSimple } from '@phosphor-icons/react/DownloadSimple';
+import { FunnelSimple } from '@phosphor-icons/react/FunnelSimple';
+import { MagnifyingGlass } from '@phosphor-icons/react/MagnifyingGlass';
+import { Plus } from '@phosphor-icons/react/Plus';
+import { Printer } from '@phosphor-icons/react/Printer';
+import { Trash } from '@phosphor-icons/react/Trash';
+import { UploadSimple } from '@phosphor-icons/react/UploadSimple';
+import { UserMinus } from '@phosphor-icons/react/UserMinus';
+import { Warning } from '@phosphor-icons/react/Warning';
+import { X } from '@phosphor-icons/react/X';
+import { Member } from '@/shared/types';
 import { MemberInput } from '@/shared/schemas/member.schema';
 import { fetchApi } from '../lib/api-client';
 import { fetchCached, invalidateCache } from '../lib/swr-client';
+import { cn } from '../lib/cn';
 import { useAuth } from '../hooks/useAuth';
 import { canManageMembers, canExportData, canGenerateQR } from '../lib/permissions';
 import { MemberList } from '../components/members/MemberList';
@@ -29,9 +27,13 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { AlertModal } from '../components/ui/AlertModal';
 import { ModalPortal } from '../components/ui/ModalPortal';
 import { Button } from '../components/ui/Button';
-
+import { Field } from '../components/ui/Field';
+import { PageHeader } from '../components/ui/PageHeader';
 import { BulkActionBar, BulkActionItem } from '@/client/components/ui/BulkActionBar';
-import { UserCheck } from 'lucide-react';
+
+/** One focus quartet. Never `focus:outline-none` alone. */
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
 interface MembersPageProps {
   onGenerateQrForMember: (member: Member) => void;
@@ -58,7 +60,8 @@ export const MembersPage: React.FC<MembersPageProps> = ({
   const [page, setPage] = useState<number>(1);
   const [limit] = useState<number>(20);
 
-  // Multi-Select state
+  // Which sections failed to load. A failed fetch is never rendered as a zero.
+  const [failedSections, setFailedSections] = useState<string[]>([]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState<boolean>(false);
 
@@ -125,40 +128,47 @@ export const MembersPage: React.FC<MembersPageProps> = ({
   const [bulkLoading, setBulkLoading] = useState<boolean>(false);
 
   const loadMembers = useCallback(async (opts?: { forceRefresh?: boolean }) => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (debouncedSearch) params.set('search', debouncedSearch);
-      if (selectedDivision) params.set('division', selectedDivision);
-      if (selectedStatus && selectedStatus !== 'all') params.set('status', selectedStatus);
-      params.set('limit', '100');
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (selectedDivision) params.set('division', selectedDivision);
+    if (selectedStatus && selectedStatus !== 'all') params.set('status', selectedStatus);
+    params.set('limit', '100');
 
-      const url = `/api/members?${params.toString()}`;
+    const url = `/api/members?${params.toString()}`;
+    try {
       const res = await fetchCached<{ members: Member[]; total: number }>(url, {
         forceRefresh: opts?.forceRefresh,
         ttlMs: 30_000,
       });
       setMembers(res.members || []);
       setTotal(res.total || 0);
+      setFailedSections([]);
     } catch (err) {
+      // Never render a failed fetch as a plausible zero: keep the last good
+      // rows and name the failure in the banner instead.
       console.error('Failed to load members:', err);
+      setFailedSections(['anggota']);
     } finally {
       setLoading(false);
     }
   }, [debouncedSearch, selectedDivision, selectedStatus]);
 
   const loadOptions = async (opts?: { forceRefresh?: boolean }) => {
-    try {
-      const [divRes, grpRes] = await Promise.all([
-        fetchCached<{ divisions: string[] }>('/api/members/divisions', { forceRefresh: opts?.forceRefresh }),
-        fetchCached<{ groups: string[] }>('/api/members/groups', { forceRefresh: opts?.forceRefresh }),
-      ]);
-      setDivisions(divRes.divisions || []);
-      setGroups(grpRes.groups || []);
-    } catch {
-      // ignore
-    }
+    const [divRes, grpRes] = await Promise.allSettled([
+      fetchCached<{ divisions: string[] }>('/api/members/divisions', { forceRefresh: opts?.forceRefresh }),
+      fetchCached<{ groups: string[] }>('/api/members/groups', { forceRefresh: opts?.forceRefresh }),
+    ]);
+    setDivisions(divRes.status === 'fulfilled' ? divRes.value.divisions || [] : []);
+    setGroups(grpRes.status === 'fulfilled' ? grpRes.value.groups || [] : []);
+    setFailedSections((prev) => {
+      const rest = prev.filter((s) => s !== 'divisi' && s !== 'grup');
+      if (divRes.status === 'rejected') rest.push('divisi');
+      if (grpRes.status === 'rejected') rest.push('grup');
+      return rest;
+    });
   };
+
 
   useEffect(() => {
     loadMembers();
@@ -490,13 +500,13 @@ export const MembersPage: React.FC<MembersPageProps> = ({
       ? [
           {
             label: 'Nonaktifkan',
-            icon: <UserX className="w-3.5 h-3.5" />,
+            icon: <UserMinus className="w-3.5 h-3.5" />,
             variant: 'warning' as const,
             onClick: handleBulkDeactivateSelected,
           },
           {
             label: 'Hapus',
-            icon: <Trash2 className="w-3.5 h-3.5" />,
+            icon: <Trash className="w-3.5 h-3.5" />,
             variant: 'danger' as const,
             onClick: handleBulkDeleteSelected,
           },
@@ -515,136 +525,148 @@ export const MembersPage: React.FC<MembersPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      {/* Top Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold font-heading text-white flex items-center gap-2.5">
-            <Users className="w-6 h-6 text-sky-400" />
-            <span>Manajemen Anggota</span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Kelola data anggota master, cetak seluruh kartu pass QR ke A4 / PDF, impor CSV
-          </p>
-        </div>
+    <div className="space-y-5 pb-24 md:space-y-8">
+      <PageHeader
+        title="Manajemen Anggota"
+        subtitle="Kelola data anggota master, cetak seluruh kartu pass QR ke A4 / PDF, impor CSV"
+        actions={
+          <>
+            {!isManager && (
+              <span className="rounded-chip border border-rule-strong bg-paper px-3 py-1.5 text-xs font-semibold text-ink-2">
+                Mode Read-Only
+              </span>
+            )}
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {!isManager && (
-            <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-700 text-slate-400">
-              Mode Read-Only
-            </span>
-          )}
-
-          {canGenerate && (
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Printer className="w-4 h-4 text-sky-400" />}
-              onClick={handleOpenBulkPrint}
-              loading={bulkLoading}
-              title="Cetak A4 / Simpan PDF QR Universal Seluruh Anggota Aktif"
-            >
-              Cetak Semua Badge / PDF
-            </Button>
-          )}
-
-          {isManager && (
-            <>
-              <Button
-                variant="primary"
-                size="sm"
-                icon={<Plus className="w-4 h-4" />}
-                onClick={() => {
-                  setEditingMember(null);
-                  setIsFormOpen(true);
-                }}
-              >
-                Tambah Anggota
-              </Button>
-
+            {canGenerate && (
               <Button
                 variant="secondary"
                 size="sm"
-                icon={<Upload className="w-4 h-4 text-sky-400" />}
-                onClick={() => setIsImportOpen(true)}
+                icon={<Printer className="w-4 h-4 text-ink-2" />}
+                onClick={handleOpenBulkPrint}
+                loading={bulkLoading}
+                title="Cetak A4 / Simpan PDF QR Universal Seluruh Anggota Aktif"
               >
-                Impor CSV / Excel
+                Cetak Semua Badge / PDF
               </Button>
-            </>
-          )}
+            )}
 
-          {canExport && (
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Download className="w-4 h-4 text-emerald-400" />}
-              onClick={handleExportCsv}
-              title="Ekspor CSV Anggota"
-            >
-              Ekspor CSV
-            </Button>
-          )}
+            {isManager && (
+              <>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={<Plus className="w-4 h-4" />}
+                  onClick={() => {
+                    setEditingMember(null);
+                    setIsFormOpen(true);
+                  }}
+                >
+                  Tambah Anggota
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<UploadSimple className="w-4 h-4 text-ink-2" />}
+                  onClick={() => setIsImportOpen(true)}
+                >
+                  Impor CSV / Excel
+                </Button>
+              </>
+            )}
+
+            {canExport && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<DownloadSimple className="w-4 h-4 text-seal-600" />}
+                onClick={handleExportCsv}
+                title="Ekspor CSV Anggota"
+              >
+                Ekspor CSV
+              </Button>
+            )}
+          </>
+        }
+      />
+
+      {/* Honest partial-failure notice: a failed fetch is never a zero. */}
+      {failedSections.length > 0 && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-start gap-2 rounded-panel border border-pending-200 bg-pending-50/70 px-3 py-2.5 text-xs text-pending-800"
+        >
+          <Warning className="mt-0.5 w-3.5 h-3.5 shrink-0" />
+          <p>
+            Sebagian data gagal dimuat: {failedSections.join(', ')}. Angka di bawah mungkin tidak
+            lengkap, bukan nol.
+          </p>
         </div>
-      </div>
+      )}
 
       {/* Filter & Search Bar */}
-      <div className="glass-panel p-2.5 sm:p-3 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 border border-slate-800">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            aria-label="Cari anggota"
-            placeholder="Cari berdasarkan nama, NIM/ID, email, atau no HP..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-950/80 border border-slate-800/80 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none focus:border-sky-500/50 transition-colors"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              aria-label="Hapus teks pencarian"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded-full"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
+      <div className="flex flex-col items-stretch gap-2.5 rounded-panel border border-rule bg-paper-raised p-2.5 md:flex-row md:items-center md:justify-between sm:p-3">
+        <Field
+          id="members-page-field-1"
+          label="Cari Anggota"
+          control="text"
+          value={search}
+          onChange={setSearch}
+          placeholder="Cari berdasarkan nama, NIM/ID, email, atau no HP..."
+          className="flex-1"
+          controlClassName="py-2 pl-9 pr-8 text-xs"
+          leadingIcon={<MagnifyingGlass className="h-4 w-4" />}
+          trailing={
+            search ? (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="Hapus teks pencarian"
+                className="rounded-full p-0.5 text-ink-2 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-500 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null
+          }
+        />
 
-        <div className="flex items-center gap-2 w-full md:w-auto flex-wrap sm:flex-nowrap">
+        <div className="flex w-full flex-wrap items-center gap-2 md:w-auto sm:flex-nowrap">
           {/* Division Filter */}
-          <div className="relative min-w-[140px] flex-1 sm:flex-initial">
-            <Building2 className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <select
-              value={selectedDivision}
-              onChange={(e) => setSelectedDivision(e.target.value)}
-              aria-label="Filter berdasarkan Divisi"
-              className="w-full pl-8 pr-7 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs font-medium text-slate-200 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none appearance-none cursor-pointer"
-            >
-              <option value="" className="bg-slate-900">Semua Divisi</option>
-              {divisions.map((div) => (
-                <option key={div} value={div} className="bg-slate-900">
-                  {div}
-                </option>
-              ))}
-            </select>
-            <Filter className="w-3 h-3 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
+          <Field
+            id="members-page-field-2"
+            label="Filter Divisi"
+            control="select"
+            value={selectedDivision}
+            onChange={setSelectedDivision}
+            className="min-w-[140px] flex-1 sm:flex-initial"
+            controlClassName="py-2 pl-8 pr-7 text-xs font-medium"
+            leadingIcon={<Buildings className="h-3.5 w-3.5" />}
+            hideSelectArrow
+            trailing={<FunnelSimple className="h-3 w-3 text-ink-2" />}
+            options={[
+              { value: '', label: 'Semua Divisi' },
+              ...divisions.map((div) => ({ value: div, label: div })),
+            ]}
+          />
 
           {/* Status Filter */}
-          <div className="relative min-w-[140px] flex-1 sm:flex-initial">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              aria-label="Filter berdasarkan Status"
-              className="w-full px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs font-medium text-slate-200 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none appearance-none cursor-pointer"
-            >
-              <option value="all" className="bg-slate-900">Semua Status</option>
-              <option value="active" className="bg-slate-900">Aktif</option>
-              <option value="inactive" className="bg-slate-900">Nonaktif</option>
-            </select>
-            <Filter className="w-3 h-3 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
+          <Field
+            id="members-page-field-3"
+            label="Filter Status"
+            control="select"
+            value={selectedStatus}
+            onChange={setSelectedStatus}
+            className="min-w-[140px] flex-1 sm:flex-initial"
+            controlClassName="py-2 px-3 text-xs font-medium"
+            hideSelectArrow
+            trailing={<FunnelSimple className="h-3 w-3 text-ink-2" />}
+            options={[
+              { value: 'all', label: 'Semua Status' },
+              { value: 'active', label: 'Aktif' },
+              { value: 'inactive', label: 'Nonaktif' },
+            ]}
+          />
 
           {(search || selectedDivision || (selectedStatus && selectedStatus !== 'all')) && (
             <button
@@ -655,7 +677,10 @@ export const MembersPage: React.FC<MembersPageProps> = ({
                 setSelectedStatus('all');
               }}
               aria-label="Reset semua filter"
-              className="px-3 py-2 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300 hover:text-white hover:bg-rose-900/60 text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
+              className={cn(
+                'flex shrink-0 items-center gap-1.5 rounded-chip border border-pen-200 bg-pen-50/70 px-3 py-2 text-xs font-semibold text-pen-deep transition-colors hover:bg-pen-50/70 hover:text-white',
+                focusRing
+              )}
             >
               <X className="w-3.5 h-3.5" />
               <span>Reset</span>
@@ -666,14 +691,16 @@ export const MembersPage: React.FC<MembersPageProps> = ({
             type="button"
             onClick={() => loadMembers({ forceRefresh: true })}
             aria-label="Refresh daftar anggota"
-            className="min-w-[36px] min-h-[36px] px-2.5 py-2 flex items-center justify-center glass-panel text-slate-400 hover:text-white rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
+            className={cn(
+              'flex min-h-[36px] min-w-[36px] shrink-0 items-center justify-center rounded-chip border border-rule-strong bg-paper px-2.5 py-2 text-ink-2 transition-colors hover:text-white',
+              focusRing
+            )}
             title="Refresh"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <ArrowClockwise className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
           </button>
         </div>
       </div>
-
       {/* Member List */}
       <MemberList
         members={members}

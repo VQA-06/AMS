@@ -1,24 +1,23 @@
 import React from 'react';
-import {
-  Calendar,
-  MapPin,
-  Clock,
-  ShieldAlert,
-  ShieldCheck,
-  Play,
-  CheckCircle,
-  Edit2,
-  Trash2,
-  ChevronRight,
-  QrCode,
-  Plus,
-} from 'lucide-react';
+import { CalendarBlank } from '@phosphor-icons/react/CalendarBlank';
+import { CaretRight } from '@phosphor-icons/react/CaretRight';
+import { CheckCircle } from '@phosphor-icons/react/CheckCircle';
+import { Clock } from '@phosphor-icons/react/Clock';
+import { MapPin } from '@phosphor-icons/react/MapPin';
+import { PencilSimple } from '@phosphor-icons/react/PencilSimple';
+import { Play } from '@phosphor-icons/react/Play';
+import { QrCode } from '@phosphor-icons/react/QrCode';
+import { ShieldCheck } from '@phosphor-icons/react/ShieldCheck';
+import { ShieldWarning } from '@phosphor-icons/react/ShieldWarning';
+import { Trash } from '@phosphor-icons/react/Trash';
 import { Event } from '@/shared/types';
 import { SkeletonEventList } from '../ui/Skeleton';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { Card, markFillClass, type MarkTone } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
-import { eventStatusVariant } from '../../lib/event-status';
+import { Table, THead, TBody, TRow, TCell } from '../ui/Table';
+import { cn } from '../../lib/cn';
 
 interface EventListProps {
   events: Event[];
@@ -34,6 +33,37 @@ interface EventListProps {
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
 }
+
+/** The one focus quartet on every hand-rolled control in this file. */
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+
+/**
+ * Status is the reason the mark exists here: it varies per row, so the mark
+ * carries presence/absence instead of a per-row badge repeating the same word.
+ * `draft` is pending (ochre), `active` is live (jade), `closed` is terminal
+ * (danger), everything else — `archived`, anything the server adds later — is
+ * neutral `idle`.
+ */
+function eventStatusMark(status: Event['status']): MarkTone {
+  if (status === 'active') return 'seal';
+  if (status === 'draft') return 'pending';
+  if (status === 'closed') return 'danger';
+  return 'idle';
+}
+
+/** Readable Indonesian status label, used only where the text *is* the message. */
+function statusLabel(status: Event['status']): string {
+  if (status === 'active') return 'Aktif';
+  if (status === 'draft') return 'Draft';
+  if (status === 'closed') return 'Selesai / Tutup';
+  return status;
+}
+
+const checkboxClass = cn(
+  'h-4 w-4 cursor-pointer rounded border-rule-strong bg-paper accent-pen-500',
+  focusRing
+);
 
 export const EventList: React.FC<EventListProps> = ({
   events,
@@ -57,338 +87,357 @@ export const EventList: React.FC<EventListProps> = ({
   if (events.length === 0) {
     return (
       <EmptyState
-        icon={<Calendar className="w-8 h-8 text-sky-400" />}
+        icon={<CalendarBlank className="h-8 w-8 text-ink-2" />}
         title="Belum ada kegiatan yang dibuat"
         description="Buat kegiatan baru untuk mulai mengaktifkan presensi QR terenkripsi dan pass digital panitia."
       />
     );
   }
 
-  const renderStatusBadge = (status: Event['status']) => {
-    const variant = eventStatusVariant(status);
-    const label =
-      status === 'active'
-        ? 'Aktif'
-        : status === 'draft'
-        ? 'Draft'
-        : status === 'closed'
-        ? 'Selesai / Tutup'
-        : status;
-
-    return (
-      <Badge variant={variant} size="sm" pulse={status === 'active'}>
-        {label}
-      </Badge>
-    );
-  };
+  const selectCell = (event: Event, isSelected: boolean, extraClass?: string) =>
+    onToggleSelect ? (
+      <TCell className={cn('w-10 text-center', extraClass)}>
+        <input
+          type="checkbox"
+          checked={isSelected || false}
+          onChange={() => onToggleSelect(event.id)}
+          className={checkboxClass}
+          aria-label={`Pilih kegiatan ${event.name}`}
+        />
+      </TCell>
+    ) : null;
 
   if (viewMode === 'table') {
     return (
-      <div className="glass-panel border border-slate-800/80 rounded-2xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead>
-              <tr className="border-b border-slate-800/80 bg-slate-900/90 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                {onToggleSelect && (
-                  <th className="py-3 px-4 w-10 text-center">
-                    <span className="sr-only">Pilih</span>
-                  </th>
-                )}
-                <th className="py-3 px-4">Nama Kegiatan & Lokasi</th>
-                <th className="py-3 px-4">Kebijakan QR</th>
-                <th className="py-3 px-4">Waktu Mulai</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 text-xs">
-              {events.map((event) => {
-                const isSelected = selectedIds?.has(event.id);
-                return (
-                  <tr
-                    key={event.id}
-                    className={`group transition-colors ${
-                      isSelected
-                        ? 'bg-sky-950/25 hover:bg-sky-950/35'
-                        : 'hover:bg-slate-800/40'
-                    }`}
-                  >
-                    {onToggleSelect && (
-                      <td className="py-3.5 px-4 text-center">
-                        <input
-                          type="checkbox"
-                          checked={isSelected || false}
-                          onChange={() => onToggleSelect(event.id)}
-                          className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                          aria-label={`Pilih kegiatan ${event.name}`}
-                        />
-                      </td>
+      <div className="surface overflow-hidden rounded-panel shadow-ambient">
+        <Table className="min-w-[700px]">
+          <THead>
+            <tr>
+              {onToggleSelect && (
+                <TCell header className="w-10 text-center">
+                  <span className="sr-only">Pilih</span>
+                </TCell>
+              )}
+              <TCell header>Nama Kegiatan &amp; Lokasi</TCell>
+              <TCell header>Kebijakan QR</TCell>
+              <TCell header>Waktu Mulai</TCell>
+              <TCell header className="text-center">Status</TCell>
+              <TCell header className="text-right">Aksi</TCell>
+            </tr>
+          </THead>
+          <TBody>
+            {events.map((event) => {
+              const isSelected = selectedIds?.has(event.id) ?? false;
+              return (
+                <TRow key={event.id} selected={isSelected} className="group" mark={eventStatusMark(event.status)}>
+                  {selectCell(event, isSelected)}
+
+                  {/* The mark is on the row itself; this cell just carries the
+                      identity that the mark colour is read against. */}
+                  <TCell truncate>
+
+                    <div className="truncate font-heading text-sm font-bold text-white">
+                      {event.name}
+                    </div>
+                    {event.location_name && (
+                      <div className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-2">
+                        <MapPin className="h-3 w-3 shrink-0 text-ink-2" />
+                        <span className="truncate">{event.location_name}</span>
+                      </div>
                     )}
-                    <td className="py-3.5 px-4">
-                      <div className="font-heading font-bold text-sm text-white group-hover:text-sky-400 transition-colors">
-                        {event.name}
+                    {event.description && (
+                      <div className="mt-0.5 truncate text-[11px] text-ink-2">
+                        {event.description}
                       </div>
-                      {event.location_name && (
-                        <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
-                          <span>{event.location_name}</span>
-                        </div>
-                      )}
-                      {event.description && (
-                        <div className="text-[11px] text-slate-500 truncate max-w-xs sm:max-w-md mt-0.5">
-                          {event.description}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      {event.qr_policy === 'event_only' ? (
-                        <Badge variant="sky" size="sm" icon={<ShieldAlert className="w-3.5 h-3.5" />}>
-                          QR Khusus Event
-                        </Badge>
-                      ) : (
-                        <Badge variant="emerald" size="sm" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-                          QR Universal Bebas
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap text-slate-300 font-mono text-[11px]">
-                      {event.starts_at ? (
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                          <span>{new Date(event.starts_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                        </div>
-                      ) : (
-                        <span className="text-slate-600">-</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap text-center">
-                      {renderStatusBadge(event.status)}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {event.status === 'active' && onScanEvent && (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            icon={<QrCode className="w-3.5 h-3.5" />}
-                            onClick={() => onScanEvent(event)}
-                            aria-label={`Scan QR untuk ${event.name}`}
-                          >
-                            Scan
-                          </Button>
-                        )}
+                    )}
+                  </TCell>
 
+                  <TCell className="whitespace-nowrap">
+                    {event.qr_policy === 'event_only' ? (
+                      <Badge variant="pen" size="sm" icon={<ShieldWarning className="h-3.5 w-3.5" />}>
+                        QR Khusus Event
+                      </Badge>
+                    ) : (
+                      <Badge variant="seal" size="sm" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+                        QR Universal Bebas
+                      </Badge>
+                    )}
+                  </TCell>
+
+                  <TCell className="whitespace-nowrap font-oxanium text-[11px] text-ink">
+                    {event.starts_at ? (
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 shrink-0 text-ink-2" />
+                        <span>
+                          {new Date(event.starts_at).toLocaleString('id-ID', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-ink-3">-</span>
+                    )}
+                  </TCell>
+
+                  <TCell className="text-center">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-ink">
+                      {statusLabel(event.status)}
+                    </span>
+                  </TCell>
+
+                  <TCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {event.status === 'active' && onScanEvent && (
                         <Button
-                          variant="secondary"
+                          variant="primary"
                           size="sm"
-                          onClick={() => onSelectEvent(event)}
-                          aria-label={`Detail ${event.name}`}
+                          icon={<QrCode className="h-3.5 w-3.5" />}
+                          onClick={() => onScanEvent(event)}
+                          aria-label={`Buka kamera pemindai untuk ${event.name}`}
                         >
-                          Detail
+                          Scan
                         </Button>
+                      )}
 
-                        {canManage && (
-                          <>
-                            {event.status === 'draft' && (
-                              <button
-                                type="button"
-                                onClick={() => onActivateEvent(event.id)}
-                                title="Aktifkan Event"
-                                aria-label={`Aktifkan event ${event.name}`}
-                                className="h-8 px-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg transition-colors text-xs font-semibold flex items-center gap-1"
-                              >
-                                <Play className="w-3.5 h-3.5" />
-                                <span>Aktifkan</span>
-                              </button>
-                            )}
-                            {event.status === 'active' && (
-                              <button
-                                type="button"
-                                onClick={() => onCloseEvent(event.id)}
-                                title="Tutup Event"
-                                aria-label={`Tutup event ${event.name}`}
-                                className="h-8 px-2.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg transition-colors text-xs font-semibold flex items-center gap-1"
-                              >
-                                <CheckCircle className="w-3.5 h-3.5" />
-                                <span>Tutup</span>
-                              </button>
-                            )}
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onSelectEvent(event)}
+                        aria-label={`Detail ${event.name}`}
+                      >
+                        Detail
+                      </Button>
+
+                      {canManage && (
+                        <>
+                          {event.status === 'draft' && (
                             <button
                               type="button"
-                              onClick={() => onEditEvent(event)}
-                              className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-                              title="Edit Event"
-                              aria-label={`Edit ${event.name}`}
+                              onClick={() => onActivateEvent(event.id)}
+                              title="Aktifkan Event"
+                              aria-label={`Aktifkan event ${event.name}`}
+                              className={cn(
+                                'flex h-8 items-center gap-1 rounded-chip bg-seal-50/60 px-2.5 text-xs font-semibold text-seal-800 transition-colors hover:bg-seal-50/70',
+                                focusRing
+                              )}
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <Play className="h-3.5 w-3.5" />
+                              <span>Aktifkan</span>
                             </button>
+                          )}
+                          {event.status === 'active' && (
                             <button
                               type="button"
-                              onClick={() => onDeleteEvent(event.id, event.name)}
-                              className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors"
-                              title="Hapus Event"
-                              aria-label={`Hapus ${event.name}`}
+                              onClick={() => onCloseEvent(event.id)}
+                              title="Tutup Event"
+                              aria-label={`Tutup event ${event.name}`}
+                              className={cn(
+                                'flex h-8 items-center gap-1 rounded-chip bg-pending-50/60 px-2.5 text-xs font-semibold text-pending-800 transition-colors hover:bg-pending-50/70',
+                                focusRing
+                              )}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              <span>Tutup</span>
                             </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onEditEvent(event)}
+                            className={cn(
+                              'flex h-8 w-8 items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper-raised hover:text-white',
+                              focusRing
+                            )}
+                            title="Edit Event"
+                            aria-label={`Edit ${event.name}`}
+                          >
+                            <PencilSimple className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteEvent(event.id, event.name)}
+                            className={cn(
+                              'flex h-8 w-8 items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-pen-50/70 hover:text-pen-deep',
+                              focusRing
+                            )}
+                            title="Hapus Event"
+                            aria-label={`Hapus ${event.name}`}
+                          >
+                            <Trash className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </TCell>
+                </TRow>
+              );
+            })}
+          </TBody>
+        </Table>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {events.map((event) => {
-        const isSelected = selectedIds?.has(event.id);
+        const isSelected = selectedIds?.has(event.id) ?? false;
         return (
-          <div
+          <Card
             key={event.id}
-            className={`glass-panel-interactive rounded-3xl p-5 border shadow-lg flex flex-col justify-between group ${
-              isSelected
-                ? 'border-sky-500/80 bg-sky-950/20 shadow-sky-500/10'
-                : 'border-slate-800/80 hover:border-slate-700'
-            }`}
+            mark={eventStatusMark(event.status)}
+            className={cn(
+              'group flex flex-col p-5 transition-colors',
+              isSelected ? 'shadow-lift ring-1 ring-pen-400/40' : undefined
+            )}
           >
-            <div className="space-y-3">
+            <div className="flex flex-1 flex-col">
               <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2.5">
+                <div className="flex min-w-0 items-start gap-2.5">
                   {onToggleSelect && (
                     <input
                       type="checkbox"
-                      checked={isSelected || false}
+                      checked={isSelected}
                       onChange={() => onToggleSelect(event.id)}
-                      className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500 shrink-0"
+                      className={cn(checkboxClass, 'mt-1 shrink-0')}
                       aria-label={`Pilih kegiatan ${event.name}`}
                     />
                   )}
-                  <div>
-                    <h4 className="font-heading font-bold text-base text-white group-hover:text-sky-400 transition-colors">
+                  <div className="min-w-0">
+                    <h3 className="truncate font-heading text-base font-bold text-white">
                       {event.name}
-                    </h4>
+                    </h3>
                     {event.location_name && (
-                      <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-                        <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                        <span>{event.location_name}</span>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-ink-2">
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-ink-2" />
+                        <span className="truncate">{event.location_name}</span>
                       </p>
                     )}
                   </div>
                 </div>
-                <div className="shrink-0">{renderStatusBadge(event.status)}</div>
+                {/* No status badge: the mark already encodes it, and the status
+                    word would only repeat it. */}
               </div>
 
-              {/* QR Policy Badge */}
-              <div className="flex items-center gap-2">
+              <div className="mt-3 flex items-center gap-2">
                 {event.qr_policy === 'event_only' ? (
-                  <Badge variant="sky" size="sm" icon={<ShieldAlert className="w-3.5 h-3.5" />}>
+                  <Badge variant="pen" size="sm" icon={<ShieldWarning className="h-3.5 w-3.5" />}>
                     QR Khusus Event
                   </Badge>
                 ) : (
-                  <Badge variant="emerald" size="sm" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
+                  <Badge variant="seal" size="sm" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
                     QR Universal Bebas
                   </Badge>
                 )}
               </div>
 
-              {/* Timestamps */}
               {(event.starts_at || event.ends_at) && (
-                <div className="text-[11px] text-slate-400 space-y-0.5 pt-2 border-t border-slate-800/60 font-mono">
+                <div className="mt-3 space-y-0.5 border-t border-rule pt-2 font-oxanium text-[11px] text-ink-2">
                   {event.starts_at && (
                     <p className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span>Mulai: {new Date(event.starts_at).toLocaleString('id-ID')}</span>
+                      <Clock className="h-3.5 w-3.5 shrink-0 text-ink-2" />
+                      <span>
+                        Mulai:{' '}
+                        {new Date(event.starts_at).toLocaleString('id-ID', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </span>
                     </p>
                   )}
                 </div>
               )}
-            </div>
 
-            {/* Action Row */}
-            <div className="flex items-center justify-between pt-4 mt-3 border-t border-slate-800/60 gap-2 flex-wrap">
-              <div className="flex items-center gap-1">
-                {canManage ? (
-                  <>
-                    {event.status === 'draft' && (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-rule pt-3">
+                <div className="flex items-center gap-1">
+                  {canManage ? (
+                    <>
+                      {event.status === 'draft' && (
+                        <button
+                          type="button"
+                          onClick={() => onActivateEvent(event.id)}
+                          title="Aktifkan Event"
+                          aria-label={`Aktifkan event ${event.name}`}
+                          className={cn(
+                            'flex min-h-[40px] items-center gap-1.5 rounded-chip bg-seal-50/60 px-3 text-xs font-semibold text-seal-800 transition-colors hover:bg-seal-50/70',
+                            focusRing
+                          )}
+                        >
+                          <Play className="h-3.5 w-3.5" />
+                          <span>Aktifkan</span>
+                        </button>
+                      )}
+                      {event.status === 'active' && (
+                        <button
+                          type="button"
+                          onClick={() => onCloseEvent(event.id)}
+                          title="Tutup Event"
+                          aria-label={`Tutup event ${event.name}`}
+                          className={cn(
+                            'flex min-h-[40px] items-center gap-1.5 rounded-chip bg-pending-50/60 px-3 text-xs font-semibold text-pending-800 transition-colors hover:bg-pending-50/70',
+                            focusRing
+                          )}
+                        >
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          <span>Tutup</span>
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => onActivateEvent(event.id)}
-                        title="Aktifkan Event"
-                        aria-label={`Aktifkan event ${event.name}`}
-                        className="min-h-[40px] px-3 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-xl transition-colors text-xs font-semibold flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                        onClick={() => onEditEvent(event)}
+                        className={cn(
+                          'flex h-10 w-10 items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper-raised hover:text-white',
+                          focusRing
+                        )}
+                        title="Edit Event"
+                        aria-label={`Edit ${event.name}`}
                       >
-                        <Play className="w-3.5 h-3.5" />
-                        <span>Aktifkan</span>
+                        <PencilSimple className="h-4 w-4" />
                       </button>
-                    )}
-                    {event.status === 'active' && (
                       <button
                         type="button"
-                        onClick={() => onCloseEvent(event.id)}
-                        title="Tutup Event"
-                        aria-label={`Tutup event ${event.name}`}
-                        className="min-h-[40px] px-3 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-xl transition-colors text-xs font-semibold flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                        onClick={() => onDeleteEvent(event.id, event.name)}
+                        className={cn(
+                          'flex h-10 w-10 items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-pen-50/70 hover:text-pen-deep',
+                          focusRing
+                        )}
+                        title="Hapus Event"
+                        aria-label={`Hapus ${event.name}`}
                       >
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        <span>Tutup</span>
+                        <Trash className="h-4 w-4" />
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => onEditEvent(event)}
-                      className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                      title="Edit Event"
-                      aria-label={`Edit ${event.name}`}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDeleteEvent(event.id, event.name)}
-                      className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
-                      title="Hapus Event"
-                      aria-label={`Hapus ${event.name}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-[11px] text-slate-400 italic">Mode Read-Only</span>
-                )}
-              </div>
+                    </>
+                  ) : (
+                    <span className="text-[11px] italic text-ink-2">Mode Read-Only</span>
+                  )}
+                </div>
 
-              <div className="flex items-center gap-2">
-                {event.status === 'active' && onScanEvent && (
+                <div className="flex items-center gap-2">
+                  {event.status === 'active' && onScanEvent && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={<QrCode className="h-3.5 w-3.5" />}
+                      onClick={() => onScanEvent(event)}
+                      aria-label={`Buka kamera pemindai untuk ${event.name}`}
+                    >
+                      Scan QR
+                    </Button>
+                  )}
+
                   <Button
-                    variant="primary"
+                    variant="secondary"
                     size="sm"
-                    icon={<QrCode className="w-3.5 h-3.5" />}
-                    onClick={() => onScanEvent(event)}
-                    aria-label={`Buka kamera pemindai untuk ${event.name}`}
+                    onClick={() => onSelectEvent(event)}
+                    aria-label={`Buka detail kegiatan ${event.name}`}
                   >
-                    Scan QR
+                    <span>Detail</span>
+                    <CaretRight className="h-3.5 w-3.5" />
                   </Button>
-                )}
-
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => onSelectEvent(event)}
-                  aria-label={`Buka detail kegiatan ${event.name}`}
-                >
-                  <span>Detail</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </Button>
+                </div>
               </div>
             </div>
-          </div>
+          </Card>
         );
       })}
     </div>

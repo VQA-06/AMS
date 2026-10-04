@@ -1,8 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, Save, RefreshCw } from 'lucide-react';
+import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
+import { FloppyDisk } from '@phosphor-icons/react/FloppyDisk';
+import { UserPlus } from '@phosphor-icons/react/UserPlus';
+import { X } from '@phosphor-icons/react/X';
 import { Member } from '@/shared/types';
 import { MemberInput } from '@/shared/schemas/member.schema';
+import { cn } from '../../lib/cn';
 import { ModalPortal } from '../ui/ModalPortal';
+import { Button } from '../ui/Button';
+import { Field } from '../ui/Field';
+
+/** One focus quartet. Never `focus:outline-none` alone. */
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Aktif' },
+  { value: 'inactive', label: 'Nonaktif' },
+];
 
 interface MemberFormModalProps {
   isOpen: boolean;
@@ -104,183 +119,164 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="w-full max-w-lg rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[85vh] flex flex-col my-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
-              <UserPlus className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="font-heading font-bold text-base sm:text-lg text-white truncate">
-                {member ? 'Edit Data Anggota' : 'Tambah Anggota Baru'}
-              </h3>
-              <p className="text-[11px] sm:text-xs text-slate-400 truncate">ID dibuat otomatis, divisi & grup opsional</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup dialog"
-            className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 shrink-0 transition-colors"
-          >
-            <X className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-        </div>
-
-        {error && (
-          <div className="mt-3 p-3 rounded-xl bg-rose-950/50 border border-rose-800/50 text-xs text-rose-300 shrink-0">
-            {error}
-          </div>
-        )}
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto overscroll-contain touch-auto pr-1 py-3 space-y-3.5 sm:space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-300">
-                  ID / Kode Anggota <span className="text-rose-400">*</span>
-                </label>
-                {!member && (
-                  <button
-                    type="button"
-                    onClick={handleRefreshId}
-                    className="text-[11px] text-sky-400 hover:text-sky-300 flex items-center gap-1 font-semibold"
-                    title="Generate ID baru"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>Auto ID</span>
-                  </button>
-                )}
+        <div className="bezel-core my-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden p-4 shadow-ambient sm:max-h-[85vh] sm:p-6">
+          {/* Header */}
+          <div className="flex shrink-0 items-center justify-between border-b border-rule pb-3 sm:pb-4">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-chip bg-pen-50/70 text-ink-2">
+                <UserPlus className="w-5 h-5" />
               </div>
-              <input
-                type="text"
-                required
-                value={formData.external_id || ''}
-                onChange={(e) => setFormData({ ...formData, external_id: e.target.value })}
-                placeholder="misal: MBR-102938"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="components-members-memberformmodal-field-1" className="block text-xs font-semibold text-slate-300 mb-1">
-                Nama Lengkap <span className="text-rose-400">*</span>
-              </label>
-              <input id="components-members-memberformmodal-field-1"
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="misal: Budi Santoso"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label htmlFor="components-members-memberformmodal-field-2" className="block text-xs font-semibold text-slate-300 mb-1">
-                Divisi <span className="text-slate-500 font-normal">(Opsional)</span>
-              </label>
-              <div className="relative">
-                <input id="components-members-memberformmodal-field-2"
-                  type="text"
-                  list="division-options"
-                  value={formData.division || ''}
-                  onChange={(e) => setFormData({ ...formData, division: e.target.value })}
-                  placeholder="misal: Acara, Logistik, Humas"
-                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-                />
-                <datalist id="division-options">
-                  {divisionList.map((div, i) => (
-                    <option key={i} value={div} />
-                  ))}
-                </datalist>
+              <div className="min-w-0">
+                <h2 className="truncate font-heading text-base font-bold text-white sm:text-lg">
+                  {member ? 'Edit Data Anggota' : 'Tambah Anggota Baru'}
+                </h2>
+                <p className="truncate text-[11px] text-ink-2 sm:text-xs">
+                  ID dibuat otomatis, divisi & grup opsional
+                </p>
               </div>
             </div>
-
-            <div>
-              <label htmlFor="components-members-memberformmodal-field-3" className="block text-xs font-semibold text-slate-300 mb-1">
-                Grup / Kategori <span className="text-slate-500 font-normal">(Opsional)</span>
-              </label>
-              <input id="components-members-memberformmodal-field-3"
-                type="text"
-                list="group-options"
-                value={formData.group_name || ''}
-                onChange={(e) => setFormData({ ...formData, group_name: e.target.value })}
-                placeholder="misal: Panitia Inti, Peserta"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-              />
-              <datalist id="group-options">
-                {groupList.map((grp, i) => (
-                  <option key={i} value={grp} />
-                ))}
-              </datalist>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label htmlFor="components-members-memberformmodal-field-4" className="block text-xs font-semibold text-slate-300 mb-1">Email</label>
-              <input id="components-members-memberformmodal-field-4"
-                type="email"
-                autoComplete="email"
-                value={formData.email || ''}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="email@example.com"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="components-members-memberformmodal-field-5" className="block text-xs font-semibold text-slate-300 mb-1">No. Telepon / WA</label>
-              <input id="components-members-memberformmodal-field-5"
-                type="tel"
-                value={formData.phone || ''}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="08123456789"
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label htmlFor="components-members-memberformmodal-field-6" className="block text-xs font-semibold text-slate-300 mb-1">Status</label>
-              <select id="components-members-memberformmodal-field-6"
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-              >
-                <option value="active">Aktif</option>
-                <option value="inactive">Nonaktif</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2.5 sm:gap-3 pt-3 sm:pt-4 border-t border-slate-800 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 sm:py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              aria-label="Tutup dialog"
+              className={cn(
+                'shrink-0 rounded-full bg-paper-raised p-1.5 text-ink-2 transition-colors hover:bg-paper hover:text-white sm:p-2',
+                focusRing
+              )}
             >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 shrink-0" />
-              <span>{loading ? 'Menyimpan...' : 'Simpan Data'}</span>
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
-        </form>
+
+          {error && (
+            <div
+              role="alert"
+              className="mt-3 shrink-0 rounded-panel border border-pen-200 bg-pen-50/70 p-3 text-xs text-pen-deep"
+            >
+              {error}
+            </div>
+          )}
+
+          {/* Form Body */}
+          <form
+            onSubmit={handleSubmit}
+            className="flex-1 space-y-4 overflow-y-auto overscroll-contain py-4 pr-1 touch-auto"
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field
+                id="member-form-modal-field-1"
+                label="ID / Kode Anggota"
+                control="text"
+                required
+                value={formData.external_id || ''}
+                onChange={(v) => setFormData({ ...formData, external_id: v })}
+                placeholder="misal: MBR-102938"
+                controlClassName="pr-16 font-oxanium"
+                trailing={
+                  !member ? (
+                    <button
+                      type="button"
+                      onClick={handleRefreshId}
+                      aria-label="Generate ID baru"
+                      className={cn(
+                        'flex items-center gap-1 rounded-chip px-1.5 py-1 text-[11px] font-semibold text-ink-2 transition-colors hover:text-ink',
+                        focusRing
+                      )}
+                      title="Generate ID baru"
+                    >
+                      <ArrowClockwise className="w-3 h-3" />
+                      <span>Auto ID</span>
+                    </button>
+                  ) : undefined
+                }
+              />
+
+              <Field
+                id="member-form-modal-field-2"
+                label="Nama Lengkap"
+                control="text"
+                required
+                value={formData.name}
+                onChange={(v) => setFormData({ ...formData, name: v })}
+                placeholder="misal: Budi Santoso"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field
+                id="member-form-modal-field-3"
+                label="Divisi (Opsional)"
+                control="text"
+                value={formData.division || ''}
+                onChange={(v) => setFormData({ ...formData, division: v })}
+                placeholder="misal: Acara, Logistik, Humas"
+                suggestions={divisionList}
+              />
+
+              <Field
+                id="member-form-modal-field-4"
+                label="Grup (Opsional)"
+                control="text"
+                value={formData.group_name || ''}
+                onChange={(v) => setFormData({ ...formData, group_name: v })}
+                placeholder="misal: Panitia Inti, Peserta"
+                suggestions={groupList}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field
+                id="member-form-modal-field-5"
+                label="Email"
+                control="email"
+                autoComplete="email"
+                value={formData.email || ''}
+                onChange={(v) => setFormData({ ...formData, email: v })}
+                placeholder="email@example.com"
+              />
+
+              <Field
+                id="member-form-modal-field-6"
+                label="No. Telepon / WA"
+                control="tel"
+                value={formData.phone || ''}
+                onChange={(v) => setFormData({ ...formData, phone: v })}
+                placeholder="08123456789"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field
+                id="member-form-modal-field-7"
+                label="Status"
+                control="select"
+                value={formData.status}
+                onChange={(v) =>
+                  setFormData({ ...formData, status: v as 'active' | 'inactive' })
+                }
+                options={STATUS_OPTIONS}
+                controlClassName="cursor-pointer"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-rule pt-4 sm:gap-3">
+              <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={loading}
+                icon={<FloppyDisk className="w-4 h-4" />}
+              >
+                {loading ? 'Menyimpan...' : 'Simpan Data'}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
-  </ModalPortal>
+    </ModalPortal>
   );
 };

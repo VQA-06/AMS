@@ -1,19 +1,17 @@
 import React from 'react';
-import {
-  QrCode,
-  UserPlus,
-  Printer,
-  ShieldCheck,
-  ShieldAlert,
-  UserCheck,
-  Eye,
-  Trash2,
-  Table as TableIcon,
-  LayoutGrid,
-} from 'lucide-react';
+import { Eye } from '@phosphor-icons/react/Eye';
+import { Printer } from '@phosphor-icons/react/Printer';
+import { QrCode } from '@phosphor-icons/react/QrCode';
+import { ShieldCheck } from '@phosphor-icons/react/ShieldCheck';
+import { ShieldWarning } from '@phosphor-icons/react/ShieldWarning';
+import { SquaresFour } from '@phosphor-icons/react/SquaresFour';
+import { Table as TableIcon } from '@phosphor-icons/react/Table';
+import { Trash } from '@phosphor-icons/react/Trash';
+import { UserCheck } from '@phosphor-icons/react/UserCheck';
+import { UserPlus } from '@phosphor-icons/react/UserPlus';
 import { Event, QrToken } from '@/shared/types';
 import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
+import { Table, THead, TBody, TRow, TCell } from '../ui/Table';
 import { EmptyState } from '../ui/EmptyState';
 import { BulkActionBar, BulkActionItem } from '../ui/BulkActionBar';
 
@@ -82,13 +80,13 @@ export const GuestPassWorkspace: React.FC<GuestPassWorkspaceProps> = ({
       : []),
     {
       label: 'Cabut Terpilih',
-      icon: <ShieldAlert className="w-3.5 h-3.5" />,
+      icon: <ShieldWarning className="w-3.5 h-3.5" />,
       variant: 'warning',
       onClick: onRevokeTokenBatch,
     },
     {
       label: 'Hapus Terpilih',
-      icon: <Trash2 className="w-3.5 h-3.5" />,
+      icon: <Trash className="w-3.5 h-3.5" />,
       variant: 'danger',
       onClick: onDeleteTokenBatch,
     },
@@ -97,10 +95,10 @@ export const GuestPassWorkspace: React.FC<GuestPassWorkspaceProps> = ({
   return (
     <div className="space-y-4">
       {/* Workspace Header Actions */}
-      <div className="p-3.5 sm:p-4 rounded-2xl glass-panel border border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+      <div className="surface flex flex-wrap items-center justify-between gap-3 rounded-panel p-3.5 shadow-ambient sm:p-4">
         <div>
-          <h2 className="text-sm font-bold font-heading text-white">Kelola Tiket QR Kegiatan</h2>
-          <p className="text-[11px] text-slate-400 mt-0.5">
+          <h2 className="font-heading text-sm font-bold text-white">Kelola Tiket QR Kegiatan</h2>
+          <p className="mt-0.5 text-[11px] text-ink-2">
             Tiket khusus yang digenerate untuk event ini atau tamu undangan sementara (guest passes).
           </p>
         </div>
@@ -110,7 +108,7 @@ export const GuestPassWorkspace: React.FC<GuestPassWorkspaceProps> = ({
             <Button
               variant="outline"
               size="sm"
-              icon={<UserPlus className="w-3.5 h-3.5" />}
+              icon={<UserPlus size={14} />}
               onClick={onOpenGuestModal}
               title="Buat Tiket Tamu / Peserta Eksternal"
             >
@@ -122,7 +120,7 @@ export const GuestPassWorkspace: React.FC<GuestPassWorkspaceProps> = ({
             <Button
               variant="secondary"
               size="sm"
-              icon={<QrCode className="w-3.5 h-3.5" />}
+              icon={<QrCode size={14} />}
               onClick={onOpenQrModal}
               title="Generate Tiket Khusus untuk Anggota Resmi"
             >
@@ -144,146 +142,150 @@ export const GuestPassWorkspace: React.FC<GuestPassWorkspaceProps> = ({
       {/* Token List */}
       {qrTokens.length === 0 ? (
         <EmptyState
-          icon={<QrCode className="w-8 h-8 text-sky-400" />}
+          icon={<QrCode size={32} className="text-ink-2" />}
           title="Belum Ada Tiket QR Khusus"
           description="Belum ada tiket QR khusus atau tamu yang dibuat untuk kegiatan ini. Anggota tetap bisa scan menggunakan QR Universal jika diizinkan."
           actionText={canGenerate ? 'Buat Tiket Tamu Sekarang' : undefined}
           onAction={canGenerate ? onOpenGuestModal : undefined}
         />
       ) : (
-        <div className="glass-panel rounded-2xl border border-slate-800/80 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 uppercase text-[10px] tracking-wider">
-                <tr>
+        <Table>
+          <THead>
+            <tr>
+              {isManager && (
+                <TCell header className="w-10 px-4 py-3.5 text-center">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedTokenIds.size === qrTokens.length && qrTokens.length > 0
+                    }
+                    onChange={onSelectAllTokens}
+                    className="h-4 w-4 cursor-pointer rounded border-rule-strong bg-paper-raised accent-pen-500"
+                    aria-label="Pilih semua tiket"
+                  />
+                </TCell>
+              )}
+              <TCell header>ID Tiket / JTI</TCell>
+              <TCell header>Nama Peserta</TCell>
+              <TCell header>Divisi / Tipe</TCell>
+              <TCell header>Masa Berlaku</TCell>
+              <TCell header>Pemakaian</TCell>
+              <TCell header>Status</TCell>
+              <TCell header className="text-right">Aksi</TCell>
+            </tr>
+          </THead>
+          <TBody>
+            {qrTokens.map((tok) => {
+              const isSelected = selectedTokenIds.has(tok.id);
+              const isRevoked = Boolean(tok.revoked_at);
+              const isGuest = tok.member_external_id?.startsWith('GUEST-');
+
+              return (
+                <TRow key={tok.id} selected={isSelected}>
                   {isManager && (
-                    <th className="w-10 px-4 py-3.5 text-center">
+                    <TCell className="w-10 px-4 py-3.5 text-center">
                       <input
                         type="checkbox"
-                        checked={selectedTokenIds.size === qrTokens.length && qrTokens.length > 0}
-                        onChange={onSelectAllTokens}
-                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                        aria-label="Pilih semua tiket"
+                        checked={isSelected}
+                        onChange={() => onToggleSelectToken(tok.id)}
+                        className="h-4 w-4 cursor-pointer rounded border-rule-strong bg-paper-raised accent-pen-500"
+                        aria-label={`Pilih tiket ${tok.member_name}`}
                       />
-                    </th>
+                    </TCell>
                   )}
-                  <th className="px-5 py-3.5">ID Tiket / JTI</th>
-                  <th className="px-5 py-3.5">Nama Peserta</th>
-                  <th className="px-5 py-3.5">Divisi / Tipe</th>
-                  <th className="px-5 py-3.5">Masa Berlaku</th>
-                  <th className="px-5 py-3.5">Pemakaian</th>
-                  <th className="px-5 py-3.5">Status</th>
-                  <th className="px-5 py-3.5 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {qrTokens.map((tok) => {
-                  const isSelected = selectedTokenIds.has(tok.id);
-                  const isRevoked = Boolean(tok.revoked_at);
-                  const isGuest = tok.member_external_id?.startsWith('GUEST-');
-
-                  return (
-                    <tr
-                      key={tok.id}
-                      className={`transition-colors ${
-                        isSelected ? 'bg-sky-950/20 hover:bg-sky-950/30' : 'hover:bg-slate-900/40'
-                      }`}
-                    >
-                      {isManager && (
-                        <td className="w-10 px-4 py-3.5 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => onToggleSelectToken(tok.id)}
-                            className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                            aria-label={`Pilih tiket ${tok.member_name}`}
-                          />
-                        </td>
-                      )}
-                      <td className="px-5 py-3.5 font-mono text-[11px] text-sky-400 font-oxanium">
-                        {tok.jti || tok.id.slice(0, 12)}
-                      </td>
-                      <td className="px-5 py-3.5 font-semibold text-white">
-                        <div className="flex items-center gap-1.5">
-                          <span>{tok.member_name || 'Peserta'}</span>
-                          {isGuest && (
-                            <span className="text-[10px] text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/40 font-mono">
-                              TAMU
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-400">
-                        {tok.member_division || (isGuest ? 'Tamu Undangan' : '-')}
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-400 font-mono text-[11px]">
-                        {tok.expires_at ? new Date(tok.expires_at).toLocaleDateString('id-ID') : 'Perpetual'}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="font-mono text-slate-300">
-                          {tok.uses_count} {tok.max_uses !== null ? `/ ${tok.max_uses}` : ''} kali
+                  <TCell className="font-oxanium text-[11px] text-ink-2">
+                    {tok.jti || tok.id.slice(0, 12)}
+                  </TCell>
+                  <TCell className="font-semibold text-white" truncate>
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate">{tok.member_name || 'Peserta'}</span>
+                      {isGuest && (
+                        <span className="shrink-0 rounded border border-pending-200 bg-pending-50 px-1.5 py-0.5 font-oxanium text-[10px] text-pending-800">
+                          TAMU
                         </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        {isRevoked ? (
-                          <Badge variant="rose">DICABUT</Badge>
-                        ) : (
-                          <Badge variant="emerald">AKTIF</Badge>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {tok.qr_token && !isRevoked && (
-                            <button
-                              onClick={() => onSelectTokenForCard(tok)}
-                              className="flex items-center gap-1 px-2.5 py-1 text-xs bg-sky-950/80 hover:bg-sky-900/80 text-sky-300 border border-sky-800/60 rounded-lg transition-colors transition-transform font-semibold shadow-sm active:scale-95"
-                              title="Lihat kartu atau cetak"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              <span>Lihat</span>
-                            </button>
-                          )}
+                      )}
+                    </span>
+                  </TCell>
+                  <TCell className="text-ink-2">
+                    {tok.member_division || (isGuest ? 'Tamu Undangan' : '-')}
+                  </TCell>
+                  <TCell className="font-oxanium text-[11px] text-ink-2">
+                    {tok.expires_at
+                      ? new Date(tok.expires_at).toLocaleDateString('id-ID')
+                      : 'Perpetual'}
+                  </TCell>
+                  <TCell className="font-oxanium text-ink">
+                    {tok.uses_count} {tok.max_uses !== null ? `/ ${tok.max_uses}` : ''} kali
+                  </TCell>
+                  <TCell>
+                    {/* The rail already encodes live vs revoked, so the text label
+                        is all that is left to say here. */}
+                    {isRevoked ? (
+                      <span className="font-oxanium text-xs font-bold text-pen-deep">
+                        DICABUT
+                      </span>
+                    ) : (
+                      <span className="font-oxanium text-xs font-bold text-ink">
+                        AKTIF
+                      </span>
+                    )}
+                  </TCell>
+                  <TCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {tok.qr_token && !isRevoked && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onSelectTokenForCard(tok)}
+                          icon={<Eye size={14} />}
+                          title="Lihat kartu digital"
+                        >
+                          Lihat
+                        </Button>
+                      )}
 
-                          {isManager && isGuest && !isRevoked && (
-                            <button
-                              onClick={() => onOpenPromoteSingle(tok)}
-                              className="flex items-center gap-1 px-2 py-1 text-xs bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800/60 rounded-lg transition-colors transition-transform font-semibold shadow-sm active:scale-95"
-                              title="Jadikan Anggota Resmi Organisasi"
-                            >
-                              <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>Angkat Resmi</span>
-                            </button>
-                          )}
+                      {isManager && isGuest && !isRevoked && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onOpenPromoteSingle(tok)}
+                          icon={<UserCheck size={14} />}
+                          title="Jadikan Anggota Resmi Organisasi"
+                        >
+                          Angkat Resmi
+                        </Button>
+                      )}
 
-                          {isManager && (
-                            <>
-                              {!isRevoked && (
-                                <button
-                                  onClick={() => onRevokeToken(tok.id)}
-                                  className="px-2 py-1 text-xs text-amber-400 hover:bg-amber-950/40 rounded-lg transition-colors font-semibold"
-                                  title="Cabut masa berlaku tiket"
-                                >
-                                  Cabut
-                                </button>
-                              )}
-                              <button
-                                onClick={() => onDeleteToken(tok.id, tok.member_name)}
-                                className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition-colors"
-                                title="Hapus tiket dari event"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </>
+                      {isManager && (
+                        <>
+                          {!isRevoked && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onRevokeToken(tok.id)}
+                              title="Cabut masa berlaku tiket"
+                            >
+                              Cabut
+                            </Button>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onDeleteToken(tok.id, tok.member_name)}
+                            aria-label={`Hapus tiket ${tok.member_name || ''}`}
+                            title="Hapus tiket dari event"
+                          >
+                            <Trash size={14} className="text-pen" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TCell>
+                </TRow>
+              );
+            })}
+          </TBody>
+        </Table>
       )}
     </div>
   );

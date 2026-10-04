@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import {
-  Printer,
-  Download,
-  X,
-  Loader2,
-  CreditCard,
-} from 'lucide-react';
+import { CreditCard } from '@phosphor-icons/react/CreditCard';
+import { DownloadSimple } from '@phosphor-icons/react/DownloadSimple';
+import { Printer } from '@phosphor-icons/react/Printer';
+import { Spinner } from '@phosphor-icons/react/Spinner';
+import { X } from '@phosphor-icons/react/X';
 import { generateIdCardDataUrl, downloadIdCardImage } from '../../lib/idcard-canvas';
 import { ModalPortal } from '../ui/ModalPortal';
+import { cn } from '../../lib/cn';
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
 export interface PrintableToken {
   id: string;
@@ -117,7 +119,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
               background-repeat: no-repeat;
               page-break-inside: avoid;
               break-inside: avoid;
-              outline: 0.5px dashed rgba(100, 116, 139, 0.5);
+              outline: 0.6pt solid #000;
             }
             .qr-container {
               position: absolute;
@@ -212,113 +214,133 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
       setDownloadingAll(false);
     }
   };
-
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="w-full max-w-5xl h-[92dvh] sm:h-[90vh] rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700 shadow-2xl flex flex-col overflow-hidden my-auto">
-        {/* Top Header & Action Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-slate-900/90 gap-3 shrink-0">
-          <div>
-            <h3 className="font-heading font-bold text-base sm:text-lg text-white flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-sky-400" />
-              <span>Cetak ID Card Resmi ({tokens.length} Kartu)</span>
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Ukuran fisik standar <strong className="text-sky-400 font-mono">54 mm × 85 mm</strong> (Sudut persegi/kotak tanpa potongan elipsis).
-            </p>
+        <div className="surface my-auto flex h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-bezel shadow-ambient sm:h-[90vh]">
+          {/* Top header & action controls */}
+          <div className="flex shrink-0 flex-col gap-3 border-b border-rule bg-paper-raised p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="min-w-0">
+              <h3 className="flex items-center gap-2 font-heading text-base font-bold text-ink sm:text-lg">
+                <CreditCard size={20} className="shrink-0 text-ink-2" />
+                <span className="truncate">Cetak ID Card Resmi ({tokens.length} Kartu)</span>
+              </h3>
+              <p className="mt-0.5 text-xs text-ink-2">
+                Ukuran fisik standar{' '}
+                <strong className="font-oxanium tabular-nums text-ink-2">54 mm × 85 mm</strong>{' '}
+                (Sudut persegi/kotak tanpa potongan elipsis).
+              </p>
+            </div>
+
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadAll}
+                disabled={tokens.length === 0 || downloadingAll}
+                title="Unduh seluruh ID Card sebagai file gambar PNG beresolusi tinggi"
+                className={cn(
+                  'flex min-h-[44px] items-center gap-1.5 rounded-chip border border-rule-strong bg-paper-raised px-3.5 text-xs font-bold text-ink transition-colors hover:bg-paper-raised/70 active:scale-95 disabled:opacity-50 sm:px-4',
+                  focusRing
+                )}
+              >
+                {downloadingAll ? (
+                  <>
+                    <Spinner size={16} weight="bold" className="animate-spin text-ink-2" />
+                    <span>Mengunduh ({downloadProgress}%)</span>
+                  </>
+                ) : (
+                  <>
+                    <DownloadSimple size={16} className="text-ink-2" />
+                    <span>Unduh Semua PNG</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePrintAll}
+                disabled={tokens.length === 0 || downloadingAll}
+                className={cn(
+                  'flex min-h-[44px] items-center gap-1.5 rounded-chip bg-pen-500 px-4 text-xs font-bold text-paper shadow-ambient transition-colors hover:bg-pen-400 active:scale-95 disabled:opacity-50 sm:px-5',
+                  focusRing
+                )}
+              >
+                <Printer size={16} weight="bold" />
+                <span>Cetak Lembar A4 (54×85 mm)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Tutup dialog"
+                className={cn(
+                  'flex min-h-[44px] min-w-[44px] items-center justify-center rounded-chip bg-paper-raised text-ink-2 transition-colors hover:text-ink',
+                  focusRing
+                )}
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleDownloadAll}
-              disabled={tokens.length === 0 || downloadingAll}
-              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-colors transition-transform border border-slate-700 active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-              title="Unduh seluruh ID Card sebagai file gambar PNG beresolusi tinggi"
+          {/* Scrollable card preview grid — preview is ink-neutral on purpose: the
+              template art carries the brand, and the frame carries geometry. */}
+          <div className="no-scrollbar flex-1 touch-auto overscroll-contain overflow-y-auto bg-ink p-4 sm:p-6">
+            <div
+              id="printable-badge-area"
+              className="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
             >
-              {downloadingAll ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-sky-400" />
-                  <span>Mengunduh ({downloadProgress}%)</span>
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 text-sky-400" />
-                  <span>Unduh Semua PNG</span>
-                </>
-              )}
-            </button>
+              {tokens.map((tok) => {
+                const nameLen = tok.member_name.length;
+                const textSizeClass =
+                  nameLen > 22 ? 'text-[13px]' : nameLen > 16 ? 'text-[15px]' : 'text-[17px]';
 
-            <button
-              onClick={handlePrintAll}
-              disabled={tokens.length === 0 || downloadingAll}
-              className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Cetak Lembar A4 (54×85 mm)</span>
-            </button>
-
-            <button
-              onClick={onClose}
-              aria-label="Tutup dialog"
-              className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable ID Cards Preview Grid */}
-        <div className="flex-1 overflow-y-auto overscroll-contain touch-auto p-4 sm:p-6 bg-slate-950">
-          <div
-            id="printable-badge-area"
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center"
-          >
-            {tokens.map((tok) => {
-              const nameLen = tok.member_name.length;
-              const textSizeClass = nameLen > 22 ? 'text-[13px]' : nameLen > 16 ? 'text-[15px]' : 'text-[17px]';
-
-              return (
-                <div
-                  key={tok.id}
-                  id={`badge-card-${tok.id}`}
-                  className="relative w-full max-w-[220px] aspect-[54/85] rounded-none overflow-hidden shadow-xl border border-slate-700 bg-slate-900 select-none group"
-                >
-                  {/* Template Background Image */}
-                  <img
-                    src="/templates/idcard-template.png"
-                    alt="Template ID Card"
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                  />
-
-                  {/* QR Code Container perfectly centered inside the 388x388 white box */}
-                  <div
-                    className="absolute top-[26.494%] left-[30.094%] w-[40.543%] h-[25.764%] p-[1.2%] flex items-center justify-center pointer-events-auto"
-                    title="QR Token"
+                return (
+                  <figure
+                    key={tok.id}
+                    id={`badge-card-${tok.id}`}
+                    className="relative aspect-[54/85] w-full max-w-[220px] select-none overflow-hidden rounded-none border border-rule-strong bg-paper shadow-ambient"
                   >
-                    <QRCodeSVG
-                      value={tok.qr_token}
-                      size={110}
-                      level="M"
-                      includeMargin={false}
-                      className="w-full h-full"
+                    {/* Template background image */}
+                    <img
+                      src="/templates/idcard-template.png"
+                      alt=""
+                      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                     />
-                  </div>
 
-                  {/* Member Name in Oxanium ExtraBold (Full Name, No Ellipsis) */}
-                  <div
-                    className={`absolute top-[60.8%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] text-center text-white font-oxanium font-extrabold ${textSizeClass} tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] leading-tight pointer-events-none break-words`}
-                    title={tok.member_name}
-                  >
-                    {tok.member_name}
-                  </div>
-                </div>
-              );
-            })}
+                    {/* QR code, centered in the template's 388×388 white box */}
+                    <div
+                      className="pointer-events-auto absolute left-[30.094%] top-[26.494%] flex h-[25.764%] w-[40.543%] items-center justify-center p-[1.2%]"
+                      title="QR Token"
+                    >
+                      <QRCodeSVG
+                        value={tok.qr_token}
+                        size={110}
+                        level="M"
+                        includeMargin={false}
+                        className="h-full w-full"
+                      />
+                    </div>
+
+                    {/* Member name — weight and size carry the hierarchy, not hue,
+                        so the sheet stays readable in black and white. */}
+                    <figcaption
+                      className={cn(
+                        'pointer-events-none absolute left-1/2 top-[60.8%] w-[92%] -translate-x-1/2 -translate-y-1/2 break-words text-center font-oxanium font-extrabold leading-tight tracking-wide text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]',
+                        textSizeClass
+                      )}
+                      title={tok.member_name}
+                    >
+                      {tok.member_name}
+                    </figcaption>
+                  </figure>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </ModalPortal>
-);
+    </ModalPortal>
+  );
+
 };

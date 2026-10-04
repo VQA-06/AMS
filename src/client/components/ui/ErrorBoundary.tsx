@@ -39,7 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }`;
 
       return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 text-slate-100">
+        <div className="min-h-screen bg-ink flex items-center justify-center p-4 text-ink">
           <ErrorPage
             code="500"
             title="Terjadi Kesalahan Sistem (Runtime Error)"

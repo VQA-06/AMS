@@ -1,7 +1,13 @@
 import React, { useEffect } from 'react';
-import { AlertCircle, CheckCircle2, Info, AlertTriangle, X } from 'lucide-react';
+import { X } from '@phosphor-icons/react/X';
+import { cn } from '../../lib/cn';
 import { ModalPortal } from './ModalPortal';
+import { Button } from './Button';
 
+/**
+ * Deliberately narrow: there is no `danger` member, so a caller cannot widen
+ * the union and render an error through a hue that means something else.
+ */
 export type AlertType = 'error' | 'success' | 'info' | 'warning';
 
 export interface AlertModalProps {
@@ -12,6 +18,16 @@ export interface AlertModalProps {
   buttonText?: string;
   onClose: () => void;
 }
+
+const PANEL: Record<AlertType, { rail: string; action: 'danger' | 'primary' | 'outline' }> = {
+  error: { rail: 'bg-pen-500', action: 'danger' },
+  warning: { rail: 'bg-pending-500', action: 'primary' },
+  success: { rail: 'bg-seal-500', action: 'primary' },
+  info: { rail: 'bg-info', action: 'outline' },
+};
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
 export const AlertModal: React.FC<AlertModalProps> = ({
   isOpen,
@@ -33,80 +49,39 @@ export const AlertModal: React.FC<AlertModalProps> = ({
 
   if (!isOpen) return null;
 
-  const getStyle = () => {
-    switch (type) {
-      case 'error':
-        return {
-          icon: <AlertCircle className="w-6 h-6 text-rose-400 shrink-0" />,
-          iconBg: 'bg-rose-950/80 border-rose-800/60 shadow-rose-950/50',
-          btnBg: 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30',
-        };
-      case 'warning':
-        return {
-          icon: <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />,
-          iconBg: 'bg-amber-950/80 border-amber-800/60 shadow-amber-950/50',
-          btnBg: 'bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold shadow-amber-600/30',
-        };
-      case 'success':
-        return {
-          icon: <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />,
-          iconBg: 'bg-emerald-950/80 border-emerald-800/60 shadow-emerald-950/50',
-          btnBg: 'bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold shadow-emerald-600/30',
-        };
-      case 'info':
-      default:
-        return {
-          icon: <Info className="w-6 h-6 text-sky-400 shrink-0" />,
-          iconBg: 'bg-sky-950/80 border-sky-800/60 shadow-sky-950/50',
-          btnBg: 'bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold shadow-sky-500/30',
-        };
-    }
-  };
-
-  const style = getStyle();
+  const panel = PANEL[type];
 
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
         <div
-          className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 text-slate-100 relative my-auto"
           role="dialog"
           aria-modal="true"
+          className="bezel relative my-auto flex w-full max-w-md flex-col gap-4 p-5 text-ink sm:gap-5 sm:p-6"
         >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-3 top-3 text-slate-400 hover:text-white min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
-          aria-label="Tutup dialog"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        <div className="flex items-start gap-4">
-          <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-lg ${style.iconBg}`}
-          >
-            {style.icon}
-          </div>
-          <div className="space-y-1 pt-1 pr-4">
-            <h3 className="font-heading font-bold text-base text-white leading-snug">
-              {title}
-            </h3>
-            <div className="text-xs text-slate-300 leading-relaxed break-words">
-              {message}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end pt-2 border-t border-slate-800/80">
+          <span aria-hidden="true" className={cn('rail absolute bottom-6 left-0 top-6', panel.rail)} />
           <button
             type="button"
             onClick={onClose}
-            className={`w-full sm:w-auto px-6 py-2.5 min-h-[40px] rounded-xl text-xs font-bold shadow-lg transition-colors transition-transform active:scale-95 flex items-center justify-center gap-2 ${style.btnBg} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus:outline-none`}
+            aria-label="Tutup dialog"
+            className={cn(
+              'absolute right-3 top-3 flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:text-white',
+              focusRing
+            )}
           >
-            <span>{buttonText}</span>
+            <X size={16} />
           </button>
-        </div>
+
+          <div className="pr-8">
+            <h3 className="font-heading text-base font-bold leading-snug text-white">{title}</h3>
+            <div className="mt-1 break-words text-xs leading-relaxed text-ink">{message}</div>
+          </div>
+
+          <div className="flex items-center justify-end border-t border-rule pt-4">
+            <Button variant={panel.action} size="md" onClick={onClose}>
+              {buttonText}
+            </Button>
+          </div>
         </div>
       </div>
     </ModalPortal>

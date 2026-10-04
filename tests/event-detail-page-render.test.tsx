@@ -1,28 +1,56 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { renderToString } from 'react-dom/server';
-import { RefreshCw, Users, QrCode } from 'lucide-react';
+import { ArrowClockwise, Users, QrCode } from '@phosphor-icons/react';
 import { Button } from '../src/client/components/ui/Button';
 import { Badge } from '../src/client/components/ui/Badge';
 import { EventHeaderSummary } from '../src/client/components/events/EventHeaderSummary';
 import { AttendanceRosterTable } from '../src/client/components/events/AttendanceRosterTable';
 import { GuestPassWorkspace } from '../src/client/components/events/GuestPassWorkspace';
 import { Event, Attendance, QrToken } from '../src/shared/types';
+import { filterPrintableTokens } from '../src/client/lib/qr-tokens';
+
+/** Fixed clock so expiry never depends on when the suite runs. */
+const NOW = new Date('2026-01-15T00:00:00.000Z').getTime();
+
+const baseToken = {
+  qr_token: 'valid-jwt',
+  jti: 'jti',
+  member_id: 'guest-1',
+  event_id: 'event-1',
+  scope: 'event' as const,
+  valid_from: '2025-06-01T00:00:00.000Z',
+  expires_at: '2030-01-01T00:00:00.000Z',
+  revoked_at: null,
+  max_uses: 1,
+  uses_count: 0,
+  note: null,
+  created_by: 'admin-1',
+  created_at: '2025-06-01T00:00:00.000Z',
+};
+
+const sampleTokens: QrToken[] = [
+  { ...baseToken, id: 'tok-1', member_name: 'Guest One', member_external_id: 'GUEST-001', member_division: 'VIP' },
+  { ...baseToken, id: 'tok-2', qr_token: 'valid-jwt-2', member_name: 'Guest Two', member_external_id: 'GUEST-002', member_division: 'Media' },
+  { ...baseToken, id: 'tok-3', revoked_at: '2025-06-01T12:00:00.000Z' },
+  { ...baseToken, id: 'tok-4', expires_at: '2025-01-01T00:00:00.000Z' },
+  { ...baseToken, id: 'tok-5', qr_token: null },
+];
 
 describe('EventDetailPage Subcomponents & Primitives Render Verification', () => {
   it('should render Button with outline variant and both element and component icons without error', () => {
     // Render with JSX element icon
     const htmlWithElement = renderToString(
-      <Button variant="outline" size="sm" icon={<RefreshCw className="w-3.5 h-3.5" />}>
+      <Button variant="outline" size="sm" icon={<ArrowClockwise size={14} />}>
         Refresh
       </Button>
     );
     expect(htmlWithElement).toContain('Refresh');
-    expect(htmlWithElement).toContain('bg-slate-900/80');
+    expect(htmlWithElement).toContain('data-variant="outline"');
 
     // Render with component constructor icon (defensive fallback)
     const htmlWithComponent = renderToString(
-      <Button variant="outline" size="sm" icon={RefreshCw as unknown as React.ReactNode}>
+      <Button variant="outline" size="sm" icon={ArrowClockwise as unknown as React.ReactNode}>
         Refresh
       </Button>
     );
@@ -31,14 +59,14 @@ describe('EventDetailPage Subcomponents & Primitives Render Verification', () =>
 
   it('should render Badge with both element and component icons without error', () => {
     const htmlWithElement = renderToString(
-      <Badge variant="emerald" icon={<Users className="w-3.5 h-3.5" />}>
+      <Badge variant="seal" icon={<Users className="w-3.5 h-3.5" />}>
         Active
       </Badge>
     );
     expect(htmlWithElement).toContain('Active');
 
     const htmlWithComponent = renderToString(
-      <Badge variant="emerald" icon={Users as unknown as React.ReactNode}>
+      <Badge variant="seal" icon={Users as unknown as React.ReactNode}>
         Active
       </Badge>
     );
@@ -113,6 +141,7 @@ describe('EventDetailPage Subcomponents & Primitives Render Verification', () =>
         onToggleSelectAttendance={() => {}}
         onSelectAllAttendances={() => {}}
         onDeleteAttendanceBatch={() => {}}
+        onOpenManualAttendance={() => {}}
         isManager={true}
       />
     );
@@ -154,6 +183,7 @@ describe('EventDetailPage Subcomponents & Primitives Render Verification', () =>
         onToggleSelectAttendance={() => {}}
         onSelectAllAttendances={() => {}}
         onDeleteAttendanceBatch={() => {}}
+        onOpenManualAttendance={() => {}}
         isManager={true}
       />
     );
@@ -247,99 +277,49 @@ describe('EventDetailPage Subcomponents & Primitives Render Verification', () =>
     expect(populatedHtml).toContain('Tamu Kehormatan');
   });
 
-  it('should correctly scope printable tokens to selectedTokenIds for multi-select print', () => {
-    const sampleTokens: QrToken[] = [
-      {
-        id: 'tok-1',
-        qr_token: 'valid-jwt-1',
-        jti: 'jti-1',
-        member_id: 'guest-1',
-        event_id: 'event-1',
-        scope: 'event',
-        valid_from: '2025-06-01T00:00:00.000Z',
-        expires_at: '2030-01-01T00:00:00.000Z',
-        revoked_at: null,
-        max_uses: 1,
-        uses_count: 0,
-        note: null,
-        created_by: 'admin-1',
-        created_at: '2025-06-01T00:00:00.000Z',
-        member_name: 'Guest One',
-        member_external_id: 'GUEST-001',
-        member_division: 'VIP',
-      },
-      {
-        id: 'tok-2',
-        qr_token: 'valid-jwt-2',
-        jti: 'jti-2',
-        member_id: 'guest-2',
-        event_id: 'event-1',
-        scope: 'event',
-        valid_from: '2025-06-01T00:00:00.000Z',
-        expires_at: '2030-01-01T00:00:00.000Z',
-        revoked_at: null,
-        max_uses: 1,
-        uses_count: 0,
-        note: null,
-        created_by: 'admin-1',
-        created_at: '2025-06-01T00:00:00.000Z',
-        member_name: 'Guest Two',
-        member_external_id: 'GUEST-002',
-        member_division: 'Media',
-      },
-      {
-        id: 'tok-3',
-        qr_token: 'valid-jwt-3',
-        jti: 'jti-3',
-        member_id: 'guest-3',
-        event_id: 'event-1',
-        scope: 'event',
-        valid_from: '2025-06-01T00:00:00.000Z',
-        expires_at: '2030-01-01T00:00:00.000Z',
-        revoked_at: '2025-06-01T12:00:00.000Z', // Revoked
-        max_uses: 1,
-        uses_count: 0,
-        note: null,
-        created_by: 'admin-1',
-        created_at: '2025-06-01T00:00:00.000Z',
-        member_name: 'Guest Three',
-        member_external_id: 'GUEST-003',
-        member_division: 'VIP',
-      },
-    ];
+  it('drops revoked, expired and payload-less tokens from the print sheet', () => {
+    const printable = filterPrintableTokens(sampleTokens, 'Sample Event', undefined, NOW);
 
-    // Filter printable tokens (active and unrevoked)
-    const printableTokens = sampleTokens
-      .filter(
-        (tok) =>
-          !tok.revoked_at &&
-          new Date(tok.expires_at).getTime() > Date.now() &&
-          Boolean(tok.qr_token)
-      )
-      .map((tok) => ({
-        id: tok.id,
-        member_id: tok.member_id,
-        member_name: tok.member_name || 'Peserta',
-        member_external_id: tok.member_external_id || tok.member_id,
-        member_division: tok.member_division || null,
-        qr_token: tok.qr_token as string,
-        scope: tok.scope,
-        expires_at: tok.expires_at,
-        event_name: 'Sample Event',
-      }));
+    expect(printable.map((t) => t.id)).toEqual(['tok-1', 'tok-2']);
+  });
 
-    expect(printableTokens.length).toBe(2);
+  it('never prints a revoked token even when the operator explicitly selects it', () => {
+    // The dangerous case: an operator ticks a revoked row and hits print.
+    const printable = filterPrintableTokens(sampleTokens, 'Sample Event', new Set(['tok-3']), NOW);
 
-    // Select only tok-1
-    const selectedTokenIds = new Set<string>(['tok-1']);
-    const targetTokens = printableTokens.filter((t) => selectedTokenIds.has(t.id));
-    expect(targetTokens.length).toBe(1);
-    expect(targetTokens[0].id).toBe('tok-1');
-    expect(targetTokens[0].member_name).toBe('Guest One');
+    expect(printable).toHaveLength(0);
+  });
 
-    // Select revoked tok-3
-    const selectedRevokedIds = new Set<string>(['tok-3']);
-    const targetRevoked = printableTokens.filter((t) => selectedRevokedIds.has(t.id));
-    expect(targetRevoked.length).toBe(0);
+  it('honours an explicit selection over the full live set', () => {
+    const printable = filterPrintableTokens(sampleTokens, 'Sample Event', new Set(['tok-1']), NOW);
+
+    expect(printable).toHaveLength(1);
+    expect(printable[0].member_name).toBe('Guest One');
+  });
+
+  it('treats an empty selection as "nothing selected", not "everything selected"', () => {
+    const printable = filterPrintableTokens(sampleTokens, 'Sample Event', new Set(), NOW);
+
+    expect(printable).toHaveLength(0);
+  });
+
+  it('stamps the event name and falls back for missing member identity fields', () => {
+    const [first] = filterPrintableTokens(
+      [{ ...sampleTokens[0], member_name: undefined, member_external_id: undefined, member_division: undefined }],
+      'Sample Event',
+      undefined,
+      NOW
+    );
+
+    expect(first.event_name).toBe('Sample Event');
+    expect(first.member_name).toBe('Peserta');
+    expect(first.member_external_id).toBe('guest-1');
+    expect(first.member_division).toBeNull();
+  });
+
+  it('leaves the event name null when printing tokens outside any event', () => {
+    const [first] = filterPrintableTokens(sampleTokens, null, undefined, NOW);
+
+    expect(first.event_name).toBeNull();
   });
 });

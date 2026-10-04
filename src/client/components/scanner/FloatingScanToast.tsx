@@ -1,14 +1,41 @@
 import React, { useEffect } from 'react';
-import {
-  CheckCircle2,
-  XCircle,
-  User,
-  Building2,
-  Calendar,
-  Clock,
-  X,
-} from 'lucide-react';
-import { ScanResultData } from './ResultModal';
+import { Buildings } from '@phosphor-icons/react/Buildings';
+import { CalendarBlank } from '@phosphor-icons/react/CalendarBlank';
+import { CheckCircle } from '@phosphor-icons/react/CheckCircle';
+import { Clock } from '@phosphor-icons/react/Clock';
+import { User } from '@phosphor-icons/react/User';
+import { Warning } from '@phosphor-icons/react/Warning';
+import { X } from '@phosphor-icons/react/X';
+import { XCircle } from '@phosphor-icons/react/XCircle';
+import { cn } from '../../lib/cn';
+import { FloatingSurface } from '../ui/FloatingSurface';
+import { ScanResultData, ScanOutcome, scanOutcome } from './ResultModal';
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+
+/** Same outcome→hue contract as `ResultModal`: a result never changes colour
+ *  between the toast, the history sheet, and the modal. */
+const outcomeTone: Record<
+  ScanOutcome,
+  { text: string; chip: string; icon: React.ReactNode }
+> = {
+  accepted: {
+    text: 'text-seal-800',
+    chip: 'border-seal-200/70 bg-seal-50/60 text-seal-800',
+    icon: <CheckCircle className="h-5 w-5 shrink-0 text-seal-600" />,
+  },
+  rejected: {
+    text: 'text-pending-800',
+    chip: 'border-pending-200/70 bg-pending-50/60 text-pending-800',
+    icon: <Warning className="h-5 w-5 shrink-0 text-pending-600" />,
+  },
+  error: {
+    text: 'text-pen-deep',
+    chip: 'border-pen-200/70 bg-pen-50/70 text-pen-deep',
+    icon: <XCircle className="h-5 w-5 shrink-0 text-pen" />,
+  },
+};
 
 interface FloatingScanToastProps {
   result: ScanResultData | null;
@@ -36,108 +63,131 @@ export const FloatingScanToast: React.FC<FloatingScanToastProps> = ({
 
   if (!result) return null;
 
-  return (
-    <aside
-      role="status"
-      aria-live="polite"
-      className="fixed top-4 inset-x-3 sm:top-5 sm:left-1/2 sm:-translate-x-1/2 md:top-6 md:right-6 md:left-auto md:translate-x-0 z-50 w-auto sm:w-[94%] md:w-full max-w-sm pointer-events-auto md:"
-    >
-      <div
-        className={`w-full rounded-2xl p-3.5 sm:p-4 shadow-2xl border relative overflow-hidden transition-colors ${
-          result.success
-            ? 'bg-slate-900 border-emerald-500/80 ring-2 ring-emerald-500/20 text-white'
-            : 'bg-slate-900 border-rose-500/80 ring-2 ring-rose-500/20 text-white'
-        }`}
-      >
-        {/* Header Row */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            {result.success ? (
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-            ) : (
-              <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-400 shrink-0">
-                <XCircle className="w-5 h-5" />
-              </div>
-            )}
+  const outcome = scanOutcome(result);
+  const tone = outcomeTone[outcome];
+  const accepted = outcome === 'accepted';
+  const a = result.attendance;
 
-            <div className="truncate">
-              <div className="flex items-center gap-2">
-                <h4 className="font-heading font-bold text-sm sm:text-base leading-none">
-                  {result.success ? 'ABSENSI BERHASIL' : 'SCAN DITOLAK'}
-                </h4>
-                {result.success && result.attendance && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    {result.attendance.sessionType}
-                  </span>
-                )}
-              </div>
-              {!result.success && (
-                <p className="text-xs font-semibold text-rose-300 mt-0.5 truncate">
-                  {result.message || 'QR Code tidak valid atau ditolak.'}
-                </p>
+  return (
+    // `FloatingSurface` owns the fixed chrome, the safe area, and the z-layer;
+    // it already renders role="status" aria-live="polite", which is exactly the
+    // announcement a scan result owes a screen-reader user in the field.
+    <FloatingSurface
+      placement="bottom-bar"
+      mark={
+        outcome === 'accepted'
+          ? 'seal'
+          : outcome === 'rejected'
+            ? 'pending'
+            : 'danger'
+      }
+      offsetClass="pb-24 md:pb-4"
+      className="mx-3 sm:mx-auto sm:max-w-md"
+    >
+      {/* One child: `FloatingSurface` lays children out in a row, so the toast
+          composes its own column to keep the headline above the detail block. */}
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              {tone.icon}
+              {/* Held one-handed in the field: the headline is the largest type
+                on the surface, because it is what gets read at arm's length. */}
+              <h3 className="font-heading text-base font-bold leading-none text-white sm:text-lg">
+                {accepted ? 'ABSENSI BERHASIL' : 'SCAN DITOLAK'}
+              </h3>
+              {accepted && a && (
+                <span
+                  className={cn(
+                    'shrink-0 rounded-chip border px-2 py-0.5 font-oxanium text-[10px] font-bold uppercase tracking-wider',
+                    tone.chip,
+                  )}
+                >
+                  {a.sessionType}
+                </span>
               )}
             </div>
+
+            {accepted && a ? (
+              <p className="mt-1 truncate text-sm font-bold text-white sm:text-base">
+                {a.memberName}
+              </p>
+            ) : (
+              <p
+                className={cn(
+                  'mt-1 truncate text-xs font-semibold sm:text-sm',
+                  tone.text,
+                )}
+              >
+                {result.message || 'QR Code tidak valid atau ditolak.'}
+              </p>
+            )}
           </div>
 
-          {/* Quick Close Button */}
           <button
+            type="button"
             onClick={onDismiss}
             aria-label="Tutup notifikasi"
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            className={cn(
+              'touch-target shrink-0 rounded-chip border border-rule bg-paper-raised text-ink-2 transition-colors duration-120 hover:text-white',
+              focusRing,
+            )}
           >
-            <X className="w-4 h-4" />
+            <X className="mx-auto h-4 w-4" />
           </button>
         </div>
 
-        {/* Member Details (When Success) */}
-        {result.success && result.attendance && (
-          <div className="mt-2.5 pt-2 border-t border-slate-800 flex flex-col gap-1 text-xs">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-bold text-white text-sm truncate flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                <span className="truncate">{result.attendance.memberName}</span>
-              </span>
-              <span className="font-mono text-sky-400 text-xs font-semibold shrink-0">
-                ID: {result.attendance.memberExternalId}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
-              <span className="truncate flex items-center gap-1">
-                {result.attendance.memberDivision ? (
-                  <span className="text-slate-300 font-medium">
-                    Divisi: {result.attendance.memberDivision}
-                  </span>
-                ) : (
-                  <span className="text-slate-400">{result.attendance.eventName}</span>
-                )}
-              </span>
-
-              <span className="flex items-center gap-1 font-mono text-slate-400 shrink-0">
-                <Clock className="w-3 h-3 text-slate-400" />
-                <span>
-                  {new Date(result.attendance.scannedAt).toLocaleTimeString('id-ID', {
+        {accepted && a && (
+          <>
+            <dl className="flex flex-col gap-1 border-t border-rule pt-2 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <dt className="flex shrink-0 items-center gap-1.5 text-ink-2">
+                  <Buildings className="h-3.5 w-3.5" />
+                  Divisi
+                </dt>
+                <dd className="truncate text-ink">
+                  {a.memberDivision || '-'}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <dt className="flex shrink-0 items-center gap-1.5 text-ink-2">
+                  <User className="h-3.5 w-3.5" />
+                  ID
+                </dt>
+                <dd className="truncate font-oxanium text-ink">
+                  {a.memberExternalId}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <dt className="flex shrink-0 items-center gap-1.5 text-ink-2">
+                  <CalendarBlank className="h-3.5 w-3.5" />
+                  Kegiatan
+                </dt>
+                <dd className="truncate text-ink">{a.eventName}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <dt className="flex shrink-0 items-center gap-1.5 text-ink-2">
+                  <Clock className="h-3.5 w-3.5" />
+                  Waktu
+                </dt>
+                <dd className="font-oxanium text-ink">
+                  {new Date(a.scannedAt).toLocaleTimeString('id-ID', {
                     hour: '2-digit',
                     minute: '2-digit',
-                    second: '2-digit',
                   })}
-                </span>
-              </span>
-            </div>
-          </div>
-        )}
+                </dd>
+              </div>
+            </dl>
 
-        {/* Bottom Auto-Dismiss Progress Bar (Driven 100% by GPU CSS Animation) */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-800">
-          <div
-            className={`h-full animate-toast-progress ${
-              result.success ? 'bg-emerald-500' : 'bg-rose-500'
-            }`}
-          />
-        </div>
+            {/* Auto-dismiss countdown. Pure width animation, no re-renders. */}
+            <span
+              aria-hidden="true"
+              className="toast-progress block h-0.5 w-full rounded-chip bg-seal-100"
+              style={{ animationDuration: `${duration}ms` }}
+            />
+          </>
+        )}
       </div>
-    </aside>
+    </FloatingSurface>
   );
 };

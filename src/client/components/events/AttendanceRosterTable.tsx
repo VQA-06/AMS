@@ -1,17 +1,22 @@
 import React from 'react';
-import {
-  Users,
-  LogIn,
-  LogOut,
-  Coffee,
-  History,
-  Building2,
-  Table as TableIcon,
-  LayoutGrid,
-  Trash2,
-} from 'lucide-react';
+import { Buildings } from '@phosphor-icons/react/Buildings';
+import { ClockCounterClockwise } from '@phosphor-icons/react/ClockCounterClockwise';
+import { Coffee } from '@phosphor-icons/react/Coffee';
+import { SignIn } from '@phosphor-icons/react/SignIn';
+import { SignOut } from '@phosphor-icons/react/SignOut';
+import { SquaresFour } from '@phosphor-icons/react/SquaresFour';
+import { Table as TableIcon } from '@phosphor-icons/react/Table';
+import { Trash } from '@phosphor-icons/react/Trash';
+import { UserPlus } from '@phosphor-icons/react/UserPlus';
+import { Users } from '@phosphor-icons/react/Users';
 import { Attendance, SessionType } from '@/shared/types';
 import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { sessionTypeMark } from '../../lib/event-status';
+import { Stat } from '../ui/Stat';
+import { Table, THead, TBody, TRow, TCell } from '../ui/Table';
+import { cn } from '../../lib/cn';
 import { EmptyState } from '../ui/EmptyState';
 import { BulkActionBar, BulkActionItem } from '../ui/BulkActionBar';
 
@@ -39,6 +44,8 @@ export interface AttendanceRosterTableProps {
   onSelectAllAttendances: () => void;
   onDeleteAttendanceBatch: () => void;
   onClearSelection?: () => void;
+  /** Opens the manual-attendance form; gated by `isManager` at the call site. */
+  onOpenManualAttendance: () => void;
   isManager: boolean;
 }
 
@@ -61,12 +68,13 @@ export const AttendanceRosterTable: React.FC<AttendanceRosterTableProps> = ({
   onSelectAllAttendances,
   onDeleteAttendanceBatch,
   onClearSelection,
+  onOpenManualAttendance,
   isManager,
 }) => {
   const bulkActions: BulkActionItem[] = [
     {
       label: 'Hapus Terpilih',
-      icon: <Trash2 className="w-3.5 h-3.5" />,
+      icon: <Trash className="w-3.5 h-3.5" />,
       variant: 'danger',
       onClick: onDeleteAttendanceBatch,
     },
@@ -75,89 +83,78 @@ export const AttendanceRosterTable: React.FC<AttendanceRosterTableProps> = ({
   return (
     <div className="space-y-4">
       {/* KPI Attendance Metrics Card */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-        <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-            <LogIn className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] text-slate-400 uppercase font-semibold block">Check-In Masuk</span>
-            <span className="text-xl font-bold font-heading text-emerald-400">{sessionCounts.checkin}</span>
-          </div>
-        </div>
-
-        <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
-            <LogOut className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] text-slate-400 uppercase font-semibold block">Check-Out Keluar</span>
-            <span className="text-xl font-bold font-heading text-sky-400">{sessionCounts.checkout}</span>
-          </div>
-        </div>
-
-        <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center shrink-0">
-            <Coffee className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] text-slate-400 uppercase font-semibold block">Break Keluar</span>
-            <span className="text-xl font-bold font-heading text-purple-300">{sessionCounts.breakOut}</span>
-          </div>
-        </div>
-
-        <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
-            <History className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] text-slate-400 uppercase font-semibold block">Break Masuk</span>
-            <span className="text-xl font-bold font-heading text-purple-400">{sessionCounts.breakIn}</span>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
+        <Stat
+          label="Check-In Masuk"
+          value={sessionCounts.checkin}
+          mark="seal"
+          icon={<SignIn size={20} />}
+        />
+        <Stat
+          label="Check-Out Keluar"
+          value={sessionCounts.checkout}
+          mark="pen"
+          icon={<SignOut size={20} />}
+        />
+        <Stat
+          label="Break Keluar"
+          value={sessionCounts.breakOut}
+          mark="idle"
+          icon={<Coffee size={20} />}
+        />
+        <Stat
+          label="Break Masuk"
+          value={sessionCounts.breakIn}
+          mark="idle"
+          icon={<ClockCounterClockwise size={20} />}
+        />
       </div>
 
       {/* Filter and Session Controls */}
-      <div className="p-3.5 sm:p-4 rounded-2xl glass-panel border border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+      <div className="surface flex flex-wrap items-center justify-between gap-3 rounded-panel p-3.5 shadow-ambient sm:p-4">
         {/* Session Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 w-full sm:w-auto">
           <button
             onClick={() => onSelectSessionFilter('ALL')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+            className={cn(
+              'whitespace-nowrap rounded-chip px-3 py-1.5 text-xs font-bold transition-colors duration-120',
               sessionFilter === 'ALL'
-                ? 'bg-slate-800 text-white border border-slate-700'
-                : 'text-slate-400 hover:text-white'
-            }`}
+                ? 'border border-pen-200/70 bg-pen-50/70 text-ink-2'
+              : 'text-ink-2 hover:text-white'
+          )}
           >
             Semua ({attendances.length})
           </button>
           <button
             onClick={() => onSelectSessionFilter('CHECKIN')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+            className={cn(
+              'whitespace-nowrap rounded-chip px-3 py-1.5 text-xs font-bold transition-colors duration-120',
               sessionFilter === 'CHECKIN'
-                ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800'
-                : 'text-slate-400 hover:text-emerald-400'
-            }`}
+                ? 'bg-seal-50 text-seal-600 border border-seal-200'
+              : 'text-ink-2 hover:text-seal-600'
+          )}
           >
             Check-In ({sessionCounts.checkin})
           </button>
           <button
             onClick={() => onSelectSessionFilter('CHECKOUT')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+            className={cn(
+              'whitespace-nowrap rounded-chip px-3 py-1.5 text-xs font-bold transition-colors duration-120',
               sessionFilter === 'CHECKOUT'
-                ? 'bg-sky-950/80 text-sky-400 border border-sky-800'
-                : 'text-slate-400 hover:text-sky-400'
-            }`}
+                ? 'border border-pen-200/70 bg-pen-50/70 text-ink-2'
+              : 'text-ink-2 hover:text-ink'
+          )}
           >
             Check-Out ({sessionCounts.checkout})
           </button>
           <button
             onClick={() => onSelectSessionFilter('BREAK_OUT')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+            className={cn(
+              'whitespace-nowrap rounded-chip px-3 py-1.5 text-xs font-bold transition-colors duration-120',
               sessionFilter === 'BREAK_OUT'
-                ? 'bg-purple-950/80 text-purple-300 border border-purple-800'
-                : 'text-slate-400 hover:text-purple-300'
-            }`}
+                ? 'bg-paper-sunk text-ink-3 border border-rule-strong'
+              : 'text-ink-2 hover:text-ink-3'
+          )}
           >
             Break ({sessionCounts.breakOut})
           </button>
@@ -171,7 +168,7 @@ export const AttendanceRosterTable: React.FC<AttendanceRosterTableProps> = ({
             placeholder="Cari nama / ID..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full sm:w-44 px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
+            className="w-full rounded-chip border border-rule-strong bg-paper-raised px-3 py-1.5 text-xs text-ink transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:w-44"
           />
 
           {divisions.length > 0 && (
@@ -179,7 +176,7 @@ export const AttendanceRosterTable: React.FC<AttendanceRosterTableProps> = ({
               id="roster-division"
               aria-label="Filter peserta berdasarkan divisi"
               onChange={(e) => onDivisionChange(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
+              className="rounded-chip border border-rule-strong bg-paper-raised px-2.5 py-1.5 text-xs text-ink transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             >
               <option value="">Semua Divisi</option>
               {divisions.map((div) => (
@@ -190,26 +187,51 @@ export const AttendanceRosterTable: React.FC<AttendanceRosterTableProps> = ({
             </select>
           )}
 
-          <div className="md:hidden flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-1 rounded-chip border border-rule bg-paper-raised p-1 md:hidden">
             <button
               type="button"
               onClick={() => onToggleMobileViewMode('card')}
-              className={`p-1.5 rounded-lg ${mobileViewMode === 'card' ? 'bg-sky-500 text-slate-950' : 'text-slate-400'}`}
-              title="Tampilan Kartu"
+              className={cn(
+                'touch-target rounded-chip p-1.5 transition-colors',
+                mobileViewMode === 'card'
+                  ? 'bg-pen-500 text-paper'
+                  : 'text-ink-2 hover:text-ink'
+              )}
+              aria-label="Tampilan Kartu"
             >
-              <LayoutGrid className="w-3.5 h-3.5" />
+              <SquaresFour className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
               onClick={() => onToggleMobileViewMode('table')}
-              className={`p-1.5 rounded-lg ${mobileViewMode === 'table' ? 'bg-sky-500 text-slate-950' : 'text-slate-400'}`}
-              title="Tampilan Tabel"
+              className={cn(
+                'touch-target rounded-chip p-1.5 transition-colors',
+                mobileViewMode === 'table'
+                  ? 'bg-pen-500 text-paper'
+                  : 'text-ink-2 hover:text-ink'
+              )}
+              aria-label="Tampilan Tabel"
             >
               <TableIcon className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </div>
+
+      {/* Manager actions: manual entry is an always-available escape hatch when
+          the camera fails, so it stays visible rather than hiding in the bar. */}
+      {isManager && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenManualAttendance}
+            icon={<UserPlus size={14} />}
+          >
+            Catat Hadir Manual
+          </Button>
+        </div>
+      )}
 
       {/* Bulk Action Bar */}
       {isManager && (
@@ -223,7 +245,7 @@ export const AttendanceRosterTable: React.FC<AttendanceRosterTableProps> = ({
       {/* Content: Empty State vs Table vs Cards */}
       {displayedAttendances.length === 0 ? (
         <EmptyState
-          icon={<Users className="w-8 h-8 text-sky-400" />}
+          icon={<Users size={32} className="text-ink-2" />}
           title="Belum Ada Presensi Tercatat"
           description={
             search || selectedDivision || sessionFilter !== 'ALL'
@@ -233,147 +255,146 @@ export const AttendanceRosterTable: React.FC<AttendanceRosterTableProps> = ({
         />
       ) : (
         <>
-          {/* Desktop Table View */}
-          <div className={`glass-panel rounded-2xl border border-slate-800/80 overflow-hidden ${mobileViewMode === 'card' ? 'hidden md:block' : 'block'}`}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 uppercase text-[10px] tracking-wider">
-                  <tr>
+          {/* Desktop Table View — the rail on each row encodes the session type,
+              which is why it varies per row and is not decoration. */}
+          <Table
+            className={
+              mobileViewMode === 'card' ? 'hidden md:block' : 'block'
+            }
+          >
+            <THead>
+              <tr>
+                {isManager && (
+                  <TCell header className="w-10 px-4 py-3.5 text-center">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedAttendanceIds.size === displayedAttendances.length &&
+                        displayedAttendances.length > 0
+                      }
+                      onChange={onSelectAllAttendances}
+                      className="h-4 w-4 cursor-pointer rounded border-rule-strong bg-paper-raised accent-pen-500"
+                      aria-label="Pilih semua presensi"
+                    />
+                  </TCell>
+                )}
+                <TCell header>ID Anggota</TCell>
+                <TCell header>Nama Lengkap</TCell>
+                <TCell header>Divisi / Gugus</TCell>
+                <TCell header>Sesi Absensi</TCell>
+                <TCell header>Waktu Scan</TCell>
+                <TCell header>Metode</TCell>
+              </tr>
+            </THead>
+            <TBody>
+              {displayedAttendances.map((att) => {
+                const isSelected = selectedAttendanceIds.has(att.id);
+
+                return (
+                  <TRow
+                    key={att.id}
+                    selected={isSelected}
+                    mark={sessionTypeMark(att.session_type)}
+                  >
                     {isManager && (
-                      <th className="w-10 px-4 py-3.5 text-center">
+                      <TCell className="w-10 px-4 py-3.5 text-center">
                         <input
                           type="checkbox"
-                          checked={selectedAttendanceIds.size === displayedAttendances.length && displayedAttendances.length > 0}
-                          onChange={onSelectAllAttendances}
-                          className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                          aria-label="Pilih semua presensi"
+                          checked={isSelected}
+                          onChange={() => onToggleSelectAttendance(att.id)}
+                          className="h-4 w-4 cursor-pointer rounded border-rule-strong bg-paper-raised accent-pen-500"
+                          aria-label={`Pilih ${att.member_name}`}
                         />
-                      </th>
+                      </TCell>
                     )}
-                    <th className="px-5 py-3.5">ID Anggota</th>
-                    <th className="px-5 py-3.5">Nama Lengkap</th>
-                    <th className="px-5 py-3.5">Divisi / Gugus</th>
-                    <th className="px-5 py-3.5">Sesi Absensi</th>
-                    <th className="px-5 py-3.5">Waktu Scan</th>
-                    <th className="px-5 py-3.5">Metode</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {displayedAttendances.map((att) => {
-                    const isSelected = selectedAttendanceIds.has(att.id);
-                    const sessionVariant =
-                      att.session_type === 'CHECKIN'
-                        ? 'emerald'
-                        : att.session_type === 'CHECKOUT'
-                        ? 'sky'
-                        : att.session_type === 'BREAK_OUT'
-                        ? 'purple'
-                        : 'slate';
-
-                    return (
-                      <tr
-                        key={att.id}
-                        className={`transition-colors ${
-                          isSelected ? 'bg-sky-950/20 hover:bg-sky-950/30' : 'hover:bg-slate-900/40'
-                        }`}
-                      >
-                        {isManager && (
-                          <td className="w-10 px-4 py-3.5 text-center">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => onToggleSelectAttendance(att.id)}
-                              className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                              aria-label={`Pilih ${att.member_name}`}
-                            />
-                          </td>
-                        )}
-                        <td className="px-5 py-3.5 font-bold text-sky-400 font-oxanium">{att.member_external_id}</td>
-                        <td className="px-5 py-3.5 font-semibold text-white">{att.member_name}</td>
-                        <td className="px-5 py-3.5 text-slate-400">
-                          {att.member_division || '-'} {att.member_group ? `(${att.member_group})` : ''}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <Badge variant={sessionVariant}>{att.session_type}</Badge>
-                        </td>
-                        <td className="px-5 py-3.5 text-slate-400 font-mono text-[11px]">
-                          {att.scanned_at ? new Date(att.scanned_at).toLocaleString('id-ID') : '-'}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          {att.is_manual ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded-md border border-amber-800/40">
-                              Manual
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-800/40">
-                              QR Scan
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                    <TCell className="font-oxanium font-bold text-ink-2">
+                      {att.member_external_id}
+                    </TCell>
+                    <TCell className="font-semibold text-white" truncate>
+                      {att.member_name}
+                    </TCell>
+                    <TCell className="text-ink-2">
+                      {att.member_division || '-'}{' '}
+                      {att.member_group ? `(${att.member_group})` : ''}
+                    </TCell>
+                    <TCell className="font-oxanium text-xs font-bold text-ink">
+                      {att.session_type}
+                    </TCell>
+                    <TCell className="font-oxanium text-[11px] text-ink-2">
+                      {att.scanned_at
+                        ? new Date(att.scanned_at).toLocaleString('id-ID')
+                        : '-'}
+                    </TCell>
+                    <TCell>
+                      {att.is_manual ? (
+                        <Badge variant="pending" size="xs">
+                          Manual
+                        </Badge>
+                      ) : (
+                        <Badge variant="seal" size="xs">
+                          QR Scan
+                        </Badge>
+                      )}
+                    </TCell>
+                  </TRow>
+                );
+              })}
+            </TBody>
+          </Table>
 
           {/* Mobile Card Grid View */}
           {mobileViewMode === 'card' && (
-            <div className="md:hidden grid grid-cols-1 gap-2.5">
+            <div className="grid grid-cols-1 gap-2.5 md:hidden">
               {displayedAttendances.map((att) => {
                 const isSelected = selectedAttendanceIds.has(att.id);
                 return (
-                  <div
+                  <Card
                     key={att.id}
+                    mark={sessionTypeMark(att.session_type)}
+                    className={cn(
+                      'cursor-pointer p-3.5 transition-colors',
+                      isSelected && 'bg-paper-sunk'
+                    )}
                     onClick={() => isManager && onToggleSelectAttendance(att.id)}
-                    className={`p-3.5 rounded-2xl glass-panel border transition-colors ${
-                      isSelected
-                        ? 'border-sky-500 bg-sky-950/30'
-                        : 'border-slate-800/80 hover:border-slate-700'
-                    }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
                         {isManager && (
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => onToggleSelectAttendance(att.id)}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
+                            className="h-4 w-4 shrink-0 cursor-pointer rounded border-rule-strong bg-paper-raised accent-pen-500"
+                            aria-label={`Pilih ${att.member_name}`}
                           />
                         )}
-                        <div>
-                          <h4 className="font-bold text-sm text-white">{att.member_name}</h4>
-                          <span className="font-mono text-xs text-sky-400 font-oxanium">{att.member_external_id}</span>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-bold text-white">
+                            {att.member_name}
+                          </h3>
+                          <span className="font-oxanium text-xs text-ink-2">
+                            {att.member_external_id}
+                          </span>
                         </div>
                       </div>
-                      <Badge
-                        variant={
-                          att.session_type === 'CHECKIN'
-                            ? 'emerald'
-                            : att.session_type === 'CHECKOUT'
-                            ? 'sky'
-                            : att.session_type === 'BREAK_OUT'
-                            ? 'purple'
-                            : 'slate'
-                        }
-                      >
+                      <span className="font-oxanium shrink-0 text-[10px] font-bold text-ink-2">
                         {att.session_type}
-                      </Badge>
+                      </span>
                     </div>
 
-                    <div className="mt-2.5 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-                      <span className="flex items-center gap-1">
-                        <Building2 className="w-3 h-3 text-slate-500" />
-                        {att.member_division || 'Umum'}
+                    <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-rule pt-2.5 text-[11px] text-ink-2">
+                      <span className="flex min-w-0 items-center gap-1">
+                        <Buildings size={12} className="shrink-0 text-ink-2" />
+                        <span className="truncate">{att.member_division || 'Umum'}</span>
                       </span>
-                      <span className="font-mono">
-                        {att.scanned_at ? new Date(att.scanned_at).toLocaleTimeString('id-ID') : '-'}
+                      <span className="shrink-0 font-oxanium">
+                        {att.scanned_at
+                          ? new Date(att.scanned_at).toLocaleTimeString('id-ID')
+                          : '-'}
                       </span>
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>

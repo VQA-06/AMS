@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import {
-  X,
-  QrCode,
-  Sparkles,
-  Calendar,
-  Building2,
-  Check,
-  Download,
-  Printer,
-  Copy,
-} from 'lucide-react';
+import { CalendarBlank } from '@phosphor-icons/react/CalendarBlank';
+import { Check } from '@phosphor-icons/react/Check';
+import { QrCode } from '@phosphor-icons/react/QrCode';
+import { Sparkle } from '@phosphor-icons/react/Sparkle';
+import { X } from '@phosphor-icons/react/X';
 import { Member, Event } from '@/shared/types';
 import { fetchApi } from '../../lib/api-client';
+import { cn } from '../../lib/cn';
 import { DigitalPassCard } from './DigitalPassCard';
+import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
+import { Field } from '../ui/Field';
 import { ModalPortal } from '../ui/ModalPortal';
+
+/** One focus quartet across this file: never `focus:outline-none` alone. */
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
 interface QrGeneratorModalProps {
   isOpen: boolean;
@@ -164,273 +166,294 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="w-full max-w-2xl rounded-2xl sm:rounded-3xl glass-panel-elevated border border-slate-700/60 shadow-2xl p-4 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[88vh] flex flex-col my-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
-              <QrCode className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="font-heading font-bold text-base sm:text-lg text-white truncate">
-                {generatedTokens ? 'Tiket QR Berhasil Dibuat' : 'Generator Tiket QR Terenkripsi'}
-              </h3>
-              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
-                {generatedTokens
-                  ? `Total ${generatedTokens.length} tiket QR siap didistribusikan`
-                  : 'Buat token absensi JWE terenkripsi dengan masa aktif'}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup dialog"
-            className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 shrink-0 transition-colors"
-          >
-            <X className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-        </div>
-
-        {error && (
-          <div className="mt-3 p-3 rounded-xl bg-rose-950/50 border border-rose-800/50 text-xs text-rose-300 shrink-0">
-            {error}
-          </div>
-        )}
-
-        {/* Generated Tokens Display */}
-        {generatedTokens ? (
-          <div className="flex-1 overflow-y-auto my-3 sm:my-4 space-y-4 pr-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 justify-items-center">
-              {generatedTokens.map((tok) => (
-                <DigitalPassCard
-                  key={tok.id}
-                  tokenString={tok.qr_token}
-                  memberName={tok.member_name}
-                  memberExternalId={tok.member_external_id}
-                  memberDivision={tok.member_division}
-                  eventName={scope === 'event' ? currentEvent?.name : null}
-                  scope={tok.scope}
-                  expiresAt={tok.expires_at}
-                />
-              ))}
-            </div>
-
-            <div className="pt-3 sm:pt-4 border-t border-slate-800 flex items-center justify-end gap-2.5 sm:gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => setGeneratedTokens(null)}
-                className="px-4 py-2 sm:py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
-              >
-                Buat QR Lain
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform"
-              >
-                Selesai
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* Generator Configuration Form */
-          <div className="flex-1 overflow-y-auto overscroll-contain touch-auto my-3 sm:my-4 space-y-3.5 sm:space-y-4 pr-1">
-            {/* Scope Selection */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Pilih Tipe / Scope QR:
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                <label htmlFor="components-qr-qrgeneratormodal-field-1"
-                  className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border cursor-pointer transition-colors ${
-                    scope === 'universal'
-                      ? 'bg-sky-500/20 border-sky-500 text-white shadow-sm'
-                      : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60'
-                  }`}
-                >
-                  <input id="components-qr-qrgeneratormodal-field-1"
-                    type="radio"
-                    name="qr_scope"
-                    value="universal"
-                    checked={scope === 'universal'}
-                    onChange={() => setScope('universal')}
-                    className="hidden"
-                  />
-                  <p className="font-bold text-xs text-sky-400 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>QR Universal</span>
-                  </p>
-                  <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1">
-                    Bisa digunakan di seluruh kegiatan yang mengizinkan QR Universal.
-                  </p>
-                </label>
-
-                <label htmlFor="components-qr-qrgeneratormodal-field-2"
-                  className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border cursor-pointer transition-colors ${
-                    scope === 'event'
-                      ? 'bg-sky-500/20 border-sky-500 text-white shadow-sm'
-                      : 'glass-panel border-slate-800 text-slate-400 hover:bg-slate-900/60'
-                  }`}
-                >
-                  <input id="components-qr-qrgeneratormodal-field-2"
-                    type="radio"
-                    name="qr_scope"
-                    value="event"
-                    checked={scope === 'event'}
-                    onChange={() => setScope('event')}
-                    className="hidden"
-                  />
-                  <p className="font-bold text-xs text-emerald-400 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>QR Khusus Event</span>
-                  </p>
-                  <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1">
-                    Terikat ketat ke 1 kegiatan. Ditolak jika dipakai di kegiatan lain.
-                  </p>
-                </label>
+        <div className="surface my-auto flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-bezel p-4 shadow-ambient sm:max-h-[88vh] sm:p-6">
+          {/* Header */}
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-rule pb-3 sm:pb-4">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-chip bg-pen-50/70 text-ink-2">
+                <QrCode size={20} weight="regular" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="truncate font-heading text-base font-bold text-ink sm:text-lg">
+                  {generatedTokens ? 'Tiket QR Berhasil Dibuat' : 'Generator Tiket QR Terenkripsi'}
+                </h3>
+                <p className="truncate text-[11px] text-ink-2 sm:text-xs">
+                  {generatedTokens
+                    ? `Total ${generatedTokens.length} tiket QR siap didistribusikan`
+                    : 'Buat token absensi JWE terenkripsi dengan masa aktif'}
+                </p>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Tutup dialog"
+              className={cn(
+                'flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-chip bg-paper-raised text-ink-2 transition-colors hover:text-ink',
+                focusRing
+              )}
+            >
+              <X size={20} />
+            </button>
+          </div>
 
-            {/* Event Picker if scope == 'event' */}
-            {scope === 'event' && (
-              <div>
-                <label htmlFor="components-qr-qrgeneratormodal-field-3" className="block text-xs font-semibold text-slate-300 mb-1">
-                  Pilih Kegiatan / Event Terkait:
-                </label>
-                <select id="components-qr-qrgeneratormodal-field-3"
-                  value={selectedEventId}
-                  onChange={(e) => setSelectedEventId(e.target.value)}
-                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-                >
-                  {events.map((ev) => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.name} ({ev.status})
-                    </option>
-                  ))}
-                </select>
+          {error && (
+            <div
+              role="alert"
+              className="mt-3 shrink-0 rounded-panel border border-pen-200 bg-pen-50 px-3 py-2.5 text-xs text-pen-deep"
+            >
+              {error}
+            </div>
+          )}
+
+          {generatedTokens ? (
+            <div className="no-scrollbar my-3 flex-1 space-y-4 overflow-y-auto pr-1 sm:my-4">
+              <div className="grid grid-cols-1 justify-items-center gap-4 sm:grid-cols-2">
+                {generatedTokens.map((tok) => (
+                  <DigitalPassCard
+                    key={tok.id}
+                    tokenString={tok.qr_token}
+                    memberName={tok.member_name}
+                    memberExternalId={tok.member_external_id}
+                    memberDivision={tok.member_division}
+                    eventName={scope === 'event' ? currentEvent?.name : null}
+                    scope={tok.scope}
+                    expiresAt={tok.expires_at}
+                  />
+                ))}
               </div>
-            )}
 
-            {/* Validity Duration */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Masa Berlaku QR:
-              </label>
-              {scope === 'universal' ? (
-                <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-xs text-emerald-400 font-medium flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Permanen / Seumur Hidup (Berlaku selama anggota aktif)</span>
+              <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => setGeneratedTokens(null)}
+                >
+                  Buat QR Lain
+                </Button>
+                <Button variant="primary" onClick={onClose}>
+                  Selesai
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Generator configuration form */
+            <div className="no-scrollbar my-3 flex-1 space-y-3.5 overflow-y-auto pr-1 sm:my-4 sm:space-y-4">
+              {/* Scope selection — universal is the community-wide pass, event is
+                  bound to one agenda. */}
+              <fieldset>
+                <legend className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-2">
+                  Pilih Tipe / Scope QR:
+                </legend>
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
+                  <label
+                    htmlFor="components-qr-qrgeneratormodal-field-1"
+                    className={cn(
+                      'flex cursor-pointer flex-col rounded-panel border p-3 transition-colors sm:p-3.5',
+                      focusRing,
+                      scope === 'universal'
+                        ? 'border-pen-500 bg-pen-50/70'
+                        : 'border-rule bg-paper-raised/40 hover:bg-paper-raised/70'
+                    )}
+                  >
+                    <input
+                      id="components-qr-qrgeneratormodal-field-1"
+                      type="radio"
+                      name="qr_scope"
+                      value="universal"
+                      checked={scope === 'universal'}
+                      onChange={() => setScope('universal')}
+                      className="sr-only"
+                    />
+                    <span className="flex items-center gap-1.5 font-oxanium text-xs font-bold text-ink-2">
+                      <Sparkle size={14} weight="bold" />
+                      <span>QR Universal</span>
+                    </span>
+                    <span className="mt-1 text-[11px] text-ink-2">
+                      Bisa digunakan di seluruh kegiatan yang mengizinkan QR Universal.
+                    </span>
+                  </label>
+
+                  <label
+                    htmlFor="components-qr-qrgeneratormodal-field-2"
+                    className={cn(
+                      'flex cursor-pointer flex-col rounded-panel border p-3 transition-colors sm:p-3.5',
+                      focusRing,
+                      scope === 'event'
+                        ? 'border-pen-500 bg-pen-50/70'
+                        : 'border-rule bg-paper-raised/40 hover:bg-paper-raised/70'
+                    )}
+                  >
+                    <input
+                      id="components-qr-qrgeneratormodal-field-2"
+                      type="radio"
+                      name="qr_scope"
+                      value="event"
+                      checked={scope === 'event'}
+                      onChange={() => setScope('event')}
+                      className="sr-only"
+                    />
+                    <span className="flex items-center gap-1.5 font-oxanium text-xs font-bold text-seal-800">
+                      <CalendarBlank size={14} weight="bold" />
+                      <span>QR Khusus Event</span>
+                    </span>
+                    <span className="mt-1 text-[11px] text-ink-2">
+                      Terikat ketat ke 1 kegiatan. Ditolak jika dipakai di kegiatan lain.
+                    </span>
+                  </label>
                 </div>
-              ) : (
-                <input
-                  type="datetime-local"
-                  value={customExpiresAt}
-                  onChange={(e) => setCustomExpiresAt(e.target.value)}
-                  className="w-full px-3.5 py-2 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
+              </fieldset>
+
+              {/* Event picker if scope === 'event' */}
+              {scope === 'event' && (
+                <Field
+                  id="components-qr-qrgeneratormodal-field-3"
+                  label="Pilih Kegiatan / Event Terkait:"
+                  control="select"
+                  value={selectedEventId}
+                  onChange={setSelectedEventId}
+                  options={events.map((ev) => ({ value: ev.id, label: `${ev.name} (${ev.status})` }))}
                 />
               )}
-            </div>
 
-            {/* Member Multi-Select with Division Filter */}
-            <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-2">
-                <label htmlFor="components-qr-qrgeneratormodal-field-4" className="text-xs font-semibold text-slate-300">
-                  Pilih Anggota ({selectedMemberIds.length} dipilih):
-                </label>
-                <div className="flex items-center gap-2">
-                  {divisions.length > 0 && (
-                    <select id="components-qr-qrgeneratormodal-field-4"
-                      value={filterDivision}
-                      onChange={(e) => setFilterDivision(e.target.value)}
-                      className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] sm:text-xs text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                    >
-                      <option value="">Semua Divisi</option>
-                      {divisions.map((div, i) => (
-                        <option key={i} value={div}>
-                          {div}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleSelectAllFiltered}
-                    className="text-[11px] sm:text-xs font-semibold text-sky-400 hover:text-sky-300"
+              {/* Validity */}
+              {scope === 'universal' ? (
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="components-qr-qrgeneratormodal-field-5"
+                    className="block text-[11px] font-semibold uppercase tracking-wide text-ink-2"
                   >
-                    Pilih Semua ({filteredMembers.length})
-                  </button>
+                    Masa Berlaku QR:
+                  </label>
+                  <div
+                    id="components-qr-qrgeneratormodal-field-5"
+                    className="flex items-center gap-2 rounded-panel border border-seal-200 bg-seal-50/70 px-3 py-2.5 text-xs font-medium text-seal-800"
+                  >
+                    <Sparkle size={16} weight="fill" className="shrink-0 text-seal-600" />
+                    <span>Permanen / Seumur Hidup (Berlaku selama anggota aktif)</span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <Field
+                  id="components-qr-qrgeneratormodal-field-5"
+                  label="Masa Berlaku QR:"
+                  control="datetime-local"
+                  value={customExpiresAt}
+                  onChange={setCustomExpiresAt}
+                  controlClassName="font-oxanium tabular-nums"
+                />
+              )}
 
-              <div className="glass-panel rounded-xl sm:rounded-2xl border border-slate-800 max-h-40 sm:max-h-48 overflow-y-auto p-1.5 sm:p-2 space-y-1.5">
-                {filteredMembers.map((m) => {
-                  const selected = selectedMemberIds.includes(m.id);
-                  return (
-                    <div
-                      key={m.id}
-                      onClick={() => toggleSelectMember(m.id)}
-                      className={`p-2 sm:p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition-colors text-xs ${
-                        selected
-                          ? 'bg-sky-500/20 text-white border border-sky-500/40'
-                          : 'hover:bg-slate-900/60 text-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div
-                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                            selected
-                              ? 'bg-sky-500 border-sky-400 text-slate-950'
-                              : 'border-slate-600 bg-slate-900'
-                          }`}
-                        >
-                          {selected && <Check className="w-3 h-3 stroke-[3]" />}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-slate-200 truncate">{m.name}</p>
-                          <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate">ID: {m.external_id}</p>
-                        </div>
-                      </div>
-
-                      {m.division && (
-                        <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/40 text-[9px] sm:text-[10px] font-semibold shrink-0 ml-2">
-                          <Building2 className="w-2.5 h-2.5" />
-                          <span className="truncate max-w-[80px]">{m.division}</span>
-                        </span>
+              {/* Member multi-select with division filter */}
+              <div>
+                <div className="mb-2 flex flex-col items-start justify-between gap-1.5 sm:flex-row sm:items-center">
+                  <label
+                    htmlFor="components-qr-qrgeneratormodal-field-6"
+                    className="text-[11px] font-semibold uppercase tracking-wide text-ink-2"
+                  >
+                    Pilih Anggota ({selectedMemberIds.length} dipilih):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {divisions.length > 0 && (
+                      <select
+                        id="components-qr-qrgeneratormodal-field-7"
+                        aria-label="Filter divisi"
+                        value={filterDivision}
+                        onChange={(e) => setFilterDivision(e.target.value)}
+                        className={cn(
+                          'rounded-chip border border-rule-strong bg-paper-raised px-2 py-1.5 text-[11px] text-ink sm:text-xs',
+                          focusRing
+                        )}
+                      >
+                        <option value="">Semua Divisi</option>
+                        {divisions.map((div, i) => (
+                          <option key={i} value={div}>
+                            {div}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSelectAllFiltered}
+                      className={cn(
+                        'rounded-chip px-2 py-1.5 text-[11px] font-semibold text-ink-2 transition-colors hover:text-ink-2 sm:text-xs',
+                        focusRing
                       )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                    >
+                      Pilih Semua ({filteredMembers.length})
+                    </button>
+                  </div>
+                </div>
 
-            {/* Footer Action */}
-            <div className="flex items-center justify-end gap-2.5 sm:gap-3 pt-3 sm:pt-4 border-t border-slate-800 shrink-0">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 sm:py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={loading || selectedMemberIds.length === 0}
-                className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 active:scale-95 transition-colors transition-transform"
-              >
-                <Sparkles className="w-4 h-4 shrink-0" />
-                <span>
+                <ul className="no-scrollbar surface max-h-40 space-y-1.5 overflow-y-auto p-1.5 sm:max-h-48 sm:p-2">
+                  {filteredMembers.map((m) => {
+                    const selected = selectedMemberIds.includes(m.id);
+                    return (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          onClick={() => toggleSelectMember(m.id)}
+                          aria-pressed={selected}
+                          className={cn(
+                            'flex w-full items-center justify-between rounded-chip p-2 text-left text-xs transition-colors sm:p-2.5',
+                            selected
+                              ? 'bg-pen-50/70 text-white'
+                              : 'text-ink hover:bg-paper-raised/60'
+                          )}
+                        >
+                          <span className="flex min-w-0 items-center gap-2.5">
+                            <span
+                              className={cn(
+                                'flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border',
+                                selected
+                                  ? 'border-pen-400 bg-pen-500 text-paper'
+                                  : 'border-rule-strong bg-paper-raised'
+                              )}
+                            >
+                              {selected && <Check size={12} weight="bold" />}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block truncate font-semibold text-ink">
+                                {m.name}
+                              </span>
+                              <span className="block truncate font-oxanium text-[10px] text-ink-2 sm:text-[11px]">
+                                ID: {m.external_id}
+                              </span>
+                            </span>
+                          </span>
+
+                          {m.division && (
+                            <Badge variant="neutral" size="xs" className="ml-2 shrink-0">
+                              {m.division}
+                            </Badge>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              {/* Footer */}
+              <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
+                <Button variant="ghost" onClick={onClose}>
+                  Batal
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleGenerate}
+                  disabled={loading || selectedMemberIds.length === 0}
+                  icon={<Sparkle size={16} weight="bold" />}
+                >
                   {loading
                     ? 'Membuat QR...'
                     : `Generate QR (${selectedMemberIds.length})`}
-                </span>
-              </button>
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  </ModalPortal>
-);
+    </ModalPortal>
+  );
 };

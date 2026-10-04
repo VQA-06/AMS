@@ -1,5 +1,14 @@
 import React from 'react';
-import { CheckCircle2, XCircle, User, Building2, Calendar, Clock, X } from 'lucide-react';
+import { Buildings } from '@phosphor-icons/react/Buildings';
+import { CalendarBlank } from '@phosphor-icons/react/CalendarBlank';
+import { CheckCircle } from '@phosphor-icons/react/CheckCircle';
+import { Clock } from '@phosphor-icons/react/Clock';
+import { User } from '@phosphor-icons/react/User';
+import { Warning } from '@phosphor-icons/react/Warning';
+import { X } from '@phosphor-icons/react/X';
+import { XCircle } from '@phosphor-icons/react/XCircle';
+import { cn } from '../../lib/cn';
+import { Button } from '../ui/Button';
 import { ModalPortal } from '../ui/ModalPortal';
 
 export interface ScanResultData {
@@ -18,138 +27,240 @@ export interface ScanResultData {
   };
 }
 
+/** The outcome hue a scan result carries: accepted, a policy rejection, or a
+ *  genuine failure. Every scan surface (toast, modal, history) reads its hue
+ *  from here so the same result never changes colour between screens. */
+export type ScanOutcome = 'accepted' | 'rejected' | 'error';
+
+/**
+ * Rejections the domain returns for a *legitimate* scan of a token that simply
+ * does not qualify. These are policy verdicts, not faults, so they read as
+ * ochre ("needs attention"), never as a red error.
+ */
+const POLICY_REJECTIONS: Record<string, true> = {
+  ALREADY_SCANNED: true,
+  WRONG_EVENT: true,
+  TOKEN_REVOKED: true,
+  TOKEN_EXPIRED: true,
+  TOKEN_NOT_ACTIVE_YET: true,
+  MAX_USES_EXCEEDED: true,
+  UNIVERSAL_NOT_ALLOWED: true,
+  EVENT_INACTIVE: true,
+  EVENT_NOT_STARTED: true,
+  EVENT_ENDED: true,
+  EVENT_CLOSED: true,
+  MEMBER_INACTIVE: true,
+};
+
+/** `accepted` → jade, `rejected` → ochre, `error` → danger. The rail class is
+ *  spelled out per tone rather than interpolated, so Tailwind can see it. */
+const outcomeTone: Record<
+  ScanOutcome,
+  { railClass: string; text: string; chip: string }
+> = {
+  accepted: {
+    railClass: 'bg-seal-500',
+    text: 'text-seal-600',
+    chip: 'border-seal-200/70 bg-seal-50/60 text-seal-800',
+  },
+  rejected: {
+    railClass: 'bg-pending-500',
+    text: 'text-pending-600',
+    chip: 'border-pending-200/70 bg-pending-50/60 text-pending-800',
+  },
+  error: {
+    railClass: 'bg-pen-500',
+    text: 'text-pen',
+    chip: 'border-pen-200/70 bg-pen-50/70 text-pen-deep',
+  },
+};
+export const scanOutcome = (result: ScanResultData): ScanOutcome => {
+  if (result.success) return 'accepted';
+  const code = result.code || '';
+  if (POLICY_REJECTIONS[code]) return 'rejected';
+  // `SCAN_REJECTED` is the client's own fallback for a bodyless failure — we
+  // could not classify it, so it must not be painted as a clean policy verdict.
+  return 'error';
+};
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+
 interface ResultModalProps {
   result: ScanResultData | null;
   onDismiss: () => void;
 }
 
-export const ResultModal: React.FC<ResultModalProps> = ({ result, onDismiss }) => {
+export const ResultModal: React.FC<ResultModalProps> = ({
+  result,
+  onDismiss,
+}) => {
   if (!result) return null;
+
+  const outcome = scanOutcome(result);
+  const tone = outcomeTone[outcome];
+  const accepted = outcome === 'accepted';
 
   return (
     <ModalPortal onClose={onDismiss}>
-      <div
-        className="modal-backdrop-full transition-opacity"
-        onClick={onDismiss}
-      >
-      <div
-        className={`w-full max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border transition-transform my-auto ${
- result.success
- ? 'bg-gradient-to-b from-slate-900 via-slate-900 to-emerald-950/40 border-emerald-500/50 ring-4 ring-emerald-500/20'
- : 'bg-gradient-to-b from-slate-900 via-slate-900 to-rose-950/40 border-rose-500/50 ring-4 ring-rose-500/20'
- }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header with Icon */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            {result.success ? (
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 animate-pop-once">
-                <CheckCircle2 className="w-7 h-7" />
-              </div>
-            ) : (
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-400">
-                <XCircle className="w-7 h-7" />
-              </div>
-            )}
-            <div>
-              <h3 className="text-xl font-bold font-heading">
-                {result.success ? 'ABSENSI BERHASIL' : 'ABSENSI DITOLAK'}
-              </h3>
-              <p
-                className={`text-xs font-semibold ${
-                  result.success ? 'text-emerald-400' : 'text-rose-400'
-                }`}
-              >
-                {result.success
-                  ? result.attendance?.sessionType || 'CHECK-IN VALID'
-                  : result.code || 'INVALID_QR'}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={onDismiss}
-            className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/60 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Content Card */}
-        {result.success && result.attendance ? (
-          <div className="space-y-3.5 bg-slate-950/60 rounded-2xl p-4 border border-slate-800/80">
-            <div>
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
-                Nama Anggota
-              </span>
-              <p className="text-lg font-bold text-white flex items-center gap-2">
-                <User className="w-4 h-4 text-sky-400 shrink-0" />
-                <span>{result.attendance.memberName}</span>
-              </p>
-              <p className="text-xs text-sky-400 font-mono mt-0.5">
-                ID: {result.attendance.memberExternalId}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800/60">
-              <div>
-                <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
-                  Divisi
-                </span>
-                <p className="text-sm font-semibold text-slate-200 flex items-center gap-1.5 mt-0.5">
-                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{result.attendance.memberDivision || '-'}</span>
-                </p>
-              </div>
-
-              <div>
-                <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
-                  Grup / Kategori
-                </span>
-                <p className="text-sm font-semibold text-slate-200 truncate mt-0.5">
-                  {result.attendance.memberGroup || '-'}
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-sky-400" />
-                <span className="truncate max-w-[160px]">{result.attendance.eventName}</span>
-              </span>
-              <span className="flex items-center gap-1.5 font-mono">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                <span>
-                  {new Date(result.attendance.scannedAt).toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  })}
-                </span>
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-slate-950/60 rounded-2xl p-5 border border-rose-900/40 text-center">
-            <p className="text-sm font-semibold text-rose-300 mb-2">
-              {result.message || 'QR Code tidak dapat diverifikasi'}
-            </p>
-            <p className="text-xs text-slate-400">
-              Pastikan QR Code sesuai dengan kegiatan yang aktif dan anggota belum melakukan absensi untuk sesi ini.
-            </p>
-          </div>
-        )}
-
-        {/* Action Button */}
-        <button
-          onClick={onDismiss}
-          className={`w-full mt-5 py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide shadow-lg transition-colors transition-transform active:scale-[0.98] ${ result.success ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30' : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30' } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950`}
+      <div className="modal-backdrop-full" onClick={onDismiss}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={
+            accepted ? 'Hasil absensi berhasil' : 'Hasil absensi ditolak'
+          }
+          className="surface my-auto w-full max-w-md overflow-hidden rounded-bezel shadow-ambient"
+          onClick={(e) => e.stopPropagation()}
         >
-          Lanjut Scan Berikutnya (OK)
-        </button>
+          <div className="flex gap-0 overflow-hidden rounded-bezel">
+            {/* The rail carries the outcome — it varies per result, so it is
+                information, not decoration. */}
+            <span
+              aria-hidden="true"
+              className={cn('rail self-stretch', tone.railClass)}
+            />
+            <div className="min-w-0 flex-1 p-4 sm:p-6">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className={cn(
+                      'pop-once flex h-12 w-12 shrink-0 items-center justify-center rounded-panel border',
+                      tone.chip,
+                    )}
+                  >
+                    {accepted ? (
+                      <CheckCircle className="h-7 w-7" />
+                    ) : outcome === 'rejected' ? (
+                      <Warning className="h-7 w-7" />
+                    ) : (
+                      <XCircle className="h-7 w-7" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-heading text-xl font-bold">
+                      {accepted ? 'ABSENSI BERHASIL' : 'ABSENSI DITOLAK'}
+                    </h3>
+                    <p
+                      className={cn(
+                        'truncate font-oxanium text-xs font-semibold',
+                        tone.text,
+                      )}
+                    >
+                      {accepted
+                        ? result.attendance?.sessionType || 'CHECK-IN VALID'
+                        : result.code || 'INVALID_QR'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onDismiss}
+                  aria-label="Tutup hasil pemindaian"
+                  className={cn(
+                    'touch-target shrink-0 rounded-chip border border-rule bg-paper-raised text-ink-2 transition-colors duration-120 hover:text-white',
+                    focusRing,
+                  )}
+                >
+                  <X className="mx-auto h-5 w-5" />
+                </button>
+              </div>
+
+              {accepted && result.attendance ? (
+                <div className="surface-raised space-y-3.5 rounded-panel p-4">
+                  <div>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-2">
+                      Nama Anggota
+                    </span>
+                    <p className="flex items-center gap-2 text-lg font-bold text-white">
+                      <User className={cn('h-4 w-4 shrink-0', tone.text)} />
+                      <span className="truncate">
+                        {result.attendance.memberName}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 font-oxanium text-xs text-ink-2">
+                      ID: {result.attendance.memberExternalId}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 border-t border-rule pt-2">
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-2">
+                        Divisi
+                      </span>
+                      <p className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold text-ink">
+                        <Buildings className="h-3.5 w-3.5 shrink-0 text-ink-2" />
+                        <span className="truncate">
+                          {result.attendance.memberDivision || '-'}
+                        </span>
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-2">
+                        Grup / Kategori
+                      </span>
+                      <p className="mt-0.5 truncate text-sm font-semibold text-ink">
+                        {result.attendance.memberGroup || '-'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 border-t border-rule pt-2 text-xs text-ink-2">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <CalendarBlank
+                        className={cn('h-3.5 w-3.5 shrink-0', tone.text)}
+                      />
+                      <span className="max-w-[160px] truncate">
+                        {result.attendance.eventName}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1.5 font-oxanium">
+                      <Clock className="h-3.5 w-3.5 text-ink-2" />
+                      <span>
+                        {new Date(
+                          result.attendance.scannedAt,
+                        ).toLocaleTimeString('id-ID', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className={cn(
+                    'rounded-panel border p-5 text-center',
+                    outcome === 'rejected'
+                      ? 'border-pending-200/70 bg-pending-500/5'
+                      : 'border-pen-200/70 bg-pen-50/60',
+                  )}
+                >
+                  <p className={cn('mb-2 text-sm font-semibold', tone.text)}>
+                    {result.message || 'QR Code tidak dapat diverifikasi'}
+                  </p>
+                  <p className="text-xs text-ink-2">
+                    Pastikan QR Code sesuai dengan kegiatan yang aktif dan
+                    anggota belum melakukan absensi untuk sesi ini.
+                  </p>
+                </div>
+              )}
+
+              <Button
+                variant={accepted ? 'primary' : 'secondary'}
+                size="lg"
+                onClick={onDismiss}
+                className="mt-5 w-full"
+              >
+                Lanjut Scan Berikutnya (OK)
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </ModalPortal>
-);
+    </ModalPortal>
+  );
 };

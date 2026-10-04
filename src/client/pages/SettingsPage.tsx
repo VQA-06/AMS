@@ -1,30 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Settings,
-  ShieldCheck,
-  UserPlus,
-  History,
-  Database,
-  User,
-  Lock,
-  CheckCircle2,
-  AlertCircle,
-  AlertTriangle,
-  Eye,
-  EyeOff,
-  Sparkles,
-  Edit2,
-  Trash2,
-  QrCode,
-  UserCheck,
-  X,
-  Smartphone,
-  RefreshCw,
-  Plus,
-  Check,
-  Minus,
-  Users,
-} from 'lucide-react';
+import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
+import { Check } from '@phosphor-icons/react/Check';
+import { CheckCircle } from '@phosphor-icons/react/CheckCircle';
+import { DeviceMobile } from '@phosphor-icons/react/DeviceMobile';
+import { Eye } from '@phosphor-icons/react/Eye';
+import { EyeSlash } from '@phosphor-icons/react/EyeSlash';
+import { LockKey } from '@phosphor-icons/react/LockKey';
+import { Minus } from '@phosphor-icons/react/Minus';
+import { PencilSimple } from '@phosphor-icons/react/PencilSimple';
+import { Plus } from '@phosphor-icons/react/Plus';
+import { ShieldCheck } from '@phosphor-icons/react/ShieldCheck';
+import { Trash } from '@phosphor-icons/react/Trash';
+import { UserCheck } from '@phosphor-icons/react/UserCheck';
+import { UserPlus } from '@phosphor-icons/react/UserPlus';
+import { Users } from '@phosphor-icons/react/Users';
+import { Warning } from '@phosphor-icons/react/Warning';
+import { WarningCircle } from '@phosphor-icons/react/WarningCircle';
+import { X } from '@phosphor-icons/react/X';
 import { Admin, AuditLog, Member, Role } from '@/shared/types';
 import { fetchApi } from '../lib/api-client';
 import { useAuth } from '../hooks/useAuth';
@@ -34,6 +26,31 @@ import { AlertModal } from '../components/ui/AlertModal';
 import { BulkActionBar, BulkActionItem } from '@/client/components/ui/BulkActionBar';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Card } from '../components/ui/Card';
+import { Field } from '../components/ui/Field';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Table, THead, TBody, TRow, TCell } from '../components/ui/Table';
+import { Tabs } from '../components/ui/Tabs';
+import { type MarkTone } from '../components/ui/Card';
+import { getRoleInfo } from '../lib/permissions';
+
+/**
+ * The team table's state mark. Its colour varies per row (jade when the
+ * account is active, danger when access is revoked), so it encodes state
+ * rather than decorating the surface. `TRow` draws it as a left border on the
+ * leading cell: a CSS variant cannot reach that cell from the `<tr>`, because
+ * Tailwind compiles `[&>*…]` into a grandchild selector no `<td>` matches.
+ */
+const adminMark = (status: Admin['status']): MarkTone =>
+  status === 'active' ? 'seal' : 'danger';
+
+const inputClass =
+  'w-full rounded-chip border border-rule-strong bg-ink px-3 py-2.5 text-xs text-ink placeholder:text-ink-3 focus:border-pen-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+
+const monoInputClass = `${inputClass} font-oxanium`;
+
+const iconButtonClass =
+  'flex h-9 w-9 items-center justify-center rounded-chip border border-rule-strong bg-paper-raised text-ink transition-colors duration-120 hover:border-rule-strong hover:text-paper-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
 export const SettingsPage: React.FC = () => {
   const { admin: currentAdmin, updateProfile } = useAuth();
@@ -159,23 +176,24 @@ export const SettingsPage: React.FC = () => {
     switch (level) {
       case 'full':
         return (
-          <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
+          <span className="inline-flex items-center gap-1 font-semibold text-seal-800">
             <Check className="w-3.5 h-3.5" />
             <span className="text-[11px]">Penuh</span>
           </span>
         );
       case 'readonly':
         return (
-          <span className="inline-flex items-center gap-1 text-amber-400 font-medium">
-            <Check className="w-3 h-3 text-amber-400" />
+          <span className="inline-flex items-center gap-1 font-medium text-pending-800">
+            <Check className="w-3 h-3 text-pending-600" />
             <span className="text-[11px]">Hanya Baca</span>
           </span>
         );
       case 'none':
       default:
         return (
-          <span className="inline-flex items-center justify-center text-slate-600 font-bold" title="Tidak Memiliki Akses">
-            <Minus className="w-3.5 h-3.5" />
+          <span className="inline-flex items-center gap-1 font-medium text-ink-2" title="Tidak Memiliki Akses">
+            <Minus className="h-3.5 w-3.5" />
+            <span className="text-[11px]">Tidak Ada</span>
           </span>
         );
     }
@@ -454,254 +472,247 @@ export const SettingsPage: React.FC = () => {
     ? [
         {
           label: 'Hapus',
-          icon: <Trash2 className="w-3.5 h-3.5" />,
+          icon: <Trash className="w-3.5 h-3.5" />,
           variant: 'danger' as const,
           onClick: handleBulkDeleteAdmins,
         },
       ]
     : [];
 
+const [isOnline, setIsOnline] = useState<boolean>(
+    () => (typeof navigator !== 'undefined' ? navigator.onLine : true)
+  );
+  const [serviceWorkerState, setServiceWorkerState] = useState<'checking' | 'active' | 'unsupported'>(
+    'checking'
+  );
+  const [systemNotice, setSystemNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+      setServiceWorkerState('unsupported');
+      return;
+    }
+    let cancelled = false;
+    navigator.serviceWorker
+      .getRegistration()
+      .then((reg) => {
+        if (!cancelled) setServiceWorkerState(reg ? 'active' : 'unsupported');
+      })
+      .catch(() => {
+        if (!cancelled) setServiceWorkerState('unsupported');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleCheckForUpdate = async () => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    setSystemNotice('Memeriksa pembaruan Service Worker...');
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
+        setSystemNotice('Service Worker belum terdaftar di perangkat ini.');
+        return;
+      }
+      await reg.update();
+      setSystemNotice('Pemeriksaan update Service Worker berhasil dijalankan.');
+    } catch {
+      setSystemNotice('Pemeriksaan update Service Worker gagal dijalankan.');
+    }
+  };
+
+  const roleTabs = [
+    { id: 'owner', label: 'Owner' },
+    { id: 'admin', label: 'Admin' },
+    { id: 'operator', label: 'Operator' },
+    { id: 'auditor', label: 'Auditor' },
+  ] as const;
+  const currentRoleInfo = getRoleInfo(currentAdmin?.role);
+
+
+
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-5 pb-24 md:space-y-8 md:pb-12">
+      <PageHeader
+        title="Pengaturan & Profil"
+        subtitle="Kelola profil akun, ubah password, hak akses panitia, dan audit log AMS Computer Community"
+      />
 
       {partialErrors.length > 0 && (
         <div
           role="status"
-          className="flex items-start gap-2.5 px-4 py-3 rounded-2xl bg-amber-950/40 border border-amber-700/50 text-amber-200 text-xs"
+          aria-live="polite"
+          className="flex items-start gap-2.5 rounded-panel border border-pending-200 bg-pending-50/70 px-4 py-3 text-xs text-pending-800"
         >
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <Warning className="mt-0.5 h-4 w-4 shrink-0 text-pending-600" />
           <span>
             Sebagian data gagal dimuat: {partialErrors.join(', ')}. Daftar di bawah
             mungkin tidak lengkap, bukan kosong.
           </span>
         </div>
       )}
-      {/* Top Header */}
-      <div>
-        <h2 className="text-2xl font-bold font-heading text-white flex items-center gap-2.5">
-          <Settings className="w-6 h-6 text-sky-400" />
-          <span>Pengaturan & Profil</span>
-        </h2>
-        <p className="text-xs text-slate-400 mt-0.5">
-          Kelola profil akun, ubah password, hak akses panitia, dan audit log AMS Computer Community
-        </p>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setActiveTab('profile')}
-          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
-            activeTab === 'profile'
-              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-              : 'text-slate-400 hover:text-slate-200 glass-panel'
-          }`}
-        >
-          <User className="w-4 h-4" />
-          <span>Profil & Keamanan Saya</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('team')}
-          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
-            activeTab === 'team'
-              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-              : 'text-slate-400 hover:text-slate-200 glass-panel'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>Tim Panitia & Akses</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('audit')}
-          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
-            activeTab === 'audit'
-              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-              : 'text-slate-400 hover:text-slate-200 glass-panel'
-          }`}
-        >
-          <History className="w-4 h-4" />
-          <span>Audit Log Sistem</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('system')}
-          className={`flex items-center gap-2 px-4 py-2.5 min-h-[40px] rounded-xl text-xs font-bold transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none ${
-            activeTab === 'system'
-              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-              : 'text-slate-400 hover:text-slate-200 glass-panel'
-          }`}
-        >
-          <Database className="w-4 h-4" />
-          <span>Info Sistem Cloudflare</span>
-        </button>
-      </div>
+      <Tabs
+        items={[
+          { id: 'profile', label: 'Profil & Keamanan Saya' },
+          { id: 'team', label: 'Tim Panitia & Akses' },
+          { id: 'audit', label: 'Audit Log Sistem' },
+          { id: 'system', label: 'Info Sistem Cloudflare' },
+        ]}
+        active={activeTab}
+        onChange={(id) => setActiveTab(id as typeof activeTab)}
+        variant="underline"
+        ariaLabel="Bagian pengaturan"
+      />
 
       {/* Tab 0: Profile & Security Management */}
       {activeTab === 'profile' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
           {/* Account Overview Card */}
-          <div className="glass-panel-elevated rounded-3xl p-6 border border-slate-800 space-y-4">
+          <Card className="space-y-4 p-5 sm:p-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-sky-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-sky-500/30 font-heading">
+              <div className="flex h-12 w-12 items-center justify-center rounded-panel bg-pen-500 font-heading text-lg font-bold text-paper">
                 {currentAdmin?.name?.charAt(0)?.toUpperCase() || 'A'}
               </div>
-              <div>
-                <h3 className="font-heading font-bold text-base text-white">{currentAdmin?.name}</h3>
-                <p className="text-xs text-slate-400 font-mono">{currentAdmin?.email}</p>
+              <div className="min-w-0">
+                <h2 className="truncate font-heading text-base font-bold text-white">
+                  {currentAdmin?.name}
+                </h2>
+                <p className="truncate font-oxanium text-xs text-ink-2">{currentAdmin?.email}</p>
               </div>
             </div>
 
-            <div className="space-y-2.5 pt-3 border-t border-slate-800/80 text-xs">
-              <div className="flex justify-between items-center p-3 rounded-xl glass-panel">
-                <span className="text-slate-400">Tingkat Akses:</span>
-                <span className="px-2.5 py-1 rounded-lg uppercase text-[10px] font-bold bg-sky-950/90 text-sky-400 border border-sky-800/50">
-                  {currentAdmin?.role}
-                </span>
+            <dl className="space-y-2 border-t border-rule pt-3 text-xs">
+              <div className="flex items-center justify-between gap-2 rounded-chip bg-paper-raised px-3 py-2.5">
+                <dt className="text-ink-2">Tingkat Akses:</dt>
+                <dd>
+                  <Badge variant={currentRoleInfo.variant} size="xs">
+                    {currentRoleInfo.label}
+                  </Badge>
+                </dd>
               </div>
-              <div className="flex justify-between items-center p-3 rounded-xl glass-panel">
-                <span className="text-slate-400">Status Akun:</span>
-                <span className="text-emerald-400 font-bold capitalize">{currentAdmin?.status}</span>
+              <div className="flex items-center justify-between gap-2 rounded-chip bg-paper-raised px-3 py-2.5">
+                <dt className="text-ink-2">Status Akun:</dt>
+                <dd>
+                  <Badge variant={currentAdmin?.status === 'active' ? 'seal' : 'danger'} size="xs" dot>
+                    {currentAdmin?.status === 'active' ? 'Aktif' : 'Nonaktif'}
+                  </Badge>
+                </dd>
               </div>
-              <div className="flex justify-between items-center p-3 rounded-xl glass-panel">
-                <span className="text-slate-400">ID Admin:</span>
-                <span className="font-mono text-[11px] text-slate-300 truncate max-w-[140px]">
-                  {currentAdmin?.id}
-                </span>
+              <div className="flex items-center justify-between gap-2 rounded-chip bg-paper-raised px-3 py-2.5">
+                <dt className="shrink-0 text-ink-2">ID Admin:</dt>
+                <dd className="truncate font-oxanium text-[11px] text-ink">{currentAdmin?.id}</dd>
               </div>
-            </div>
+            </dl>
 
-            <div className="p-3.5 rounded-2xl bg-sky-950/40 border border-sky-800/40 text-[11px] text-sky-300 flex items-start gap-2">
-              <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-sky-400" />
-              <span>
-                Data akun tersimpan terenkripsi secara aman di database Cloudflare D1.
-              </span>
-            </div>
-          </div>
+            <p className="flex items-start gap-2 rounded-panel border border-rule bg-paper-raised px-3.5 py-3 text-[11px] text-ink-2">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ink-2" />
+              <span>{currentRoleInfo.description}</span>
+            </p>
+          </Card>
 
           {/* Edit Profile & Password Form */}
-          <div className="lg:col-span-2 glass-panel-elevated rounded-3xl p-6 border border-slate-800 space-y-5">
-            <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
-              <Lock className="w-4 h-4 text-sky-400" />
+          <Card className="space-y-5 p-5 sm:p-6 lg:col-span-2">
+            <h2 className="flex items-center gap-2 font-heading text-base font-bold text-white">
+              <LockKey className="h-4 w-4 text-ink-2" />
               <span>Kelola Profil & Ganti Password</span>
-            </h3>
+            </h2>
 
             {profileSuccessMsg && (
-              <div className="p-3.5 rounded-2xl bg-emerald-950/60 border border-emerald-800/60 flex items-start gap-2.5 text-xs text-emerald-300">
-                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex items-start gap-2.5 rounded-panel border border-seal-200 bg-seal-50/70 px-3.5 py-3 text-xs text-seal-800"
+              >
+                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-seal-600" />
                 <span>{profileSuccessMsg}</span>
               </div>
             )}
 
             {profileErrorMsg && (
-              <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-800/60 flex items-start gap-2.5 text-xs text-rose-300">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 rounded-panel border border-pen-200 bg-pen-50/70 px-3.5 py-3 text-xs text-pen-deep"
+              >
+                <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-pen" />
                 <span>{profileErrorMsg}</span>
               </div>
             )}
 
             <form onSubmit={handleUpdateProfile} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="pages-settingspage-field-1" className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Nama Lengkap:
-                  </label>
-                  <input id="pages-settingspage-field-1"
-                    type="text"
-                    required
-                    value={profileName}
-                    autoComplete="name"
-                    onChange={(e) => setProfileName(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-                  />
-                </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field
+                  id="pages-settingspage-field-1"
+                  label="Nama Lengkap:"
+                  control="text"
+                  required
+                  value={profileName}
+                  onChange={setProfileName}
+                  autoComplete="name"
+                />
 
-                <div>
-                  <label htmlFor="pages-settingspage-field-2" className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Email / Username:
-                  </label>
-                  <input id="pages-settingspage-field-2"
-                    type="email"
-                    required
-                    value={profileEmail}
-                    autoComplete="email"
-                    onChange={(e) => setProfileEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
-                  />
-                </div>
+                <Field
+                  id="pages-settingspage-field-2"
+                  label="Email / Username:"
+                  control="email"
+                  required
+                  value={profileEmail}
+                  onChange={setProfileEmail}
+                  autoComplete="email"
+                  controlClassName="font-oxanium"
+                />
               </div>
 
-              <div className="pt-3 border-t border-slate-800/80 space-y-3">
-                <p className="text-xs font-bold text-slate-200">
-                  Ganti Password <span className="text-slate-500 font-normal">(Kosongkan jika tidak ingin mengubah)</span>
+              <div className="space-y-3 border-t border-rule pt-3">
+                <p className="text-xs font-bold text-ink">
+                  Ganti Password <span className="font-normal text-ink-2">(Kosongkan jika tidak ingin mengubah)</span>
                 </p>
 
-                <div>
-                  <label htmlFor="pages-settingspage-field-3" className="block text-xs font-semibold text-slate-300 mb-1">
-                    Password Saat Ini:
-                  </label>
-                  <div className="relative">
-                    <input id="pages-settingspage-field-3"
-                      type={showCurrentPass ? 'text' : 'password'}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Masukkan password sekarang"
-                      className="w-full px-4 py-2.5 pr-12 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPass(!showCurrentPass)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
-                    >
-                      {showCurrentPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
+                <Field
+                  id="pages-settingspage-field-3"
+                  label="Password Saat Ini:"
+                  control="password"
+                  value={currentPassword}
+                  onChange={setCurrentPassword}
+                  placeholder="Masukkan password sekarang"
+                  controlClassName="font-oxanium"
+                />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="pages-settingspage-field-4" className="block text-xs font-semibold text-slate-300 mb-1">
-                      Password Baru:
-                    </label>
-                    <div className="relative">
-                      <input id="pages-settingspage-field-4"
-                        autoComplete="new-password"
-                        type={showNewPass ? 'text' : 'password'}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Minimal 6 karakter"
-                        className="w-full px-4 py-2.5 pr-12 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPass(!showNewPass)}
-                        aria-label={showNewPass ? 'Sembunyikan password' : 'Tampilkan password'}
-                        aria-pressed={showNewPass}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
-                      >
-                        {showNewPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                  </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field
+                    id="pages-settingspage-field-4"
+                    label="Password Baru:"
+                    control="password"
+                    value={newPassword}
+                    onChange={setNewPassword}
+                    placeholder="Minimal 6 karakter"
+                    hint="Minimal 6 karakter"
+                    autoComplete="new-password"
+                    controlClassName="font-oxanium"
+                  />
 
-                  <div>
-                    <label htmlFor="pages-settingspage-field-5" className="block text-xs font-semibold text-slate-300 mb-1">
-                      Konfirmasi Password Baru:
-                    </label>
-                    <input id="pages-settingspage-field-5"
-                      type="password"
-                      value={confirmPassword}
-                      autoComplete="new-password"
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Ketik ulang password baru"
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
-                    />
-                  </div>
+                  <Field
+                    id="pages-settingspage-field-5"
+                    label="Konfirmasi Password Baru:"
+                    control="password"
+                    value={confirmPassword}
+                    onChange={setConfirmPassword}
+                    placeholder="Ketik ulang password baru"
+                    autoComplete="new-password"
+                    controlClassName="font-oxanium"
+                  />
                 </div>
               </div>
 
@@ -710,28 +721,28 @@ export const SettingsPage: React.FC = () => {
                   type="submit"
                   disabled={profileSaving}
                   loading={profileSaving}
-                  icon={<CheckCircle2 className="w-4 h-4" />}
+                  icon={<CheckCircle className="h-4 w-4" />}
                 >
                   Simpan Perubahan Profil
                 </Button>
               </div>
             </form>
-          </div>
+          </Card>
         </div>
       )}
 
       {/* Tab 1: Team Management */}
       {activeTab === 'team' && (
-        <div className="space-y-6">
-          {/* Panitia Accounts List (Full Width Enterprise Table) */}
-          <div className="glass-panel-elevated rounded-2xl p-5 sm:p-6 border border-slate-800 space-y-4 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+        <div className="space-y-5 lg:space-y-6">
+          {/* Panitia Accounts List */}
+          <Card className="space-y-4 p-5 sm:p-6">
+            <div className="flex flex-col justify-between gap-3 border-b border-rule pb-3 sm:flex-row sm:items-center">
               <div>
-                <h3 className="text-base font-bold font-heading text-white flex items-center gap-2">
-                  <Users className="w-5 h-5 text-sky-400" />
+                <h2 className="flex items-center gap-2 font-heading text-base font-bold text-white">
+                  <Users className="h-5 w-5 text-ink-2" />
                   <span>Daftar Akun Tim Panitia</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
+                </h2>
+                <p className="mt-0.5 text-xs text-ink-2">
                   Kelola hak otorisasi dan penugasan peran operasional akun panitia AMS Computer Community
                 </p>
               </div>
@@ -740,7 +751,7 @@ export const SettingsPage: React.FC = () => {
                 <Button
                   variant="primary"
                   size="sm"
-                  icon={<Plus className="w-4 h-4" />}
+                  icon={<Plus className="h-4 w-4" />}
                   onClick={() => {
                     setFormError(null);
                     setFormSuccess(null);
@@ -754,122 +765,105 @@ export const SettingsPage: React.FC = () => {
               )}
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-800">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900/90 uppercase font-bold tracking-wider text-slate-400 text-[10px] border-b border-slate-800">
-                  <tr>
-                    {currentAdmin?.role === 'owner' && (
-                      <th className="w-10 px-4 py-3.5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectableAdmins.length > 0 && selectedAdminIds.size === selectableAdmins.length}
-                          onChange={handleToggleSelectAllAdmins}
-                          className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                          title={selectedAdminIds.size === selectableAdmins.length ? 'Batalkan pilih semua' : 'Pilih semua'}
-                        />
-                      </th>
-                    )}
-                    <th className="px-4 py-3.5">Nama & Identitas</th>
-                    <th className="px-4 py-3.5">Role / Peran</th>
-                    <th className="px-4 py-3.5">Tipe Akun</th>
-                    <th className="px-4 py-3.5">Status</th>
-                    {currentAdmin?.role === 'owner' && <th className="px-4 py-3.5 text-right">Aksi</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {admins.map((adm) => {
-                    const isSelectable = adm.id !== currentAdmin?.id && !(adm.role === 'owner' && adm.member_id === null);
-                    const isSelected = selectedAdminIds.has(adm.id);
-                    return (
-                      <tr
-                        key={adm.id}
-                        className={`transition-colors ${
-                          isSelected ? 'bg-sky-950/20 hover:bg-sky-950/30' : 'hover:bg-slate-900/40'
-                        }`}
-                      >
-                        {currentAdmin?.role === 'owner' && (
-                          <td className="w-10 px-4 py-3.5 text-center">
-                            {isSelectable ? (
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => handleToggleSelectAdmin(adm.id)}
-                                className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-sky-500/40 cursor-pointer accent-sky-500"
-                              />
-                            ) : (
-                              <span className="text-slate-600 text-xs">-</span>
-                            )}
-                          </td>
-                        )}
-                        <td className="px-4 py-3.5 font-sans">
-                          <div className="font-semibold text-white">{adm.name}</div>
-                          <div className="text-[11px] text-slate-400 font-mono">{adm.email}</div>
-                          {adm.member_division && (
-                            <span className="text-[10px] text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-800/40 mt-0.5 inline-block">
-                              Divisi: {adm.member_division}
-                            </span>
+            <Table className="rounded-panel border border-rule">
+              <THead>
+                <tr>
+                  {currentAdmin?.role === 'owner' && (
+                    <TCell header className="w-10 text-center">
+                      <input
+                        type="checkbox"
+                        aria-label="Pilih semua akun panitia"
+                        checked={selectableAdmins.length > 0 && selectedAdminIds.size === selectableAdmins.length}
+                        onChange={handleToggleSelectAllAdmins}
+                        className="h-4 w-4 cursor-pointer rounded border-rule-strong bg-ink accent-pen-500"
+                        title={selectedAdminIds.size === selectableAdmins.length ? 'Batalkan pilih semua' : 'Pilih semua'}
+                      />
+                    </TCell>
+                  )}
+                  <TCell header>Nama & Identitas</TCell>
+                  <TCell header>Role / Peran</TCell>
+                  <TCell header>Tipe Akun</TCell>
+                  <TCell header>Status</TCell>
+                  {currentAdmin?.role === 'owner' && <TCell header className="text-right">Aksi</TCell>}
+                </tr>
+              </THead>
+              <TBody>
+                {admins.map((adm) => {
+                  const isSelectable = adm.id !== currentAdmin?.id && !(adm.role === 'owner' && adm.member_id === null);
+                  const isSelected = selectedAdminIds.has(adm.id);
+                  const roleInfo = getRoleInfo(adm.role);
+                  return (
+                    <TRow key={adm.id} selected={isSelected} mark={adminMark(adm.status)}>
+                      {currentAdmin?.role === 'owner' && (
+                        <TCell className="w-10 text-center">
+                          {isSelectable ? (
+                            <input
+                              type="checkbox"
+                              aria-label={`Pilih akun ${adm.name}`}
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectAdmin(adm.id)}
+                              className="h-4 w-4 cursor-pointer rounded border-rule-strong bg-ink accent-pen-500"
+                            />
+                          ) : (
+                            <span className="text-xs text-ink-3">-</span>
                           )}
-                        </td>
-                        <td className="px-4 py-3.5 font-sans">
-                          <Badge
-                            variant={
-                              adm.role === 'owner'
-                                ? 'amber'
-                                : adm.role === 'admin'
-                                ? 'sky'
-                                : adm.role === 'operator'
-                                ? 'emerald'
-                                : 'purple'
-                            }
-                            size="xs"
-                          >
-                            {adm.role.toUpperCase()}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3.5 text-slate-400 text-[11px] font-sans">
-                          {adm.member_id ? 'Terkait Anggota' : 'Default Master'}
-                        </td>
-                        <td className="px-4 py-3.5 font-sans">
-                          <Badge
-                            variant={adm.status === 'active' ? 'emerald' : 'rose'}
-                            size="xs"
-                            dot
-                          >
-                            {adm.status === 'active' ? 'Aktif' : 'Nonaktif'}
-                          </Badge>
-                        </td>
-                        {currentAdmin?.role === 'owner' && (
-                          <td className="px-4 py-3.5 font-sans text-right">
-                            <div className="flex items-center justify-end gap-1">
+                        </TCell>
+                      )}
+                      <TCell>
+                        <div className="max-w-[16rem] truncate font-semibold text-white">{adm.name}</div>
+                        <div className="max-w-[16rem] truncate font-oxanium text-[11px] text-ink-2">
+                          {adm.email}
+                        </div>
+                        {adm.member_division && (
+                          <span className="mt-0.5 inline-block max-w-[16rem] truncate rounded-chip border border-pen-200 bg-pen-50/70 px-1.5 py-0.5 text-[10px] text-ink-2">
+                            Divisi: {adm.member_division}
+                          </span>
+                        )}
+                      </TCell>
+                      <TCell>
+                        <Badge variant={roleInfo.variant} size="xs">
+                          {roleInfo.label}
+                        </Badge>
+                      </TCell>
+                      <TCell className="text-[11px] text-ink-2">
+                        {adm.member_id ? 'Terkait Anggota' : 'Default Master'}
+                      </TCell>
+                      <TCell>
+                        <Badge variant={adm.status === 'active' ? 'seal' : 'danger'} size="xs" dot>
+                          {adm.status === 'active' ? 'Aktif' : 'Nonaktif'}
+                        </Badge>
+                      </TCell>
+                      {currentAdmin?.role === 'owner' && (
+                        <TCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(adm)}
+                              aria-label={`Edit akun ${adm.name}`}
+                              className={iconButtonClass}
+                              title="Edit Akun Panitia"
+                            >
+                              <PencilSimple className="h-3.5 w-3.5" />
+                            </button>
+                            {adm.id !== 'adm_owner_default' && adm.id !== currentAdmin.id && (
                               <button
                                 type="button"
-                                onClick={() => handleOpenEditModal(adm)}
-                                aria-label={`Edit akun ${adm.name}`}
-                                className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-slate-800/80 hover:bg-sky-600/30 text-slate-300 hover:text-sky-400 transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus:outline-none"
-                                title="Edit Akun & Password"
+                                onClick={() => handleDeleteAdmin(adm)}
+                                aria-label={`Hapus akun ${adm.name}`}
+                                className={`${iconButtonClass} hover:border-pen-600 hover:text-pen-deep`}
+                                title="Hapus Akun Panitia"
                               >
-                                <Edit2 className="w-3.5 h-3.5" />
+                                <Trash className="h-3.5 w-3.5" />
                               </button>
-                              {adm.id !== 'adm_owner_default' && adm.id !== currentAdmin.id && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteAdmin(adm)}
-                                  aria-label={`Hapus akun ${adm.name}`}
-                                  className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-slate-800/80 hover:bg-rose-600/30 text-slate-300 hover:text-rose-400 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus:outline-none"
-                                  title="Hapus Akun Panitia"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            )}
+                          </div>
+                        </TCell>
+                      )}
+                    </TRow>
+                  );
+                })}
+              </TBody>
+            </Table>
 
             {/* Contextual Floating Bulk Action Bar for Team Tab */}
             <BulkActionBar
@@ -881,183 +875,158 @@ export const SettingsPage: React.FC = () => {
               isAllSelected={selectableAdmins.length > 0 && selectedAdminIds.size === selectableAdmins.length}
               actions={adminBulkActions}
             />
-          </div>
+          </Card>
 
           {/* Role-Based Access Control (RBAC) Matrix Table */}
-          <div className="glass-panel-elevated rounded-2xl p-5 sm:p-6 border border-slate-800 space-y-4 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+          <Card className="space-y-4 p-5 sm:p-6">
+            <div className="flex flex-col justify-between gap-2 border-b border-rule pb-3 sm:flex-row sm:items-center">
               <div>
-                <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <h2 className="flex items-center gap-2 font-heading text-base font-bold text-white">
+                  <ShieldCheck className="h-5 w-5 text-seal-600" />
                   <span>Matriks Hak Akses Peran (RBAC Matrix)</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
+                </h2>
+                <p className="mt-0.5 text-xs text-ink-2">
                   Spesifikasi hak otorisasi dan batas kewenangan operasional per peran pada sistem presensi AMS
                 </p>
               </div>
-              <span className="text-[11px] font-mono text-slate-400 bg-slate-900 px-3 py-1 rounded-full border border-slate-800 self-start sm:self-auto">
+              <Badge variant="neutral" size="xs">
                 Role-Based Access Control
-              </span>
+              </Badge>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-800">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900/90 text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-slate-800">
-                  <tr>
-                    <th className="py-3 px-4 min-w-[240px]">Fitur & Kapabilitas Sistem</th>
-                    <th className="py-3 px-4 text-center min-w-[120px]">
-                      <span className="px-2 py-0.5 rounded-md bg-amber-950/80 text-amber-300 border border-amber-800/60 font-mono font-bold text-[10px]">
-                        Owner
-                      </span>
-                    </th>
-                    <th className="py-3 px-4 text-center min-w-[120px]">
-                      <span className="px-2 py-0.5 rounded-md bg-sky-950/80 text-sky-400 border border-sky-800/60 font-mono font-bold text-[10px]">
-                        Admin
-                      </span>
-                    </th>
-                    <th className="py-3 px-4 text-center min-w-[120px]">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-mono font-bold text-[10px]">
-                        Operator
-                      </span>
-                    </th>
-                    <th className="py-3 px-4 text-center min-w-[120px]">
-                      <span className="px-2 py-0.5 rounded-md bg-purple-950/80 text-purple-300 border border-purple-800/60 font-mono font-bold text-[10px]">
-                        Auditor
-                      </span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 text-xs">
-                  {rbacMatrixData.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-900/40 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-white">{row.name}</div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">{row.desc}</div>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {renderCapabilityCell(row.owner)}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {renderCapabilityCell(row.admin)}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {renderCapabilityCell(row.operator)}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {renderCapabilityCell(row.auditor)}
-                      </td>
-                    </tr>
+            <Table className="rounded-panel border border-rule">
+              <THead>
+                <tr>
+                  <TCell header className="min-w-[240px]">
+                    Fitur &amp; Kapabilitas Sistem
+                  </TCell>
+                  {roleTabs.map((role) => (
+                    <TCell key={role.id} header className="min-w-[120px] text-center">
+                      <Badge variant={getRoleInfo(role.id).variant} size="xs">
+                        {role.label}
+                      </Badge>
+                    </TCell>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                </tr>
+              </THead>
+              <TBody>
+                {rbacMatrixData.map((row) => (
+                  <TRow key={row.name}>
+                    <TCell>
+                      <div className="max-w-[22rem] font-semibold text-white">{row.name}</div>
+                      <div className="mt-0.5 max-w-[22rem] text-[11px] text-ink-2">{row.desc}</div>
+                    </TCell>
+                    <TCell className="text-center">{renderCapabilityCell(row.owner)}</TCell>
+                    <TCell className="text-center">{renderCapabilityCell(row.admin)}</TCell>
+                    <TCell className="text-center">{renderCapabilityCell(row.operator)}</TCell>
+                    <TCell className="text-center">{renderCapabilityCell(row.auditor)}</TCell>
+                  </TRow>
+                ))}
+              </TBody>
+            </Table>
+          </Card>
 
           {/* Modal Tambah Akun Panitia */}
           {isAddAdminOpen && (
             <ModalPortal onClose={() => setIsAddAdminOpen(false)}>
               <div className="modal-backdrop-full">
-                <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="surface my-auto w-full max-w-md space-y-4 rounded-bezel p-5 shadow-ambient sm:p-6">
+                  <div className="flex items-center justify-between border-b border-rule pb-3">
                     <div className="flex items-center gap-2">
-                      <UserPlus className="w-5 h-5 text-sky-400" />
-                      <h3 className="font-heading font-bold text-base text-white">
+                      <UserPlus className="h-5 w-5 text-ink-2" />
+                      <h2 className="font-heading text-base font-bold text-white">
                         Tambah Akun Panitia Baru
-                      </h3>
+                      </h2>
                     </div>
                     <button
                       type="button"
                       onClick={() => setIsAddAdminOpen(false)}
-                      className="text-slate-400 hover:text-white p-1 rounded-lg"
-                      title="Tutup"
+                      aria-label="Tutup"
+                      className={iconButtonClass}
                     >
-                      <X className="w-4 h-4" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
 
                   {formError && (
-                    <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-xs text-rose-300 flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div
+                      role="alert"
+                      className="flex items-start gap-2 rounded-chip border border-pen-200 bg-pen-50/70 px-3 py-3 text-xs text-pen-deep"
+                    >
+                      <WarningCircle className="mt-0.5 h-4 w-4 shrink-0" />
                       <span>{formError}</span>
                     </div>
                   )}
 
                   {formSuccess && (
-                    <div className="p-3 rounded-xl bg-emerald-950/50 border border-emerald-800 text-xs text-emerald-300 flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div
+                      role="status"
+                      aria-live="polite"
+                      className="flex items-start gap-2 rounded-chip border border-seal-200 bg-seal-50/70 px-3 py-3 text-xs text-seal-800"
+                    >
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
                       <span>{formSuccess}</span>
                     </div>
                   )}
 
                   <form onSubmit={handleAddAdminFromMember} className="space-y-3.5 text-xs">
-                    <div>
-                      <label htmlFor="pages-settingspage-field-6" className="block font-semibold text-slate-300 mb-1">
-                        Pilih Anggota Utama / Universal:
-                      </label>
-                      <select id="pages-settingspage-field-6"
-                        required
-                        value={selectedMemberId}
-                        onChange={(e) => setSelectedMemberId(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-                      >
-                        <option value="">-- Pilih Anggota Aktif --</option>
-                        {activeMembers
+                    <Field
+                      id="pages-settingspage-field-6"
+                      label="Pilih Anggota Utama / Universal:"
+                      control="select"
+                      required
+                      value={selectedMemberId}
+                      onChange={setSelectedMemberId}
+                      hint={
+                        activeMembers.filter((m) => !admins.some((a) => a.member_id === m.id)).length === 0
+                          ? 'Semua anggota aktif sudah terdaftar memiliki akun panitia.'
+                          : undefined
+                      }
+                      options={[
+                        { value: '', label: '-- Pilih Anggota Aktif --' },
+                        ...activeMembers
                           .filter((m) => !admins.some((a) => a.member_id === m.id))
-                          .map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.name} ({m.external_id}) {m.division ? `[${m.division}]` : ''}
-                            </option>
-                          ))}
-                      </select>
-                      {activeMembers.filter((m) => !admins.some((a) => a.member_id === m.id)).length === 0 && (
-                        <p className="text-[11px] text-amber-400 mt-1">
-                          Semua anggota aktif sudah terdaftar memiliki akun panitia.
-                        </p>
-                      )}
-                    </div>
+                          .map((m) => ({
+                            value: m.id,
+                            label: `${m.name} (${m.external_id}) ${m.division ? `[${m.division}]` : ''}`,
+                          })),
+                      ]}
+                    />
 
-                    <div>
-                      <label htmlFor="pages-settingspage-field-7" className="block font-semibold text-slate-300 mb-1">Role / Peran Akun:</label>
-                      <select id="pages-settingspage-field-7"
-                        value={newRole}
-                        onChange={(e) => setNewRole(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-                      >
-                        <option value="operator">Operator (Pos Scanner & Cek Event)</option>
-                        <option value="admin">Admin (Kelola Anggota, Event, QR)</option>
-                        <option value="auditor">Auditor (Read-Only Rekap & Laporan)</option>
-                        <option value="owner">Owner (Hak Akses Penuh / Super Admin)</option>
-                      </select>
-                    </div>
+                    <Field
+                      id="pages-settingspage-field-7"
+                      label="Role / Peran Akun:"
+                      control="select"
+                      value={newRole}
+                      onChange={(v) => setNewRole(v as Role)}
+                      options={[
+                        { value: 'operator', label: 'Operator (Pos Scanner & Cek Event)' },
+                        { value: 'admin', label: 'Admin (Kelola Anggota, Event, QR)' },
+                        { value: 'auditor', label: 'Auditor (Read-Only Rekap & Laporan)' },
+                        { value: 'owner', label: 'Owner (Hak Akses Penuh / Super Admin)' },
+                      ]}
+                    />
 
-                    <div>
-                      <label htmlFor="pages-settingspage-field-8" className="block font-semibold text-slate-300 mb-1">
-                        Password Awal <span className="text-slate-500 font-normal">(Min. 6 Karakter)</span>:
-                      </label>
-                      <input id="pages-settingspage-field-8"
-                        type="password"
-                        required
-                        value={newPasswordAdmin}
-                        onChange={(e) => setNewPasswordAdmin(e.target.value)}
-                        placeholder="Contoh: Panitia123!"
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
-                      />
-                    </div>
+                    <Field
+                      id="pages-settingspage-field-8"
+                      label="Password Awal (Min. 6 Karakter):"
+                      control="password"
+                      required
+                      value={newPasswordAdmin}
+                      onChange={setNewPasswordAdmin}
+                      placeholder="Contoh: Panitia123!"
+                      controlClassName="font-oxanium"
+                    />
 
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsAddAdminOpen(false)}
-                      >
+                    <div className="flex items-center justify-end gap-2 border-t border-rule pt-3">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddAdminOpen(false)}>
                         Batal
                       </Button>
                       <Button
                         type="submit"
                         disabled={formLoading}
                         loading={formLoading}
-                        icon={<UserCheck className="w-4 h-4" />}
+                        icon={<UserCheck className="h-4 w-4" />}
                         size="sm"
                       >
                         Buat Akun Tim
@@ -1073,95 +1042,85 @@ export const SettingsPage: React.FC = () => {
           {editingAdmin && (
             <ModalPortal onClose={() => setEditingAdmin(null)}>
               <div className="modal-backdrop-full">
-                <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 my-auto">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="surface my-auto w-full max-w-md space-y-3.5 rounded-bezel p-4 shadow-ambient sm:space-y-4 sm:p-6">
+                  <div className="flex items-center justify-between border-b border-rule pb-3">
                     <div className="flex items-center gap-2">
-                      <Edit2 className="w-4 h-4 text-sky-400" />
-                      <h3 className="font-heading font-bold text-base text-white">
-                        Edit Akun Panitia
-                      </h3>
+                      <PencilSimple className="h-4 w-4 text-ink-2" />
+                      <h2 className="font-heading text-base font-bold text-white">Edit Akun Panitia</h2>
                     </div>
                     <button
                       type="button"
                       onClick={() => setEditingAdmin(null)}
-                      className="text-slate-400 hover:text-white p-1"
+                      aria-label="Tutup"
+                      className={iconButtonClass}
                     >
-                      <X className="w-4 h-4" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
 
-                  <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-1 text-xs">
-                    <div className="font-semibold text-white">{editingAdmin.name}</div>
-                    <div className="text-slate-400 font-mono">{editingAdmin.email}</div>
+                  <div className="surface-raised space-y-1 rounded-panel p-3 text-xs">
+                    <div className="truncate font-semibold text-white">{editingAdmin.name}</div>
+                    <div className="truncate font-oxanium text-ink-2">{editingAdmin.email}</div>
                     {editingAdmin.member_external_id && (
-                      <div className="text-sky-400 font-mono text-[11px]">
+                      <div className="truncate font-oxanium text-[11px] text-ink-2">
                         Kode Anggota: {editingAdmin.member_external_id}
                       </div>
                     )}
                   </div>
 
                   {editError && (
-                    <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-xs text-rose-300">
+                    <div
+                      role="alert"
+                      className="rounded-chip border border-pen-200 bg-pen-50/70 px-3 py-3 text-xs text-pen-deep"
+                    >
                       {editError}
                     </div>
                   )}
 
                   <form onSubmit={handleSaveEditAdmin} className="space-y-3 text-xs">
-                    <div>
-                      <label htmlFor="pages-settingspage-field-9" className="block font-semibold text-slate-300 mb-1">Role / Peran:</label>
-                      <select id="pages-settingspage-field-9"
-                        value={editRole}
-                        onChange={(e) => setEditRole(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500"
-                      >
-                        <option value="operator">Operator (Pos Scanner & Cek Event)</option>
-                        <option value="admin">Admin (Kelola Anggota, Event, QR)</option>
-                        <option value="auditor">Auditor (Read-Only Rekap & Laporan)</option>
-                        <option value="owner">Owner (Hak Akses Penuh / Super Admin)</option>
-                      </select>
-                    </div>
+                    <Field
+                      id="pages-settingspage-field-9"
+                      label="Role / Peran:"
+                      control="select"
+                      value={editRole}
+                      onChange={(v) => setEditRole(v as Role)}
+                      options={[
+                        { value: 'operator', label: 'Operator (Pos Scanner & Cek Event)' },
+                        { value: 'admin', label: 'Admin (Kelola Anggota, Event, QR)' },
+                        { value: 'auditor', label: 'Auditor (Read-Only Rekap & Laporan)' },
+                        { value: 'owner', label: 'Owner (Hak Akses Penuh / Super Admin)' },
+                      ]}
+                    />
 
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Status Akun:</label>
-                      <select
-                        disabled={editingAdmin.id === 'adm_owner_default'}
-                        value={editStatus}
-                        onChange={(e) => setEditStatus(e.target.value as any)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 disabled:opacity-50"
-                      >
-                        <option value="active">Aktif</option>
-                        <option value="inactive">Nonaktif (Akses Dicabut)</option>
-                      </select>
-                    </div>
+                    <Field
+                      id="pages-settingspage-field-11"
+                      label="Status Akun:"
+                      control="select"
+                      disabled={editingAdmin.id === 'adm_owner_default'}
+                      value={editStatus}
+                      onChange={(v) => setEditStatus(v === 'inactive' ? 'inactive' : 'active')}
+                      hint={editingAdmin.id === 'adm_owner_default' ? 'Status akun owner default tidak dapat diubah.' : undefined}
+                      options={[
+                        { value: 'active', label: 'Aktif' },
+                        { value: 'inactive', label: 'Nonaktif (Akses Dicabut)' },
+                      ]}
+                    />
 
-                    <div>
-                      <label htmlFor="pages-settingspage-field-10" className="block font-semibold text-slate-300 mb-1">
-                        Reset Password Baru <span className="text-slate-500 font-normal">(Kosongkan jika tidak diubah)</span>:
-                      </label>
-                      <input id="pages-settingspage-field-10"
-                        type="password"
-                        value={editPassword}
-                        onChange={(e) => setEditPassword(e.target.value)}
-                        placeholder="Masukkan password baru"
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 font-mono"
-                      />
-                    </div>
+                    <Field
+                      id="pages-settingspage-field-10"
+                      label="Reset Password Baru (Kosongkan jika tidak diubah):"
+                      control="password"
+                      value={editPassword}
+                      onChange={setEditPassword}
+                      placeholder="Masukkan password baru"
+                      controlClassName="font-oxanium"
+                    />
 
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingAdmin(null)}
-                      >
+                    <div className="flex items-center justify-end gap-2 border-t border-rule pt-3">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setEditingAdmin(null)}>
                         Batal
                       </Button>
-                      <Button
-                        type="submit"
-                        disabled={editSaving}
-                        loading={editSaving}
-                        size="sm"
-                      >
+                      <Button type="submit" disabled={editSaving} loading={editSaving} size="sm">
                         Simpan Perubahan
                       </Button>
                     </div>
@@ -1175,60 +1134,60 @@ export const SettingsPage: React.FC = () => {
 
       {/* Tab 2: Audit Logs */}
       {activeTab === 'audit' && (
-        <div className="space-y-4">
-          <div className="glass-panel rounded-3xl overflow-hidden border border-slate-800 shadow-xl">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-900/80 uppercase font-bold tracking-wider text-slate-400 border-b border-slate-800">
-                <tr>
-                  <th className="px-5 py-3.5">Waktu</th>
-                  <th className="px-5 py-3.5">Aksi</th>
-                  <th className="px-5 py-3.5">Pelaksana</th>
-                  <th className="px-5 py-3.5">Detail</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
-                {auditLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-900/40">
-                    <td className="px-5 py-3.5 text-slate-400">
-                      {new Date(log.created_at).toLocaleString('id-ID')}
-                    </td>
-                    <td className="px-5 py-3.5 font-bold text-sky-400">{log.action}</td>
-                    <td className="px-5 py-3.5 font-sans text-slate-200">
-                      {log.admin_name || log.admin_email || 'Sistem / Dev'}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-400 truncate max-w-xs">
-                      {typeof log.meta === 'string' ? log.meta : JSON.stringify(log.meta)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Card className="overflow-hidden">
+          <Table>
+            <THead>
+              <tr>
+                <TCell header>Waktu</TCell>
+                <TCell header>Aksi</TCell>
+                <TCell header>Pelaksana</TCell>
+                <TCell header>Detail</TCell>
+              </tr>
+            </THead>
+            <TBody>
+              {auditLogs.map((log) => (
+                <TRow key={log.id}>
+                  <TCell className="whitespace-nowrap font-oxanium text-ink-2">
+                    {new Date(log.created_at).toLocaleString('id-ID')}
+                  </TCell>
+                  <TCell truncate className="font-semibold text-ink-2">
+                    {log.action}
+                  </TCell>
+                  <TCell truncate className="text-ink">
+                    {log.admin_name || log.admin_email || 'Sistem / Dev'}
+                  </TCell>
+                  <TCell truncate className="font-oxanium text-ink-2">
+                    {typeof log.meta === 'string' ? log.meta : JSON.stringify(log.meta)}
+                  </TCell>
+                </TRow>
+              ))}
+            </TBody>
+          </Table>
+        </Card>
       )}
 
-      {/* Tab 3: System Status */}
+      {/* Tab 3: System Status — real runtime state only */}
       {activeTab === 'system' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="glass-panel-elevated rounded-3xl p-6 border border-slate-800 space-y-4 md:col-span-2">
-            <div className="flex items-center justify-between">
-              <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
-                <Smartphone className="w-4 h-4 text-emerald-400" />
-                <span>Progressive Web App (PWA) & Offline Shell</span>
-              </h3>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950/80 text-emerald-400 border border-emerald-800/50">
-                PWA v1.0.0
-              </span>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
+          <Card className="space-y-4 p-5 sm:p-6 md:col-span-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 font-heading text-base font-bold text-white">
+                <DeviceMobile className="h-4 w-4 text-seal-600" />
+                <span>Progressive Web App (PWA) &amp; Offline Shell</span>
+              </h2>
+              <Badge variant="seal" size="xs">
+                Terpasang sebagai PWA
+              </Badge>
             </div>
 
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-ink">
               AMS mendukung instalasi mandiri di Android, iOS, Windows, macOS, dan Linux dengan kemampuan caching offline penuh.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
-              <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
-                <span className="text-[11px] text-slate-400 block font-medium">Mode Tampilan:</span>
-                <span className="font-bold text-sky-400">
+            <div className="grid grid-cols-1 gap-3 pt-1 text-xs sm:grid-cols-3">
+              <div className="surface-raised space-y-1 rounded-panel p-3.5">
+                <span className="block text-[11px] font-medium text-ink-2">Mode Tampilan:</span>
+                <span className="font-bold text-ink-2">
                   {typeof window !== 'undefined' &&
                   (window.matchMedia('(display-mode: standalone)').matches ||
                     (window.navigator as unknown as { standalone?: boolean }).standalone)
@@ -1237,65 +1196,66 @@ export const SettingsPage: React.FC = () => {
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
-                <span className="text-[11px] text-slate-400 block font-medium">Service Worker:</span>
-                <span className="font-bold text-emerald-400 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  {typeof navigator !== 'undefined' && 'serviceWorker' in navigator
-                    ? 'Aktif & Pre-cached'
-                    : 'Tidak Didukung'}
+              <div className="surface-raised space-y-1 rounded-panel p-3.5">
+                <span className="block text-[11px] font-medium text-ink-2">Service Worker:</span>
+                <span className="flex items-center gap-1.5 font-bold text-ink">
+                  {serviceWorkerState === 'active' ? (
+                    <>
+                      <CheckCircle className="h-3.5 w-3.5 text-seal-600" />
+                      Aktif &amp; Terdaftar
+                    </>
+                  ) : serviceWorkerState === 'checking' ? (
+                    <>
+                      <ArrowClockwise className="h-3.5 w-3.5 text-pending-600 animate-pulse" />
+                      Memeriksa...
+                    </>
+                  ) : (
+                    <>
+                      <Minus className="h-3.5 w-3.5 text-ink-2" />
+                      Tidak Terdaftar
+                    </>
+                  )}
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
-                <span className="text-[11px] text-slate-400 block font-medium">Konektivitas Jaringan:</span>
-                <span className="font-bold text-white flex items-center gap-1.5">
+              <div className="surface-raised space-y-1 rounded-panel p-3.5">
+                <span className="block text-[11px] font-medium text-ink-2">Konektivitas Jaringan:</span>
+                <span className="flex items-center gap-1.5 font-bold text-ink">
                   <span
-                    className={`w-2 h-2 rounded-full ${
-                      typeof navigator !== 'undefined' && navigator.onLine
-                        ? 'bg-emerald-400'
-                        : 'bg-rose-400'
-                    }`}
-                  ></span>
-                  {typeof navigator !== 'undefined' && navigator.onLine ? 'Online' : 'Offline'}
+                    aria-hidden="true"
+                    className={`h-2 w-2 rounded-full ${isOnline ? 'bg-seal-400' : 'bg-pen-400'}`}
+                  />
+                  {isOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
             </div>
+
+            {systemNotice && (
+              <p role="status" aria-live="polite" className="text-xs text-ink-2">
+                {systemNotice}
+              </p>
+            )}
 
             <div className="flex flex-wrap gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.getRegistration().then((reg) => {
-                      if (reg) {
-                        reg.update();
-                        setAlertModal({
-                          isOpen: true,
-                          title: 'Pemeriksaan Update',
-                          message: 'Pemeriksaan update Service Worker berhasil dijalankan.',
-                          type: 'success',
-                        });
-                      }
-                    });
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl glass-panel text-slate-200 hover:text-white font-semibold text-xs transition-colors"
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCheckForUpdate}
+                icon={<ArrowClockwise className="h-3.5 w-3.5" />}
               >
-                <RefreshCw className="w-3.5 h-3.5 text-sky-400" />
-                <span>Cek Pembaruan App</span>
-              </button>
+                Cek Pembaruan App
+              </Button>
 
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setClearingCache(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl glass-panel text-rose-400 hover:text-rose-300 font-semibold text-xs transition-colors"
+                icon={<Trash className="h-3.5 w-3.5" />}
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Bersihkan Cache Offline & Reload</span>
-              </button>
+                Bersihkan Cache Offline &amp; Reload
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 

@@ -7,6 +7,9 @@ import { fetchApi } from './lib/api-client';
 import { fetchCached } from './lib/swr-client';
 import { Member, Event } from '@/shared/types';
 import { ErrorPage } from './pages/ErrorPage';
+import { WarningCircle } from '@phosphor-icons/react/WarningCircle';
+import { Skeleton } from './components/ui/Skeleton';
+import { failedGlobalSections } from './lib/global-load-sections';
 
 // Route-based Code Splitting: Secondary routes loaded asynchronously on-demand
 const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
@@ -20,14 +23,14 @@ const MemberTrackerPage = lazy(() => import('./pages/MemberTrackerPage').then((m
 const QrGeneratorModal = lazy(() => import('./components/qr/QrGeneratorModal').then((m) => ({ default: m.QrGeneratorModal })));
 
 const RouteLoadingFallback: React.FC = () => (
-  <div className="p-4 max-w-7xl mx-auto space-y-4">
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-      <div className="h-24 bg-slate-900/60 border border-slate-800/80 rounded-2xl animate-pulse" />
-      <div className="h-24 bg-slate-900/60 border border-slate-800/80 rounded-2xl animate-pulse" />
-      <div className="h-24 bg-slate-900/60 border border-slate-800/80 rounded-2xl animate-pulse" />
-      <div className="h-24 bg-slate-900/60 border border-slate-800/80 rounded-2xl animate-pulse" />
+  <div className="mx-auto w-full max-w-[1536px] space-y-4" role="status" aria-live="polite">
+    <span className="sr-only">Memuat halaman…</span>
+    <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <Skeleton key={`route-kpi-${idx}`} className="h-24 rounded-panel" />
+      ))}
     </div>
-    <div className="h-72 bg-slate-900/40 border border-slate-800/60 rounded-2xl animate-pulse" />
+    <Skeleton className="h-72 rounded-panel" />
   </div>
 );
 
@@ -85,6 +88,8 @@ export const App: React.FC = () => {
   // Trigger add member or create event from dashboard
   const [openAddMemberTrigger, setOpenAddMemberTrigger] = useState<boolean>(false);
   const [openCreateEventTrigger, setOpenCreateEventTrigger] = useState<boolean>(false);
+  /** Which global sections failed their last load; drives the honesty banner. */
+  const [failedSections, setFailedSections] = useState<string[]>([]);
 
   // Listen to popstate (Browser Back/Forward buttons)
   useEffect(() => {
@@ -108,19 +113,39 @@ export const App: React.FC = () => {
 
   const loadGlobalData = useCallback(async (force = false) => {
     if (!admin) return;
-    try {
-      const [mRes, eRes, dRes] = await Promise.all([
-        fetchCached<{ members: Member[]; total: number }>('/api/members?limit=200', { forceRefresh: force, ttlMs: 15_000 }).catch(() => null),
-        fetchCached<{ events: Event[] }>('/api/agenda', { forceRefresh: force, ttlMs: 15_000 }).catch(() => null),
-        fetchCached<{ divisions: string[] }>('/api/members/divisions', { forceRefresh: force, ttlMs: 15_000 }).catch(() => null),
-      ]);
 
-      if (mRes?.members) setMembers(mRes.members);
-      if (eRes?.events) setEvents(eRes.events);
-      if (dRes?.divisions) setDivisions(dRes.divisions);
-    } catch (err) {
-      console.error('Error loading global data:', err);
+    const [membersResult, eventsResult, divisionsResult] = await Promise.allSettled([
+      fetchCached<{ members: Member[]; total: number }>('/api/members?limit=200', {
+        forceRefresh: force,
+        ttlMs: 15_000,
+      }),
+      fetchCached<{ events: Event[] }>('/api/agenda', { forceRefresh: force, ttlMs: 15_000 }),
+      fetchCached<{ divisions: string[] }>('/api/members/divisions', {
+        forceRefresh: force,
+        ttlMs: 15_000,
+      }),
+    ]);
+
+    if (membersResult.status === 'fulfilled' && membersResult.value?.members) {
+      setMembers(membersResult.value.members);
     }
+    if (eventsResult.status === 'fulfilled' && eventsResult.value?.events) {
+      setEvents(eventsResult.value.events);
+    }
+    if (divisionsResult.status === 'fulfilled' && divisionsResult.value?.divisions) {
+      setDivisions(divisionsResult.value.divisions);
+    }
+
+    // A failed section keeps whatever it last held, which reads exactly like
+    // real data. Name the failures instead of silently rendering plausible
+    // zeros as though they were counts.
+    setFailedSections(
+      failedGlobalSections({
+        members: membersResult,
+        events: eventsResult,
+        divisions: divisionsResult,
+      })
+    );
   }, [admin]);
 
   // Online / Offline listener
@@ -179,11 +204,13 @@ export const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-100">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-b from-white via-slate-50 to-slate-100 p-2 flex items-center justify-center animate-pulse shadow-lg shadow-sky-500/10 border border-white/40 ring-1 ring-white/20 mb-4">
-          <img src="/logo.webp" alt="AMS Logo" className="w-full h-full object-contain" />
+      <div className="flex min-h-screen flex-col items-center justify-center bg-ink text-ink">
+        <div className="surface-raised mb-4 flex h-16 w-16 items-center justify-center rounded-panel p-2 shadow-lift">
+          <img src="/logo.webp" alt="AMS Logo" className="h-full w-full object-contain" />
         </div>
-        <p className="text-sm font-semibold text-slate-300">Memuat AMS (Attendance Management System)...</p>
+        <p className="text-sm font-semibold text-ink-2">
+          Memuat AMS (Attendance Management System)…
+        </p>
       </div>
     );
   }
@@ -192,7 +219,7 @@ export const App: React.FC = () => {
     return (
       <>
         <PwaInstallBanner />
-        <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+        <Suspense fallback={<div className="min-h-screen bg-paper-sunk" />}>
           <LoginPage onLoginSuccess={() => navigate('/dashboard')} />
         </Suspense>
       </>
@@ -226,6 +253,19 @@ export const App: React.FC = () => {
   return (
     <MobileShell currentTab={currentRoute.tab} onTabChange={handleTabChange}>
       <OfflineBanner />
+      {failedSections.length > 0 && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mb-4 flex items-start gap-2.5 rounded-panel border border-pending-200 bg-pending-900/20 px-4 py-3 text-xs text-pending-800"
+        >
+          <WarningCircle size={16} weight="fill" className="mt-px shrink-0 text-pending-600" />
+          <p className="min-w-0 break-words">
+            Sebagian data gagal dimuat: {failedSections.join(', ')}. Angka di bawah mungkin tidak
+            lengkap, bukan nol.
+          </p>
+        </div>
+      )}
 
       <Suspense fallback={<RouteLoadingFallback />}>
         {currentRoute.tab === 'dashboard' && (

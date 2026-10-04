@@ -1,61 +1,77 @@
 import { describe, it, expect } from 'vitest';
-import { TabKey } from '../src/client/components/layout/MobileShell';
+import {
+  mobileNavItems,
+  desktopNavGroups,
+  tabLabelFor,
+} from '../src/client/components/layout/MobileShell';
+import { sessionTypeVariant, eventStatusVariant } from '../src/client/lib/event-status';
 
-describe('Mobile Shell Layout & Global UI State Synchronization', () => {
-  it('should ensure mobile navigation has exactly 5 items with Scanner at center index 2', () => {
-    const mobileNavItems: Array<{ key: TabKey; label: string; isScanner?: boolean }> = [
-      { key: 'dashboard', label: 'Beranda' },
-      { key: 'members', label: 'Anggota' },
-      { key: 'scanner', label: 'Scan QR', isScanner: true },
-      { key: 'events', label: 'Kegiatan' },
-      { key: 'tracker', label: 'Keaktifan' },
-    ];
-
-    expect(mobileNavItems.length).toBe(5);
+describe('Mobile Shell Navigation', () => {
+  it('gives the mobile dock exactly 5 items with Scanner centred at index 2', () => {
+    expect(mobileNavItems).toHaveLength(5);
     expect(mobileNavItems[2].key).toBe('scanner');
     expect(mobileNavItems[2].isScanner).toBe(true);
-
-    // Verify left and right symmetry
-    const leftItems = mobileNavItems.slice(0, 2);
-    const rightItems = mobileNavItems.slice(3);
-    expect(leftItems.length).toBe(2);
-    expect(rightItems.length).toBe(2);
-    expect(leftItems.map((i) => i.key)).toEqual(['dashboard', 'members']);
-    expect(rightItems.map((i) => i.key)).toEqual(['events', 'tracker']);
   });
 
-  it('should ensure desktop sidebar has all 6 items including settings', () => {
-    const desktopNavItems: Array<{ key: TabKey; label: string }> = [
-      { key: 'dashboard', label: 'Beranda' },
-      { key: 'members', label: 'Anggota' },
-      { key: 'scanner', label: 'Scan QR' },
-      { key: 'events', label: 'Kegiatan' },
-      { key: 'tracker', label: 'Keaktifan' },
-      { key: 'settings', label: 'Pengaturan' },
-    ];
-
-    expect(desktopNavItems.length).toBe(6);
-    expect(desktopNavItems.some((i) => i.key === 'settings')).toBe(true);
+  it('keeps the dock balanced around the Scanner — two items on each side', () => {
+    expect(mobileNavItems.slice(0, 2).map((i) => i.key)).toEqual(['dashboard', 'members']);
+    expect(mobileNavItems.slice(3).map((i) => i.key)).toEqual(['events', 'tracker']);
   });
 
-  it('should propagate global refresh when event status changes', async () => {
-    let globalEventsCount = 1;
-    let globalRefreshCalled = false;
+  it('marks Scanner as the only promoted dock item', () => {
+    expect(mobileNavItems.filter((i) => i.isScanner).map((i) => i.key)).toEqual(['scanner']);
+  });
 
-    const mockLoadGlobalData = async () => {
-      globalEventsCount = 2;
-      globalRefreshCalled = true;
-    };
+  it('exposes every operator-reachable screen in the desktop sidebar, settings included', () => {
+    const keys = desktopNavGroups.flatMap((g) => g.items.map((i) => i.key));
+    expect(keys).toHaveLength(6);
+    expect(keys).toContain('settings');
+    expect(new Set(keys).size).toBe(6);
+  });
 
-    // Simulate event activation triggering onRefreshGlobal
-    const simulateActivateEvent = async (onRefreshGlobal?: () => void) => {
-      // Server call mocked
-      await onRefreshGlobal?.();
-    };
+  it('gives every sidebar and dock entry a non-empty label for screen readers', () => {
+    const all = [...desktopNavGroups.flatMap((g) => g.items), ...mobileNavItems];
+    for (const item of all) {
+      expect(item.label.trim(), `${item.key} needs a label`).not.toBe('');
+    }
+  });
 
-    await simulateActivateEvent(mockLoadGlobalData);
+  it('labels every route tab, including the error and offline routes', () => {
+    for (const key of [
+      'dashboard',
+      'members',
+      'events',
+      'tracker',
+      'scanner',
+      'settings',
+      '404',
+      '403',
+      'offline',
+    ] as const) {
+      expect(tabLabelFor(key), `${key} needs a breadcrumb label`).not.toBe(key);
+    }
+  });
+});
 
-    expect(globalRefreshCalled).toBe(true);
-    expect(globalEventsCount).toBe(2);
+describe('Shared colour semantics', () => {
+  it('keeps the warning hue out of every attendance session type', () => {
+    for (const type of ['CHECKIN', 'CHECKOUT', 'BREAK_OUT', 'BREAK_IN']) {
+      expect(sessionTypeVariant(type)).not.toBe('pending');
+    }
+  });
+
+  it('distinguishes check-in from check-out so present and absent never share a hue', () => {
+    expect(sessionTypeVariant('CHECKIN')).toBe('seal');
+    expect(sessionTypeVariant('CHECKOUT')).toBe('pen');
+  });
+
+  it('falls back to a neutral hue for unknown session types instead of guessing a state', () => {
+    expect(sessionTypeVariant('SOMETHING_NEW')).toBe('neutral');
+  });
+
+  it('never paints an unknown event status as a real state', () => {
+    expect(eventStatusVariant('active')).toBe('seal');
+    expect(eventStatusVariant('closed')).toBe('danger');
+    expect(eventStatusVariant('unknown-future-status')).toBe('neutral');
   });
 });

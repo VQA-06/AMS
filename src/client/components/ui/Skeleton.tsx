@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '../../lib/cn';
 
 interface SkeletonProps {
   className?: string;
@@ -6,15 +7,12 @@ interface SkeletonProps {
 }
 
 /**
- * Primitive Base Skeleton element with shimmer effect
+ * The one skeleton system. Every loading placeholder in the console uses this
+ * single shimmer; pages must not add their own `animate-pulse` block.
  */
 export const Skeleton: React.FC<SkeletonProps> = ({ className = '', style }) => {
   return (
-    <div
-      className={`skeleton-shimmer rounded-xl ${className}`}
-      style={style}
-      aria-hidden="true"
-    />
+    <div className={cn('skeleton-shimmer rounded-chip', className)} style={style} aria-hidden="true" />
   );
 };
 
@@ -29,7 +27,7 @@ export const SkeletonMemberList: React.FC<{ rows?: number }> = ({ rows = 8 }) =>
         {Array.from({ length: Math.min(rows, 6) }).map((_, idx) => (
           <div
             key={`skel-m-card-${idx}`}
-            className="glass-panel-elevated rounded-2xl p-4 border border-slate-800/80 space-y-3"
+            className="surface-raised rounded-panel p-4 space-y-3"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-start gap-3 w-full">
@@ -45,7 +43,7 @@ export const SkeletonMemberList: React.FC<{ rows?: number }> = ({ rows = 8 }) =>
               <Skeleton className="w-8 h-8 rounded-xl shrink-0" />
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/60">
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-rule">
               <Skeleton className="h-3 w-28" />
               <Skeleton className="h-3 w-24" />
             </div>
@@ -60,10 +58,10 @@ export const SkeletonMemberList: React.FC<{ rows?: number }> = ({ rows = 8 }) =>
       </div>
 
       {/* Desktop Table Skeletons (>= md screens) */}
-      <div className="hidden md:block glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      <div className="surface hidden overflow-hidden rounded-panel shadow-ambient md:block">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider">
+          <table className="w-full text-left text-xs text-ink">
+            <thead className="surface-raised text-ink-2 font-semibold uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-3.5 w-10">
                   <Skeleton className="w-4 h-4 rounded" />
@@ -77,9 +75,9 @@ export const SkeletonMemberList: React.FC<{ rows?: number }> = ({ rows = 8 }) =>
                 <th className="px-4 py-3.5 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/50">
+            <tbody className="divide-y divide-rule">
               {Array.from({ length: rows }).map((_, idx) => (
-                <tr key={`skel-row-${idx}`} className="bg-slate-950/40">
+                <tr key={`skel-row-${idx}`}>
                   <td className="px-4 py-3.5">
                     <Skeleton className="w-4 h-4 rounded" />
                   </td>
@@ -130,7 +128,7 @@ export const SkeletonEventList: React.FC<{ count?: number }> = ({ count = 4 }) =
       {Array.from({ length: count }).map((_, idx) => (
         <div
           key={`skel-event-${idx}`}
-          className="glass-panel-elevated rounded-2xl p-5 border border-slate-800/80 space-y-4 shadow-lg"
+          className="surface space-y-4 rounded-panel p-5 shadow-ambient"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1.5 flex-1">
@@ -143,7 +141,7 @@ export const SkeletonEventList: React.FC<{ count?: number }> = ({ count = 4 }) =
             <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
           </div>
 
-          <div className="space-y-2 pt-2 border-t border-slate-800/60">
+          <div className="space-y-2 pt-2 border-t border-rule-strong/60">
             <div className="flex items-center gap-2">
               <Skeleton className="w-4 h-4 rounded" />
               <Skeleton className="h-3 w-48" />
@@ -154,7 +152,7 @@ export const SkeletonEventList: React.FC<{ count?: number }> = ({ count = 4 }) =
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-3 border-t border-slate-800/60">
+          <div className="flex items-center justify-between pt-3 border-t border-rule-strong/60">
             <Skeleton className="h-4 w-28" />
             <div className="flex items-center gap-2">
               <Skeleton className="h-8 w-24 rounded-xl" />
@@ -176,7 +174,7 @@ export const SkeletonStats: React.FC<{ count?: number }> = ({ count = 4 }) => {
       {Array.from({ length: count }).map((_, idx) => (
         <div
           key={`skel-stat-${idx}`}
-          className="glass-panel p-4 rounded-2xl border border-slate-800/80 space-y-2"
+          className="surface space-y-2 rounded-panel p-4 shadow-ambient"
         >
           <div className="flex items-center justify-between">
             <Skeleton className="h-3 w-20" />

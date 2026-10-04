@@ -1,10 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Trophy,
-  Calendar,
-  ChevronRight,
-  MapPin,
-} from 'lucide-react';
+import { CalendarBlank } from '@phosphor-icons/react/CalendarBlank';
+import { CaretRight } from '@phosphor-icons/react/CaretRight';
+import { MapPin } from '@phosphor-icons/react/MapPin';
+import { Trophy } from '@phosphor-icons/react/Trophy';
 import {
   ResponsiveContainer,
   PieChart,
@@ -13,6 +11,8 @@ import {
   Tooltip,
 } from 'recharts';
 import { EventStatus, QrPolicy } from '@/shared/types';
+import { Badge, BadgeVariant } from '../ui/Badge';
+import { cn } from '../../lib/cn';
 
 export interface TopEventStatItem {
   id: string;
@@ -36,50 +36,109 @@ interface TopEventsChartProps {
   onOpenScanner?: () => void;
 }
 
+type PeriodFilter = 'all' | 'year' | '30days';
+type StatusFilter = 'all' | 'active' | 'closed';
+type SortKey = 'attendance' | 'recent';
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+
+/**
+ * Donut palette. Index 0 — the top-ranked event, the one the reader lands on —
+ * is brass, the single accent. The remainder are non-focus and step through
+ * `info` and the slate ramp; a second brass slice would say "two things matter"
+ * and mean neither.
+ */
+const SLICE_PALETTE = ['#C8A96A', '#7BA5C7', '#4FA88B', '#D9A441', '#8b93a7'] as const;
+const SURFACE = '#0B0C10';
+
+/** Tooltip status chip. Copy and hue both mirror the readiness list below. */
+const statusChip = (status: EventStatus): { label: string; variant: BadgeVariant } =>
+  status === 'active'
+    ? { label: 'Aktif', variant: 'seal' }
+    : { label: 'Selesai', variant: 'neutral' };
+
+/** Readiness list chip: an event that has not opened is "Draft" regardless of
+ *  whether it is scheduled for later or already closed. */
+const readinessChip = (status: EventStatus): { label: string; variant: BadgeVariant } =>
+  status === 'active'
+    ? { label: 'Siap Scan', variant: 'seal' }
+    : { label: 'Draft', variant: 'pending' };
+
+const PERIOD_OPTIONS: Array<{ value: PeriodFilter; label: string }> = [
+  { value: 'all', label: 'Semua' },
+  { value: 'year', label: 'Tahun Ini' },
+  { value: '30days', label: '30 Hari' },
+];
+
+const SELECT_CLASS =
+  'min-h-[36px] cursor-pointer rounded-panel border border-rule-strong bg-paper-raised px-2.5 py-1.5 text-xs font-medium text-ink transition-colors hover:border-pen-200 focus-visible:border-pen-500';
+
+interface PieDatum {
+  id: string;
+  name: string;
+  value: number;
+  fill: string;
+  attendance_count: number;
+  member_count: number;
+  guest_count: number;
+  location_name: string | null;
+  status: EventStatus;
+}
+
+interface TooltipEntry {
+  payload?: unknown;
+}
+
 interface CustomPieTooltipProps {
   active?: boolean;
-  payload?: any[];
+  payload?: TooltipEntry[];
   totalAttendees: number;
 }
 
+const asPieDatum = (datum: unknown): PieDatum | undefined =>
+  typeof datum === 'object' && datum !== null && 'fill' in datum ? (datum as PieDatum) : undefined;
+
 const CustomPieTooltip: React.FC<CustomPieTooltipProps> = ({ active, payload, totalAttendees }) => {
   if (!active || !payload || !payload.length) return null;
-  const item = payload[0]?.payload as (TopEventStatItem & { fill: string }) | undefined;
+  const item = asPieDatum(payload[0]?.payload);
   if (!item) return null;
 
+  const chip = statusChip(item.status);
   const totalPct = totalAttendees > 0 ? Math.round((item.attendance_count / totalAttendees) * 100) : 0;
 
   return (
-    <div className="rounded-xl border border-slate-700/90 bg-slate-900/98 p-3 text-xs shadow-2xl backdrop-blur-md max-w-[260px] space-y-2 pointer-events-none relative z-50">
+    <div className="z-toast pointer-events-none max-w-[260px] space-y-2 rounded-panel border border-rule-strong bg-paper-raised px-3 py-2 text-xs shadow-ambient backdrop-blur-md">
       <div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.fill }} />
-          <p className="font-bold text-white text-xs line-clamp-1">{item.name}</p>
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: item.fill }}
+            aria-hidden="true"
+          />
+          <p className="line-clamp-1 font-heading text-xs font-bold text-white">{item.name}</p>
         </div>
-        <div className="flex items-center gap-2 mt-1">
-          <span className={`text-[9px] font-semibold px-1.5 py-0.2 rounded border ${item.status === 'active'
-            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-            : 'bg-slate-800 text-slate-400 border-slate-700'
-            }`}>
-            {item.status === 'active' ? 'Aktif' : 'Selesai'}
-          </span>
+        <div className="mt-1 flex items-center gap-2">
+          <Badge variant={chip.variant} size="xs">
+            {chip.label}
+          </Badge>
           {item.location_name && (
-            <span className="text-[10px] text-slate-400 truncate max-w-[140px]">
-              {item.location_name}
-            </span>
+            <span className="max-w-[140px] truncate text-[10px] text-ink-2">{item.location_name}</span>
           )}
         </div>
       </div>
-      <div className="border-t border-slate-800 pt-1.5 space-y-1 font-mono text-[11px]">
-        <div className="flex items-center justify-between text-sky-400">
+      <div className="space-y-1 border-t border-rule pt-1.5 font-oxanium text-[11px] tabular-nums">
+        <div className="flex items-center justify-between gap-3 text-ink-2">
           <span>Total Presensi:</span>
           <span className="font-bold">{item.attendance_count} hadir</span>
         </div>
-        <div className="flex items-center justify-between text-slate-400 text-[10px]">
+        <div className="flex items-center justify-between gap-3 text-[10px] text-ink-2">
           <span>Komposisi:</span>
-          <span>{item.member_count || 0} Anggota • {item.guest_count || 0} Tamu</span>
+          <span>
+            {item.member_count || 0} Anggota • {item.guest_count || 0} Tamu
+          </span>
         </div>
-        <div className="flex items-center justify-between text-slate-400 text-[10px]">
+        <div className="flex items-center justify-between gap-3 text-[10px] text-ink-2">
           <span>Pangsa Kehadiran:</span>
           <span>{totalPct}% dari total</span>
         </div>
@@ -88,23 +147,15 @@ const CustomPieTooltip: React.FC<CustomPieTooltipProps> = ({ active, payload, to
   );
 };
 
-const PIE_PALETTE = [
-  '#0284c7', // Sky 600
-  '#14b8a6', // Teal 500
-  '#6366f1', // Indigo 500
-  '#f59e0b', // Amber 500
-  '#ec4899', // Pink 500
-];
-
 export const TopEventsChart: React.FC<TopEventsChartProps> = ({
   events,
   loading = false,
   onSelectEvent,
   onOpenScanner,
 }) => {
-  const [periodFilter, setPeriodFilter] = useState<'all' | 'year' | '30days'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'closed'>('all');
-  const [sortBy, setSortBy] = useState<'attendance' | 'recent'>('attendance');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortBy, setSortBy] = useState<SortKey>('attendance');
 
   const filteredEvents = useMemo(() => {
     let list = [...events];
@@ -148,74 +199,84 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
     return filteredEvents.reduce((acc, ev) => acc + (ev.attendance_count || 0), 0);
   }, [filteredEvents]);
 
-  // Donut data for Recharts PieChart
-  const pieData = useMemo(() => {
+  // Donut data for Recharts PieChart. Events with no attendance are excluded
+  // rather than rendered as a zero-width slice: a slice sized 0 is a mark that
+  // says "this event has no attendance", which is what the empty state below
+  // already says in words.
+  const pieData = useMemo<PieDatum[]>(() => {
     const validEvents = filteredEvents.filter((ev) => (ev.attendance_count || 0) > 0);
     if (validEvents.length === 0) return [];
     return validEvents.slice(0, 5).map((ev, idx) => ({
-      ...ev,
+      id: ev.id,
+      name: ev.name,
       value: ev.attendance_count || 0,
-      fill: PIE_PALETTE[idx % PIE_PALETTE.length],
+      fill: SLICE_PALETTE[idx % SLICE_PALETTE.length],
+      attendance_count: ev.attendance_count || 0,
+      member_count: ev.member_count || 0,
+      guest_count: ev.guest_count || 0,
+      location_name: ev.location_name,
+      status: ev.status,
     }));
   }, [filteredEvents]);
 
+  // Events present but never scanned — named, never folded into "0".
+  const unscannedEvents = useMemo(
+    () => filteredEvents.filter((ev) => (ev.attendance_count || 0) === 0),
+    [filteredEvents]
+  );
+
   return (
-    <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-800 flex flex-col justify-between shadow-xl space-y-4 h-full min-w-0">
+    /* Chart container is a static surface: hairline edge only, never a rail. */
+    <div className="surface flex h-full min-w-0 flex-col space-y-4 rounded-panel p-4 shadow-ambient sm:p-5">
       {/* Header & Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+      <div className="flex flex-col justify-between gap-3 border-b border-rule pb-3 lg:flex-row lg:items-center">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Trophy className="w-3.5 h-3.5 text-sky-400" />
+            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-2">
+              <Trophy size={14} className="text-ink-2" aria-hidden="true" />
               <span>Sebaran Kehadiran Kegiatan</span>
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">
+          <p className="mt-0.5 text-[11px] text-ink-2">
             Peringkat dan volume kehadiran presensi per agenda kegiatan
           </p>
         </div>
 
         {/* Filter Controls */}
-        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-start lg:justify-end">
+        <div className="flex w-full flex-wrap items-center justify-start gap-2 lg:w-auto lg:justify-end">
           {/* Period Filter */}
-          <div className="flex items-center p-0.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px]">
-            <button
-              type="button"
-              onClick={() => setPeriodFilter('all')}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-colors min-h-[32px] sm:min-h-0 flex items-center ${periodFilter === 'all'
-                ? 'bg-slate-700 text-white font-bold'
-                : 'text-slate-400 hover:text-white'
-                }`}
-            >
-              Semua
-            </button>
-            <button
-              type="button"
-              onClick={() => setPeriodFilter('year')}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-colors min-h-[32px] sm:min-h-0 flex items-center ${periodFilter === 'year'
-                ? 'bg-slate-700 text-white font-bold'
-                : 'text-slate-400 hover:text-white'
-                }`}
-            >
-              Tahun Ini
-            </button>
-            <button
-              type="button"
-              onClick={() => setPeriodFilter('30days')}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-colors min-h-[32px] sm:min-h-0 flex items-center ${periodFilter === '30days'
-                ? 'bg-slate-700 text-white font-bold'
-                : 'text-slate-400 hover:text-white'
-                }`}
-            >
-              30 Hari
-            </button>
+          <div
+            className="flex items-center gap-0.5 rounded-panel border border-rule bg-paper-raised p-0.5 text-[11px]"
+            role="group"
+            aria-label="Filter periode kegiatan"
+          >
+            {PERIOD_OPTIONS.map((opt) => {
+              const on = periodFilter === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setPeriodFilter(opt.value)}
+                  aria-pressed={on}
+                  className={cn(
+                    'flex min-h-[32px] items-center rounded-chip px-2.5 py-1 font-semibold transition-colors',
+                    focusRing,
+                    on ? 'bg-pen-500 font-bold text-paper' : 'text-ink-2 hover:bg-paper-raised/70 hover:text-white'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Status Select */}
           <select
+            id="top-events-chart-status-filter"
+            aria-label="Filter status kegiatan"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 cursor-pointer min-h-[36px]"
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            className={cn(SELECT_CLASS, focusRing)}
           >
             <option value="all">Semua Status</option>
             <option value="active">Aktif Saja</option>
@@ -224,9 +285,11 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
 
           {/* Sort Select */}
           <select
+            id="top-events-chart-sort"
+            aria-label="Urutkan kegiatan"
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus:border-sky-500 cursor-pointer min-h-[36px]"
+            onChange={(e) => setSortBy(e.target.value as SortKey)}
+            className={cn(SELECT_CLASS, focusRing)}
           >
             <option value="attendance">Peserta Terbanyak</option>
             <option value="recent">Kegiatan Terbaru</option>
@@ -235,27 +298,27 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
       </div>
 
       {/* Main Graphical Display: Pure Centered Recharts PieChart (No List, Clean Z-Index) */}
-      <div className="flex-1 flex flex-col items-center justify-center min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col items-center justify-center">
         {loading ? (
-          <div className="py-12 text-center text-slate-500 text-xs font-semibold animate-pulse">
+          <div className="py-12 text-center text-xs font-semibold text-ink-2" role="status" aria-live="polite">
             Memuat sebaran data kegiatan...
           </div>
         ) : filteredEvents.length === 0 ? (
-          <div className="py-12 text-center border border-dashed border-slate-800 rounded-2xl text-slate-500 text-xs space-y-1 w-full">
-            <p className="font-semibold text-slate-400">Tidak ada kegiatan yang sesuai filter</p>
+          <div className="w-full space-y-1 rounded-panel border border-dashed border-rule-strong px-4 py-12 text-center text-xs text-ink-2">
+            <p className="font-semibold text-ink">Tidak ada kegiatan yang sesuai filter</p>
             <p className="text-[11px]">Coba ubah filter periode atau status kegiatan di atas.</p>
           </div>
         ) : totalAttendees === 0 ? (
-          /* Actionable Zero-Attendance State */
-          <div className="space-y-3 w-full">
-            <div className="py-4 px-4 bg-slate-950/40 rounded-xl border border-dashed border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          /* Actionable Zero-Attendance State: named, not a zero-length ring. */
+          <div className="w-full space-y-3">
+            <div className="flex flex-col items-center justify-between gap-3 rounded-panel border border-dashed border-rule-strong bg-paper-raised/40 px-4 py-4 text-center sm:flex-row sm:text-left">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                  <Calendar className="w-5 h-5 text-sky-400" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-panel border border-rule bg-paper-raised text-ink-2">
+                  <CalendarBlank size={20} className="text-ink-2" aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-200">Belum Ada Presensi Tercatat</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-xs font-bold text-ink">Belum Ada Presensi Tercatat</p>
+                  <p className="mt-0.5 text-[11px] text-ink-2">
                     {filteredEvents.length} kegiatan terdaftar siap menerima pemindaian absensi tiket QR.
                   </p>
                 </div>
@@ -264,60 +327,72 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
                 <button
                   type="button"
                   onClick={onOpenScanner}
-                  className="min-h-[44px] sm:min-h-0 px-3.5 py-1.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 border border-sky-500/30 rounded-xl text-xs font-semibold transition-colors shrink-0 flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                  className={cn(
+                    'flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-panel border border-pen-200 bg-pen-50/70 px-3.5 py-1.5 text-xs font-semibold text-ink-2 transition-colors hover:bg-pen-50',
+                    focusRing
+                  )}
                 >
                   <span>Buka Scanner QR</span>
                 </button>
               )}
             </div>
 
-            {/* Event Readiness List */}
+            {/* Event Readiness List — each row carries a jade/ochre rail by state,
+                so the rail varies per row rather than decorating a constant hue. */}
             <div className="space-y-2">
-              {filteredEvents.slice(0, 3).map((ev, idx) => (
-                <div
-                  key={ev.id}
-                  onClick={() => onSelectEvent?.(ev.id)}
-                  className="p-2.5 rounded-xl bg-slate-900/40 border border-slate-800/60 flex items-center justify-between gap-2 hover:bg-slate-900/80 transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-5 h-5 rounded-md bg-slate-800 text-slate-400 text-[10px] font-mono font-bold flex items-center justify-center shrink-0">
-                      #{idx + 1}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-white group-hover:text-sky-400 transition-colors truncate">
-                        {ev.name}
-                      </p>
-                      {ev.location_name && (
-                        <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
-                          <MapPin className="w-3 h-3 text-slate-600 shrink-0" />
-                          <span>{ev.location_name}</span>
-                        </p>
-                      )}
+              {filteredEvents.slice(0, 3).map((ev, idx) => {
+                const chip = readinessChip(ev.status);
+                return (
+                  <div
+                    key={ev.id}
+                    onClick={() => onSelectEvent?.(ev.id)}
+                    className="flex cursor-pointer items-center justify-between gap-2 rounded-panel border border-rule bg-paper-raised/40 transition-colors hover:border-pen-200"
+                  >
+                    <div className="flex min-w-0 items-stretch">
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          'rail self-stretch',
+                          ev.status === 'active' ? 'bg-seal-500' : 'bg-ink-3'
+                        )}
+                      />
+                      <span aria-hidden="true" className="w-3 shrink-0" />
+                      <div className="flex min-w-0 items-center gap-2.5 py-2.5">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-chip border border-rule bg-paper-raised font-oxanium text-[10px] font-bold tabular-nums text-ink-2">
+                          #{idx + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-bold text-white">{ev.name}</p>
+                          {ev.location_name && (
+                            <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-ink-2">
+                              <MapPin size={12} className="shrink-0 text-ink-3" aria-hidden="true" />
+                              <span>{ev.location_name}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 pr-2.5">
+                      <Badge variant={chip.variant} size="xs">
+                        {chip.label}
+                      </Badge>
+                      <CaretRight size={14} className="text-ink-3" aria-hidden="true" />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${ev.status === 'active'
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      : 'bg-slate-800 text-slate-400 border-slate-700'
-                      }`}>
-                      {ev.status === 'active' ? 'Siap Scan' : 'Draft'}
-                    </span>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition-colors" />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : (
           /* Pure Recharts Donut PieChart Hero (Centered, Spacious, Zero Overlap) */
-          <div className="w-full flex flex-col items-center justify-center py-2 space-y-3">
+          <div className="flex w-full flex-col items-center justify-center space-y-3 py-2">
             {/* Centered Donut with Proper Z-Index */}
-            <div className="relative w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center">
+            <div className="relative flex h-44 w-44 items-center justify-center sm:h-48 sm:w-48">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Tooltip
                     content={<CustomPieTooltip totalAttendees={totalAttendees} />}
-                    wrapperStyle={{ zIndex: 1000 }}
+                    wrapperStyle={{ zIndex: 70 }}
                   />
                   <Pie
                     data={pieData}
@@ -326,14 +401,17 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
                     endAngle={-270}
                     innerRadius={56}
                     outerRadius={74}
-                    stroke="#0d1527"
+                    stroke={SURFACE}
                     strokeWidth={3}
                     cornerRadius={6}
                     paddingAngle={pieData.length > 1 ? 4 : 0}
-                    onClick={(entry: any) => {
-                      if (entry?.id && onSelectEvent) {
-                        onSelectEvent(entry.id);
-                      }
+                    onClick={(entry) => {
+                      // recharts widens the sector datum to an index-signature
+                      // object; only `id` is read, so narrow through a guard
+                      // rather than trusting the shape.
+                      if (!onSelectEvent || typeof entry !== 'object' || entry === null) return;
+                      const id: unknown = 'id' in entry ? entry.id : undefined;
+                      if (typeof id === 'string' && id.length > 0) onSelectEvent(id);
                     }}
                     className="cursor-pointer"
                   >
@@ -345,19 +423,19 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
               </ResponsiveContainer>
 
               {/* Centered Total Attendances Metric (Lower Z-Index, Unobtrusive) */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center z-0">
-                <span className="text-3xl sm:text-4xl font-extrabold font-heading text-white tracking-tight">
+              <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center text-center">
+                <span className="font-oxanium text-3xl font-extrabold tabular-nums tracking-tight text-white sm:text-4xl">
                   {totalAttendees}
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 mt-0.5">
+                <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-ink-2">
                   Total Hadir
                 </span>
               </div>
             </div>
 
-            {/* Clean Minimalist Horizontal Legend Tags (No List, Pure Hero Chart) */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-1 max-w-md">
-              {pieData.map((ev, idx) => {
+            {/* Legend tags double as the keyboard-reachable path into each slice. */}
+            <div className="flex max-w-md flex-wrap items-center justify-center gap-2 pt-1">
+              {pieData.map((ev) => {
                 const totalPct = totalAttendees > 0 ? Math.round((ev.value / totalAttendees) * 100) : 0;
 
                 return (
@@ -365,26 +443,39 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
                     type="button"
                     key={ev.id}
                     onClick={() => onSelectEvent?.(ev.id)}
-                    className="px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] font-mono flex items-center gap-1.5 hover:border-slate-700 transition-colors cursor-pointer text-slate-200"
-                    title={`${ev.name}: ${ev.value} hadir (${totalPct}%)`}
+                    aria-label={`${ev.name}: ${ev.value} hadir (${totalPct}%)`}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-chip border border-rule bg-paper-raised px-3 py-1 font-oxanium text-[11px] tabular-nums transition-colors hover:border-pen-200',
+                      focusRing
+                    )}
                   >
                     <span
-                      className="w-2 h-2 rounded-full shrink-0"
+                      className="h-2 w-2 shrink-0 rounded-full"
                       style={{ backgroundColor: ev.fill }}
+                      aria-hidden="true"
                     />
-                    <span className="font-semibold truncate max-w-[120px]">{ev.name}</span>
-                    <span className="text-slate-400">({ev.value})</span>
+                    <span className="max-w-[120px] truncate font-semibold">{ev.name}</span>
+                    <span className="text-ink-2">({ev.value})</span>
                   </button>
                 );
               })}
             </div>
+
+            {unscannedEvents.length > 0 && (
+              <p className="w-full text-center text-[11px] text-ink-2">
+                {unscannedEvents.length} kegiatan lain pada rentang ini belum mencatat presensi, sehingga
+                tidak tampil sebagai irisan.
+              </p>
+            )}
           </div>
         )}
       </div>
 
       {/* Footer Summary */}
-      <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 text-[11px] font-mono text-slate-400">
-        <span>Total Terdata: <strong className="text-white font-bold">{totalAttendees}</strong> Presensi</span>
+      <div className="flex items-center justify-between border-t border-rule pt-3 font-oxanium text-[11px] tabular-nums text-ink-2">
+        <span>
+          Total Terdata: <strong className="font-bold text-white">{totalAttendees}</strong> Presensi
+        </span>
         <span>{filteredEvents.length} Kegiatan Terdaftar</span>
       </div>
     </div>

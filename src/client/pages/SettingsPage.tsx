@@ -45,7 +45,7 @@ const adminMark = (status: Admin['status']): MarkTone =>
   status === 'active' ? 'seal' : 'danger';
 
 const inputClass =
-  'w-full rounded-chip border border-rule-strong bg-ink px-3 py-2.5 text-xs text-ink placeholder:text-ink-3 focus:border-pen-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+  'w-full rounded-chip border border-rule-strong bg-ink px-3 py-2.5 text-xs text-paper placeholder:text-ink-3 focus:border-pen-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
 const monoInputClass = `${inputClass} font-oxanium`;
 

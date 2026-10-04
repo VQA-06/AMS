@@ -529,7 +529,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'draft' | 'closed')}
               className={cn(
-                'w-full cursor-pointer appearance-none rounded-panel border border-rule bg-ink/80 px-3 py-2 text-xs font-medium text-ink transition-colors',
+                'w-full cursor-pointer appearance-none rounded-panel border border-rule bg-ink/80 px-3 py-2 text-xs font-medium text-paper transition-colors',
                 focusRing
               )}
             >

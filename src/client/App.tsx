@@ -200,7 +200,7 @@ export const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-ink text-ink">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-ink text-paper">
         <div className="surface-raised mb-4 flex h-16 w-16 items-center justify-center rounded-panel p-2 shadow-lift">
           <img src="/logo.webp" alt="AMS Logo" className="h-full w-full object-contain" />
         </div>

@@ -416,7 +416,7 @@ export const MemberTrackerPage: React.FC = () => {
               onChange={(e) => setSelectedDivision(e.target.value)}
               aria-label="Filter berdasarkan divisi"
               className={cn(
-                'min-h-[44px] w-full cursor-pointer appearance-none rounded-chip border border-rule-strong bg-ink py-2 pl-8 pr-7 text-xs font-medium text-ink transition-colors duration-120 hover:border-rule-strong',
+                'min-h-[44px] w-full cursor-pointer appearance-none rounded-chip border border-rule-strong bg-ink py-2 pl-8 pr-7 text-xs font-medium text-paper transition-colors duration-120 hover:border-rule-strong',
                 focusRing,
               )}
             >
@@ -441,7 +441,7 @@ export const MemberTrackerPage: React.FC = () => {
               }
               aria-label="Filter berdasarkan status keaktifan"
               className={cn(
-                'min-h-[44px] w-full cursor-pointer appearance-none rounded-chip border border-rule-strong bg-ink px-3 py-2 text-xs font-medium text-ink transition-colors duration-120 hover:border-rule-strong',
+                'min-h-[44px] w-full cursor-pointer appearance-none rounded-chip border border-rule-strong bg-ink px-3 py-2 text-xs font-medium text-paper transition-colors duration-120 hover:border-rule-strong',
                 focusRing,
               )}
             >

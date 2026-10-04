@@ -73,6 +73,57 @@ describe('text contrast guard', () => {
     expect(offenders, `text-white on a paper ground is invisible (1.06:1):\n${offenders.join('\n')}`)
       .toEqual([]);
   });
+
+  it('gives every <option> an explicit colour', () => {
+    // A native dropdown paints its list with the OS palette and inherits the
+    // *select's* text colour. Inheriting `text-paper` (the shell's light
+    // default on dark chrome) renders the open list as blank rows at 1.1:1.
+    const offenders: string[] = [];
+
+    for (const file of files) {
+      const rel = file.slice(CLIENT.length + 1);
+      const lines = readFileSync(file, 'utf8').split('\n');
+
+      lines.forEach((line, i) => {
+        if (!/<option\b/.test(line)) return;
+        // Self-closing `<option />` (a datalist entry) inherits from Field's
+        // control, which sets `text-ink`. Only styled, populated options in a
+        // raw <select> need an explicit colour.
+        if (/\/>\s*$/.test(line) && !/className=/.test(line)) return;
+        if (!/className=/.test(line)) return;
+        if (/className="[^"]*\btext-(?:ink|paper)\b/.test(line)) return;
+
+        offenders.push(`${rel}:${i + 1}  ${line.trim().slice(0, 100)}`);
+      });
+    }
+
+    expect(
+      offenders,
+      `<option> without an explicit text colour inherits an unreadable one:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  it('pairs every bg-pen-500 chip with light text', () => {
+    // `bg-pen-500` is the one saturated surface in the palette; dark ink on it
+    // measures 2.94:1. Every other chip in the app already uses text-paper.
+    const offenders: string[] = [];
+
+    for (const file of files) {
+      const rel = file.slice(CLIENT.length + 1);
+      const lines = readFileSync(file, 'utf8').split('\n');
+
+      lines.forEach((line, i) => {
+        if (!/bg-pen-500/.test(line)) return;
+        if (/text-paper/.test(line)) return;
+        if (/(mark|rail|dot)Class|railClass|^\s*pen:|^\s*danger:/.test(line)) return;
+        if (/text-ink(?![\w-])/.test(line)) {
+          offenders.push(`${rel}:${i + 1}  ${line.trim().slice(0, 100)}`);
+        }
+      });
+    }
+
+    expect(offenders, `bg-pen-500 with dark text is 2.94:1:\n${offenders.join('\n')}`).toEqual([]);
+  });
   it('never pairs a dark ground with dark text', () => {
     const offenders: string[] = [];
 

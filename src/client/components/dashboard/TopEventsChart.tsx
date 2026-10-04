@@ -261,7 +261,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
                   className={cn(
                     'flex min-h-[32px] items-center rounded-chip px-2.5 py-1 font-semibold transition-colors',
                     focusRing,
-                    on ? 'bg-pen-500 font-bold text-ink' : 'text-ink-2 hover:bg-paper-raised/70 hover:text-ink'
+                    on ? 'bg-pen-500 font-bold text-paper' : 'text-ink-2 hover:bg-paper-raised/70 hover:text-ink'
                   )}
                 >
                   {opt.label}

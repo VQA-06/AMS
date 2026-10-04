@@ -420,11 +420,11 @@ export const MemberTrackerPage: React.FC = () => {
                 focusRing,
               )}
             >
-              <option value="" className="bg-paper-sunk">
+              <option value="" className="bg-paper-sunk text-ink">
                 Semua Divisi
               </option>
               {divisions.map((div) => (
-                <option key={div} value={div} className="bg-paper-sunk">
+                <option key={div} value={div} className="bg-paper-sunk text-ink">
                   {div}
                 </option>
               ))}
@@ -445,16 +445,16 @@ export const MemberTrackerPage: React.FC = () => {
                 focusRing,
               )}
             >
-              <option value="all" className="bg-paper-sunk">
+              <option value="all" className="bg-paper-sunk text-ink">
                 Semua Status Keaktifan
               </option>
-              <option value="highly_active" className="bg-paper-sunk">
+              <option value="highly_active" className="bg-paper-sunk text-ink">
                 Sangat Aktif
               </option>
-              <option value="active" className="bg-paper-sunk">
+              <option value="active" className="bg-paper-sunk text-ink">
                 Cukup Aktif
               </option>
-              <option value="inactive" className="bg-paper-sunk">
+              <option value="inactive" className="bg-paper-sunk text-ink">
                 Belum Aktif
               </option>
             </select>

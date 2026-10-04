@@ -600,23 +600,23 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({
                 className={cn(
                   'mb-3 h-10 w-10',
                   cameraPhase === 'denied'
-                    ? 'text-pen'
-                    : 'text-pending-600',
+                    ? 'text-pen-200'
+                    : 'text-pending-200',
                 )}
               />
               <p
                 className={cn(
                   'mb-2 text-sm font-bold',
                   cameraPhase === 'denied'
-                    ? 'text-pen-deep'
-                    : 'text-pending-800',
+                    ? 'text-pen-200'
+                    : 'text-pending-200',
                 )}
               >
                 {cameraPhase === 'denied'
                   ? 'Izin Kamera Ditolak'
                   : 'Kamera Tidak Tersedia'}
               </p>
-              <p className="mb-4 max-w-xs text-xs text-ink-2">
+              <p className="mb-4 max-w-xs text-xs text-paper/80">
                 {cameraError}
               </p>
               {cameraPhase === 'denied' && (

@@ -108,7 +108,7 @@ const LogoutButton: React.FC<{ onLogout: () => void; size?: 'sm' | 'md' }> = ({
     title="Keluar"
     aria-label="Keluar dari akun"
     className={cn(
-      'flex items-center justify-center rounded-chip text-ink-2 transition-colors hover:text-pen-deep hover:bg-pen-50/70',
+      'flex items-center justify-center rounded-chip text-paper/70 transition-colors hover:text-paper hover:bg-paper/10',
       focusRing,
       size === 'sm' ? 'h-9 w-9' : 'h-10 w-10'
     )}
@@ -135,15 +135,15 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               <img src="/logo.webp" alt="AMS Logo" className="h-full w-full object-contain" />
             </div>
             <div>
-              <h1 className="font-heading text-lg font-bold leading-tight text-ink">AMS</h1>
-              <p className="text-xs font-medium text-ink-2">Computer Community</p>
+              <h1 className="font-heading text-lg font-bold leading-tight text-paper">AMS</h1>
+              <p className="text-xs font-medium text-paper/70">Computer Community</p>
             </div>
           </div>
 
           <nav className="space-y-5" aria-label="Navigasi utama">
             {desktopNavGroups.map((group) => (
               <div key={group.title}>
-                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-ink-3">
+                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-paper/50">
                   {group.title}
                 </div>
                 <div className="space-y-0.5">
@@ -160,7 +160,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
                           focusRing,
                           active
                             ? 'bg-paper-raised font-semibold text-ink-2'
-                            : 'text-ink-2 hover:bg-paper/80 hover:text-ink'
+                            : 'text-paper/70 hover:bg-paper/80 hover:text-ink'
                         )}
                       >
                         {/* Rail encodes "you are here" — its hue is constant
@@ -186,7 +186,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
         <div className="border-t border-rule pt-4">
           <div className="flex items-center justify-between gap-2 px-1">
             <div className="min-w-0 pr-2">
-              <p className="truncate text-xs font-semibold text-ink">
+              <p className="truncate text-xs font-semibold text-paper">
                 {admin?.name || 'Admin'}
               </p>
               <Badge variant={roleInfo.variant} size="xs" className="mt-1">
@@ -198,7 +198,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
         </div>
       </aside>
 
-      <div className="flex h-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pb-24 md:pb-8">
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-paper pb-24 md:pb-8">
         {/* One header, both layouts: breadcrumb on desktop, identity + role on mobile. */}
         <header className="sticky top-0 z-sticky flex shrink-0 items-center justify-between gap-3 border-b border-rule bg-ink/90 px-4 py-2.5 backdrop-blur-md sm:px-6 md:px-8">
           <div className="flex items-center gap-2.5 md:hidden">
@@ -207,20 +207,20 @@ export const MobileShell: React.FC<MobileShellProps> = ({
             </div>
             <div>
               <p className="font-heading text-base font-bold leading-tight text-paper">AMS</p>
-              <p className="text-[10px] font-semibold leading-none text-ink-2">
+              <p className="text-[10px] font-semibold leading-none text-paper/70">
                 Computer Community
               </p>
             </div>
           </div>
 
           <div className="hidden min-w-0 items-center gap-2 text-xs md:flex">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-paper/50">
               AMS
             </span>
-            <span className="text-ink-3" aria-hidden="true">
+            <span className="text-paper/50" aria-hidden="true">
               /
             </span>
-            <span className="truncate font-semibold text-ink">
+            <span className="truncate font-semibold text-paper">
               {tabLabelFor(currentTab)}
             </span>
           </div>
@@ -239,7 +239,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
                 focusRing,
                 currentTab === 'settings'
                   ? 'bg-paper-raised text-ink-2'
-                  : 'text-ink-2 hover:bg-paper-raised/60 hover:text-ink'
+                  : 'text-paper/70 hover:bg-paper-raised/60 hover:text-ink'
               )}
             >
               <Gear size={18} />
@@ -285,7 +285,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
                 <span
                   className={cn(
                     'mt-1 text-[10px] font-bold',
-                    active ? 'text-ink-2' : 'text-ink-2'
+                    active ? 'text-paper' : 'text-paper/70'
                   )}
                 >
                   {item.label}
@@ -304,7 +304,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               className={cn(
                 'flex min-h-[48px] min-w-[52px] flex-col items-center justify-center rounded-chip px-2 py-1 transition-colors duration-120 ease-out-expo',
                 focusRing,
-                active ? 'text-ink-2' : 'text-ink-2 hover:text-ink'
+                active ? 'text-paper' : 'text-paper/70 hover:text-paper'
               )}
             >
               <span className={cn('p-0.5', active && 'rail-pulse rounded-panel')}>

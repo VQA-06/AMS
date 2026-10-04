@@ -533,10 +533,10 @@ export const EventsPage: React.FC<EventsPageProps> = ({
                 focusRing
               )}
             >
-              <option value="all" className="bg-paper">Semua Status</option>
-              <option value="active" className="bg-paper">Sedang Aktif</option>
-              <option value="draft" className="bg-paper">Draft</option>
-              <option value="closed" className="bg-paper">Selesai / Tutup</option>
+              <option value="all" className="bg-paper text-ink">Semua Status</option>
+              <option value="active" className="bg-paper text-ink">Sedang Aktif</option>
+              <option value="draft" className="bg-paper text-ink">Draft</option>
+              <option value="closed" className="bg-paper text-ink">Selesai / Tutup</option>
             </select>
             <FunnelSimple className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-ink-2" />
           </div>

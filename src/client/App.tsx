@@ -253,7 +253,7 @@ export const App: React.FC = () => {
         <div
           role="status"
           aria-live="polite"
-          className="mb-4 flex items-start gap-2.5 rounded-panel border border-pending-200 bg-pending-900/20 px-4 py-3 text-xs text-pending-800"
+          className="mb-4 flex items-start gap-2.5 rounded-panel border border-pending-200 bg-pending-50/70 px-4 py-3 text-xs text-pending-800"
         >
           <WarningCircle size={16} weight="fill" className="mt-px shrink-0 text-pending-600" />
           <p className="min-w-0 break-words">

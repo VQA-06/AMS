@@ -26,7 +26,7 @@ const outcomeRail: Record<ScanOutcome, string> = {
 const outcomeIcon: Record<ScanOutcome, React.ReactNode> = {
   accepted: <CheckCircle className="h-4 w-4 shrink-0 text-seal-600" />,
   rejected: <Warning className="h-4 w-4 shrink-0 text-pending-600" />,
-  error: <XCircle className="h-4 w-4 shrink-0 text-pen" />,
+  error: <XCircle className="h-4 w-4 shrink-0 text-pen-600" />,
 };
 
 interface RecentScansSheetProps {
@@ -45,6 +45,7 @@ export const RecentScansSheet: React.FC<RecentScansSheetProps> = ({
       placement="bottom-sheet"
       offsetClass="pb-24 md:pb-4"
       className="flex-col items-stretch"
+      open={isOpen}
     >
       <button
         type="button"

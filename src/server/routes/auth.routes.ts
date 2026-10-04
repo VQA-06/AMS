@@ -648,6 +648,23 @@ authRoutes.delete('/admins/:id', authMiddleware, requireRole(['owner']), async (
   });
 });
 
+/**
+ * Single source of truth for admin bulk-delete protection. An admin can never
+ * delete their own account, and the default master owner (role `owner` with no
+ * linked `member_id`) can never be deleted through any path. The
+ * `POST /admins/bulk-delete` loop is the only caller.
+ */
+export function canDeleteAdmin(
+  currentAdminId: string,
+  target: { id: string; role: string; member_id?: string | null }
+): boolean {
+  // Protect self
+  if (target.id === currentAdminId) return false;
+  // Protect owner account if owner deletion is restricted
+  if (target.role === 'owner' && target.member_id === null) return false;
+  return true;
+}
+
 // POST /api/auth/admins/bulk-delete - Bulk delete team accounts (protects current admin & default owner)
 authRoutes.post('/admins/bulk-delete', authMiddleware, requireRole(['owner']), async (c) => {
   const currentAdmin = c.get('admin');
@@ -666,12 +683,10 @@ authRoutes.post('/admins/bulk-delete', authMiddleware, requireRole(['owner']), a
 
   let deletedCount = 0;
   for (const id of ids) {
-    // Protect self
-    if (id === currentAdmin.id) continue;
     const target = await adminRepo.findById(id);
     if (!target) continue;
-    // Protect owner account if owner deletion is restricted
-    if (target.role === 'owner' && target.member_id === null) continue;
+    // Protection rule lives in canDeleteAdmin so it is testable at source.
+    if (!canDeleteAdmin(currentAdmin.id, target)) continue;
 
     await adminRepo.delete(id);
     invalidateAdminCache(target.email);

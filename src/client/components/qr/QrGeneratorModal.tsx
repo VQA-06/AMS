@@ -166,7 +166,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="surface my-auto flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-bezel p-4 shadow-ambient sm:max-h-[88vh] sm:p-6">
+        <div className="surface my-auto flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-bezel p-4 sm:max-h-[88vh] sm:p-6">
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-rule pb-3 sm:pb-4">
             <div className="flex min-w-0 items-center gap-2.5">

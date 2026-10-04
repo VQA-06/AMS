@@ -108,7 +108,7 @@ const CustomPieTooltip: React.FC<CustomPieTooltipProps> = ({ active, payload, to
   const totalPct = totalAttendees > 0 ? Math.round((item.attendance_count / totalAttendees) * 100) : 0;
 
   return (
-    <div className="z-toast pointer-events-none max-w-[260px] space-y-2 rounded-panel border border-rule-strong bg-paper-raised px-3 py-2 text-xs shadow-ambient backdrop-blur-md">
+    <div className="z-toast pointer-events-none max-w-[260px] space-y-2 rounded-panel border border-rule-strong bg-paper-raised px-3 py-2 text-xs backdrop-blur-md">
       <div>
         <div className="flex items-center gap-1.5">
           <span
@@ -227,7 +227,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
 
   return (
     /* Chart container is a static surface: hairline edge only, never a rail. */
-    <div className="surface flex h-full min-w-0 flex-col space-y-4 rounded-panel p-4 shadow-ambient sm:p-5">
+    <div className="surface flex h-full min-w-0 flex-col space-y-4 rounded-panel p-4 sm:p-5">
       {/* Header & Controls */}
       <div className="flex flex-col justify-between gap-3 border-b border-rule pb-3 lg:flex-row lg:items-center">
         <div>

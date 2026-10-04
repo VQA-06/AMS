@@ -13,6 +13,13 @@ export interface FloatingSurfaceProps {
   /** Extra offset for callers that must clear the mobile dock. */
   offsetClass?: string;
   className?: string;
+  /**
+   * Whether the surface is showing at all. Defaults to true so a bar that owns
+   * its own presence (bulk bar, scan toast, install banner) needs no flag.
+   * A collapsible surface passes its open state, because a collapsed sheet must
+   * not paint a backdrop over the page it is sitting on.
+   */
+  open?: boolean;
 }
 
 /**
@@ -31,15 +38,21 @@ export const FloatingSurface: React.FC<FloatingSurfaceProps> = ({
   mark,
   offsetClass,
   className,
+  open = true,
 }) => {
+  if (!open) return null;
+
   return (
     <>
-      {/* Backdrop: separates the surface from content behind it. Not focusable,
-          Escape and click-through both belong to the surface's owner. */}
+      {/* Backdrop: separates the surface from content behind it. It is
+          click-through by construction — a full-viewport scrim that eats
+          pointer events blocks the page under a surface whose owner has
+          already closed it. Not focusable; Escape and click-through both
+          belong to the surface's owner. */}
       <div
         aria-hidden="true"
         className={cn(
-          'fixed inset-0 z-bar bg-ink/40',
+          'pointer-events-none fixed inset-0 z-bar bg-ink/40',
           placement === 'top-bar' && 'hidden'
         )}
       />
@@ -47,7 +60,7 @@ export const FloatingSurface: React.FC<FloatingSurfaceProps> = ({
         role="status"
         aria-live="polite"
         className={cn(
-          'fixed inset-x-0 z-bar',
+          'pointer-events-auto fixed inset-x-0 z-bar',
           placement === 'top-bar' && 'top-0',
           placement !== 'top-bar' && 'bottom-0',
           placement === 'bottom-sheet' && 'pb-safe',

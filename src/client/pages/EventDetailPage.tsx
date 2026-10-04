@@ -819,7 +819,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       {/* Tab Content: Overview */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="surface space-y-4 rounded-panel p-6 shadow-ambient">
+          <div className="surface space-y-4 rounded-panel p-6">
             <h3 className="font-heading text-base font-bold text-ink">Kebijakan Keamanan QR</h3>
             <div className="space-y-3 text-xs text-ink">
               <div className="rounded-panel border border-rule bg-paper-raised p-4">
@@ -852,7 +852,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             </div>
           </div>
 
-          <div className="surface space-y-4 rounded-panel p-6 shadow-ambient">
+          <div className="surface space-y-4 rounded-panel p-6">
             <h3 className="font-heading text-base font-bold text-ink">Statistik Kehadiran</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="surface rounded-panel p-4">
@@ -1108,7 +1108,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
           <button
             type="button"
             onClick={() => onScanEvent(event)}
-            className="flex h-12 items-center gap-2 rounded-chip bg-pen-500 px-4 text-xs font-bold text-paper shadow-lift transition-transform duration-120 ease-spring active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper hover:bg-pen-400"
+            className="flex h-12 items-center gap-2 rounded-chip bg-pen-500 px-4 text-xs font-bold text-paper shadow-lift transition-transform duration-120 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper hover:bg-pen-400"
             aria-label="Scan Presensi"
           >
             <QrCode size={16} />

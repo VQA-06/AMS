@@ -495,7 +495,7 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({
     <div className="flex flex-col items-center justify-center w-full max-w-lg mx-auto">
       {/* Insecure Context Warning if opened over non-https LAN */}
       {isInsecureContext && (
-        <div className="mb-3 flex items-start gap-2 rounded-panel border border-l-2 border-rule border-l-pending bg-paper-sunk p-3 text-xs text-pending-800">
+        <div className="mb-3 flex items-start gap-2 rounded-panel border border-l-2 border-rule border-l-pending-500 bg-paper-sunk p-3 text-xs text-pending-800">
           <ShieldWarning className="mt-0.5 h-4 w-4 shrink-0 text-pending-600" />
           <div>
             <p className="font-bold">Peringatan Protokol Browser Mobile:</p>
@@ -580,11 +580,11 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({
             real phase of the hardware rather than a generic failure. */}
         {cameraPhase === 'requesting' && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/90 p-6 text-center">
-            <ArrowClockwise className="mb-3 h-8 w-8 animate-spin text-ink-2" />
-            <p className="mb-1 text-sm font-bold text-ink">
+            <ArrowClockwise className="mb-3 h-8 w-8 animate-spin text-paper/70" />
+            <p className="mb-1 text-sm font-bold text-paper">
               Meminta Izin Kamera...
             </p>
-            <p className="max-w-xs text-xs text-ink-2">
+            <p className="max-w-xs text-xs text-paper/80">
               Setujui permintaan izin kamera pada browser untuk mulai memindai.
             </p>
           </div>

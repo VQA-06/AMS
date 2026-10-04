@@ -19,6 +19,11 @@ export interface TabsProps {
 const focusRing =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
+// Segments share the switcher's width, so a two-option bar splits evenly
+// instead of hugging its labels at the left. `overflow-x-auto` stays: a wider
+// set of labels (the settings bar has four) still scrolls rather than squashing.
+const tabListBase = 'flex items-center justify-center gap-1 overflow-x-auto no-scrollbar';
+
 export const Tabs: React.FC<TabsProps> = ({
   items,
   active,
@@ -32,7 +37,7 @@ export const Tabs: React.FC<TabsProps> = ({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        'flex items-center gap-1 overflow-x-auto no-scrollbar',
+        tabListBase,
         variant === 'pill' ? 'rounded-chip bg-paper-raised p-1' : 'border-b border-rule',
         className
       )}
@@ -47,7 +52,7 @@ export const Tabs: React.FC<TabsProps> = ({
             aria-selected={selected}
             onClick={() => onChange(item.id)}
             className={cn(
-              'shrink-0 whitespace-nowrap text-xs font-semibold transition-colors duration-120 ease-out-expo',
+              'flex-1 shrink-0 whitespace-nowrap text-center text-xs font-semibold transition-colors duration-120 ease-out-expo',
               focusRing,
               variant === 'pill'
                 ? cn('rounded px-3 py-1.5', selected ? 'bg-pen-500 text-paper' : 'text-ink-2 hover:text-ink')

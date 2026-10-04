@@ -7,11 +7,22 @@ Guidance for AI coding agents working in this repository.
 Hono on Cloudflare Workers (server) + React SPA (client) + Cloudflare D1.
 Client source lives in `src/client`, server in `src/server`.
 
+## Design system
+
+`DESIGN.md` is the authority on the visual and structural language: the two
+grounds (paper vs dark chrome) and which token family paints each, the four
+signal ramps, the hand-written `index.css` utilities, motion rules, the
+`FloatingSurface` overlay contract, mobile reachability (`100dvh`, never
+`overflow-hidden` on a root, `w-screen` is a trap), and `order-*` mobile
+ordering. Read it before changing any colour, ground, or layout, and keep it
+accurate when you change the design — every number in it is verified against
+source and a production build.
+
 ## Before You Edit
 
 ```bash
 npx tsc --noEmit -p tsconfig.json   # types must stay at zero errors
-npx vitest run                       # 232 tests
+npx vitest run                       # 238 tests
 npm run build
 ```
 
@@ -40,10 +51,32 @@ These encode fixes already applied to this codebase. Do not reintroduce them.
 - The `animate-in` / `fade-in` / `zoom-in-95` / `slide-in-from-*` classes are not
   defined in `index.css`. They emitted zero CSS and are dead weight.
 - A looping `animate-bounce` on an icon is noise after the first second. Use
-  `.animate-pop-once` for one-shot emphasis. Reserve looping `animate-pulse` for
+  `.pop-once` for one-shot emphasis. Reserve looping `animate-pulse` for
   genuinely ongoing state (e.g. the offline banner).
 - `prefers-reduced-motion` is handled globally in `index.css`. New custom
   animations must be added to that block.
+
+**Token ramps**
+- A bare hue name on a ramp emits nothing. `text-pen` is not a class — `pen` is
+  a `state()` object with a `50`…`950` scale, so `text-pen` renders as no CSS.
+  Use `text-pen-deep` for text, `bg-pen-500` for the base fill, `bg-pen-50/70`
+  for a tint. Same for `bg-info`, `border-l-pending`. This silently-bit the
+  codebase once; `tests/text-contrast-guard.test.ts` now enforces it.
+
+**Overlays**
+- Backdrops are click-through by construction. `FloatingSurface`'s backdrop is
+  `pointer-events-none` with `pointer-events-auto` on the content — never
+  re-add pointer events to a backdrop, or a closed surface's scrim blocks the
+  page under it.
+- Gate the render, not the CSS: a collapsible surface passes `open={isOpen}` to
+  `FloatingSurface` (default `true`) and `open === false` returns `null`. A
+  collapsed sheet must not paint a backdrop at all.
+
+**Reachability**
+- Use `100dvh`, never `100vh`. Never `overflow-hidden` on a page root — it
+  clips content with no way to scroll to it. `w-screen` is the viewport width,
+  so it overflows when combined with padding; bound a drawer by its wrapper
+  (`w-full max-w-md`) instead.
 
 **Contrast**
 - Never choose a text token without checking the ground that actually paints
@@ -88,8 +121,10 @@ These encode fixes already applied to this codebase. Do not reintroduce them.
 
 **Decoration**
 - No blurred pulsing background orbs.
-- `glass-panel` already sets `background` and `border`. Do not stack a `bg-*` or
-  `border-*` utility on the same element — the override silently fights it.
+- `.surface` and `.surface-raised` already set `background` and `border`. Do not
+  stack a `bg-*` or `border-*` utility on the same element — the override
+  silently fights it. If one call site needs a different fill, give it an
+  explicit `bg-*` there rather than weakening the shared class.
 - Icon tiles that merely repeat an adjacent text label are noise.
 - An uppercase tracked capsule above every heading is template grammar. One per
   page section at most, and only when it carries real status.

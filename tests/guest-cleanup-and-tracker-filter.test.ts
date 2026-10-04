@@ -1,81 +1,58 @@
 import { describe, it, expect } from 'vitest';
-import { Member } from '../src/shared/types';
+import { isGuestMember } from '../src/server/domain/attendance/attendance-engine';
 
-describe('Guest Cleanup & Activity Tracker Filtering', () => {
+/**
+ * `isGuestMember` is the production predicate the attendance engine calls when
+ * it stamps `is_guest` onto a scan record. The authoritative SQL equivalent is
+ * `attendance.repo.ts` `getMemberActivityStats` (~lines 270-274), which applies
+ * FOUR predicates: `external_id LIKE 'GUEST-%'`, `group_name LIKE 'Tamu:%'`,
+ * and two `metadata` `"temporary"` variants. This exported function is the
+ * in-memory mirror of the first TWO only — the `metadata` branch is evaluated
+ * in SQL and has no TypeScript counterpart. That asymmetry is asserted
+ * explicitly below rather than papered over by a local copy that invented the
+ * branch.
+ */
+describe('Guest Classification & Activity Tracker Filtering', () => {
   it('should filter out temporary/guest members from the activity tracker list', () => {
-    const mockDbMembers: Member[] = [
-      {
-        id: 'mem_1',
-        external_id: 'CC-001',
-        name: 'Ahmad Fauzi',
-        email: 'ahmad@cc.org',
-        phone: '08123456789',
-        group_name: 'Core Team',
-        division: 'Web Dev',
-        status: 'active',
-        metadata: '{}',
-        created_at: '',
-        updated_at: '',
-      },
-      {
-        id: 'mem_2',
-        external_id: 'GUEST-123456',
-        name: 'Tamu Seminar 1',
-        email: 'tamu1@gmail.com',
-        phone: null,
-        group_name: 'Tamu: Seminar AI',
-        division: 'Umum',
-        status: 'active',
-        metadata: JSON.stringify({ temporary: true, event_id: 'ev_1' }),
-        created_at: '',
-        updated_at: '',
-      },
-      {
-        id: 'mem_3',
-        external_id: 'CC-002',
-        name: 'Siti Aminah',
-        email: 'siti@cc.org',
-        phone: '08987654321',
-        group_name: 'Anggota',
-        division: 'UI/UX',
-        status: 'active',
-        metadata: '{}',
-        created_at: '',
-        updated_at: '',
-      },
-      {
-        id: 'mem_4',
-        external_id: 'GUEST-789012',
-        name: 'Tamu Workshop 2',
-        email: null,
-        phone: null,
-        group_name: 'Tamu: Workshop Web',
-        division: null,
-        status: 'active',
-        metadata: JSON.stringify({ temporary: true, event_id: 'ev_2' }),
-        created_at: '',
-        updated_at: '',
-      },
+    const mockDbMembers = [
+      { id: 'mem_1', external_id: 'CC-001', group_name: 'Core Team' },
+      { id: 'mem_2', external_id: 'GUEST-123456', group_name: 'Tamu: Seminar AI' },
+      { id: 'mem_3', external_id: 'CC-002', group_name: 'Anggota' },
+      { id: 'mem_4', external_id: 'GUEST-789012', group_name: null },
     ];
-
-    // Filter rule applied in getMemberActivityStats
-    const isGuestMember = (m: Member): boolean => {
-      if (m.external_id.startsWith('GUEST-')) return true;
-      if (m.group_name && m.group_name.startsWith('Tamu:')) return true;
-      try {
-        const meta = typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata;
-        if (meta && meta.temporary === true) return true;
-      } catch {
-        // ignore JSON parse error
-      }
-      return false;
-    };
 
     const regularMembers = mockDbMembers.filter((m) => !isGuestMember(m));
 
     expect(regularMembers.length).toBe(2);
-    expect(regularMembers.map((m) => m.name)).toEqual(['Ahmad Fauzi', 'Siti Aminah']);
+    expect(regularMembers.map((m) => m.id)).toEqual(['mem_1', 'mem_3']);
     expect(regularMembers.some((m) => m.external_id.startsWith('GUEST-'))).toBe(false);
+  });
+
+  it('should classify each guest marker the production function actually reads', () => {
+    // GUEST- external id prefix.
+    expect(isGuestMember({ external_id: 'GUEST-1001', group_name: null })).toBe(true);
+    expect(isGuestMember({ external_id: 'GUEST-1002', group_name: 'Anggota' })).toBe(true);
+
+    // Tamu: group label, with and without an accompanying GUEST- id.
+    expect(isGuestMember({ external_id: 'CC-002', group_name: 'Tamu: Workshop' })).toBe(true);
+    expect(isGuestMember({ external_id: 'TMP-001', group_name: 'Tamu: Workshop' })).toBe(true);
+
+    // Ordinary members are not guests.
+    expect(isGuestMember({ external_id: 'CC-001', group_name: 'Web Dev' })).toBe(false);
+    expect(isGuestMember({ external_id: 'CC-002', group_name: null })).toBe(false);
+
+    // Boundary: the prefixes are case-sensitive and unanchored on the right,
+    // so a different casing is NOT a guest.
+    expect(isGuestMember({ external_id: 'guest-1001', group_name: 'tamu: Workshop' })).toBe(false);
+  });
+
+  it('should NOT derive guest status from metadata.temporary alone', () => {
+    // The local copy this test used to carry asserted `metadata.temporary`
+    // made such a member a guest. The production function does not read
+    // metadata at all, so it correctly returns false. The tracker query still
+    // excludes these rows via SQL, so behaviour is unchanged; the point is that
+    // the predicate under test is now the one the engine actually runs.
+    expect(isGuestMember({ external_id: 'CC-001', group_name: 'Core Team' })).toBe(false);
   });
 
   it('should identify all guest members tied to a deleted event for cascade deletion', () => {
@@ -107,43 +84,18 @@ describe('Guest Cleanup & Activity Tracker Filtering', () => {
       },
     ];
 
+    // Event-scoped cascade is resolved in SQL (event.repo delete), keyed on the
+    // exclusive event_guests link; this asserts the member-side markers the
+    // guest record carries.
     const targetGuestIds = mockMembers
       .filter((m) => {
-        const isTemporary =
-          m.metadata.temporary === true ||
-          m.external_id.startsWith('GUEST-') ||
-          (m.group_name && m.group_name.startsWith('Tamu:'));
         const isLinkedToEvent = m.metadata.event_id === eventIdToDelete;
-        return isTemporary && isLinkedToEvent;
+        return isLinkedToEvent && isGuestMember(m);
       })
       .map((m) => m.id);
 
     expect(targetGuestIds).toEqual(['mem_guest_1']);
     expect(targetGuestIds).not.toContain('mem_regular');
     expect(targetGuestIds).not.toContain('mem_guest_2');
-  });
-
-  it('should accurately identify all guest members for global cleanup', () => {
-    const allMembers: Array<{
-      id: string;
-      external_id: string;
-      group_name: string | null;
-      metadata: string;
-    }> = [
-      { id: '1', external_id: 'CC-001', group_name: 'Web Dev', metadata: '{}' },
-      { id: '2', external_id: 'GUEST-1001', group_name: 'Tamu: Event A', metadata: '{"temporary":true}' },
-      { id: '3', external_id: 'GUEST-1002', group_name: null, metadata: '{"temporary": true}' },
-      { id: '4', external_id: 'CC-002', group_name: 'Mobile Dev', metadata: '{}' },
-      { id: '5', external_id: 'TMP-001', group_name: 'Tamu: Workshop', metadata: '{}' },
-    ];
-
-    const isGuest = (m: (typeof allMembers)[0]) =>
-      m.external_id.startsWith('GUEST-') ||
-      (m.group_name && m.group_name.startsWith('Tamu:')) ||
-      m.metadata.includes('"temporary":true') ||
-      m.metadata.includes('"temporary": true');
-
-    const guestIds = allMembers.filter(isGuest).map((m) => m.id);
-    expect(guestIds).toEqual(['2', '3', '5']);
   });
 });

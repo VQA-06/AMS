@@ -217,7 +217,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="surface my-auto flex h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-bezel shadow-ambient sm:h-[90vh]">
+        <div className="surface my-auto flex h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-bezel sm:h-[90vh]">
           {/* Top header & action controls */}
           <div className="flex shrink-0 flex-col gap-3 border-b border-rule bg-paper-raised p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <div className="min-w-0">
@@ -261,7 +261,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
                 onClick={handlePrintAll}
                 disabled={tokens.length === 0 || downloadingAll}
                 className={cn(
-                  'flex min-h-[44px] items-center gap-1.5 rounded-chip bg-pen-500 px-4 text-xs font-bold text-paper shadow-ambient transition-colors hover:bg-pen-400 active:scale-95 disabled:opacity-50 sm:px-5',
+                  'flex min-h-[44px] items-center gap-1.5 rounded-chip bg-pen-500 px-4 text-xs font-bold text-paper transition-colors hover:bg-pen-400 active:scale-95 disabled:opacity-50 sm:px-5',
                   focusRing
                 )}
               >
@@ -299,7 +299,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
                   <figure
                     key={tok.id}
                     id={`badge-card-${tok.id}`}
-                    className="relative aspect-[54/85] w-full max-w-[220px] select-none overflow-hidden rounded-none border border-rule-strong bg-paper shadow-ambient"
+                    className="relative aspect-[54/85] w-full max-w-[220px] select-none overflow-hidden rounded-none border border-rule-strong bg-paper"
                   >
                     {/* Template background image */}
                     <img

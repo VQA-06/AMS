@@ -262,7 +262,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="surface my-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-bezel p-4 shadow-ambient sm:max-h-[88vh] sm:p-6">
+        <div className="surface my-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-bezel p-4 sm:max-h-[88vh] sm:p-6">
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-rule pb-3 sm:pb-4">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -299,7 +299,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
               onClick={() => setMode('names')}
               className={`py-2 px-2 rounded-chip text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
                 mode === 'names'
-                  ? 'bg-pen-500 text-paper shadow-ambient'
+                  ? 'bg-pen-500 text-paper'
                   : 'border border-rule-strong bg-paper-raised text-ink-2 hover:text-ink'
               }`}
             >
@@ -312,7 +312,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
               onClick={() => setMode('batch')}
               className={`py-2 px-2 rounded-chip text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
                 mode === 'batch'
-                  ? 'bg-pen-500 text-paper shadow-ambient'
+                  ? 'bg-pen-500 text-paper'
                   : 'border border-rule-strong bg-paper-raised text-ink-2 hover:text-ink'
               }`}
             >
@@ -325,7 +325,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
               onClick={() => setMode('import_events')}
               className={`py-2 px-2 rounded-chip text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
                 mode === 'import_events'
-                  ? 'bg-pen-500 text-paper shadow-ambient'
+                  ? 'bg-pen-500 text-paper'
                   : 'border border-rule-strong bg-paper-raised text-ink-2 hover:text-ink'
               }`}
             >
@@ -588,7 +588,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                                       {cand.name}
                                     </span>
                                     {cand.division && (
-                                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-rule-strong text-ink font-medium truncate">
+                                      <span className="truncate rounded bg-rule-strong px-1.5 py-0.5 text-[10px] font-medium text-ink">
                                         {cand.division}
                                       </span>
                                     )}
@@ -630,7 +630,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                   loading ||
                   (mode === 'import_events' && (selectedMemberIds.size === 0 || sources.length === 0))
                 }
-                className="flex items-center gap-2 rounded-chip bg-pen-500 px-4 py-2 text-xs font-bold text-paper shadow-ambient transition-transform duration-120 ease-spring active:scale-95 hover:bg-pen-400 disabled:pointer-events-none disabled:opacity-50 sm:px-5 sm:py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                className="flex items-center gap-2 rounded-chip bg-pen-500 px-4 py-2 text-xs font-bold text-paper transition-transform duration-120 active:scale-95 hover:bg-pen-400 disabled:pointer-events-none disabled:opacity-50 sm:px-5 sm:py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
               >
                 <Sparkle size={16} className="shrink-0" />
                 <span>

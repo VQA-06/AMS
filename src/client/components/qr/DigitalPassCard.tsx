@@ -36,7 +36,7 @@ export const DigitalPassCard: React.FC<DigitalPassCardProps> = ({
   // truncates rather than widening the card.
   const tokenPrefix = `${tokenString.slice(0, 12)}…${tokenString.slice(-8)}`;
   return (
-    <div className="surface relative mx-auto flex w-full max-w-sm flex-col items-center rounded-panel p-3.5 text-center shadow-ambient sm:p-5">
+    <div className="surface relative mx-auto flex w-full max-w-sm flex-col items-center rounded-panel p-3.5 text-center sm:p-5">
       {onClose && (
         <button
           type="button"

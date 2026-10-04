@@ -119,7 +119,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="bezel-core my-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden p-4 shadow-ambient sm:max-h-[85vh] sm:p-6">
+        <div className="bezel-core my-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden p-4 sm:max-h-[85vh] sm:p-6">
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-rule pb-3 sm:pb-4">
             <div className="flex min-w-0 items-center gap-2.5">

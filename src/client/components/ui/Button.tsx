@@ -50,7 +50,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   outline:
     'bg-transparent text-ink border border-rule-strong hover:bg-paper-sunk/70',
   ghost: 'bg-transparent text-ink-2 hover:text-ink hover:bg-paper-sunk/70',
-  danger: 'bg-pen text-paper font-bold hover:bg-pen-600',
+  danger: 'bg-pen-500 text-paper font-bold hover:bg-pen-600',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

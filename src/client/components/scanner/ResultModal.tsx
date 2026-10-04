@@ -70,7 +70,7 @@ const outcomeTone: Record<
   },
   error: {
     railClass: 'bg-pen-500',
-    text: 'text-pen',
+    text: 'text-pen-600',
     chip: 'border-pen-200/70 bg-pen-50/70 text-pen-deep',
   },
 };
@@ -110,7 +110,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           aria-label={
             accepted ? 'Hasil absensi berhasil' : 'Hasil absensi ditolak'
           }
-          className="surface my-auto w-full max-w-md overflow-hidden rounded-bezel shadow-ambient"
+          className="surface my-auto w-full max-w-md overflow-hidden rounded-bezel"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex gap-0 overflow-hidden rounded-bezel">

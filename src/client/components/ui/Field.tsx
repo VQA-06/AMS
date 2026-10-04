@@ -277,7 +277,7 @@ export const Field: React.FC<FieldProps> = ({
       >
         {label}
         {required && (
-          <span className={cn('ml-1', onDark ? 'text-paper/70' : 'text-pen')} aria-hidden="true">
+          <span className={cn('ml-1', onDark ? 'text-paper/70' : 'text-pen-600')} aria-hidden="true">
             *
           </span>
         )}

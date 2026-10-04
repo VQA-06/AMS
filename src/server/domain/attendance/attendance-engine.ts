@@ -65,7 +65,7 @@ export interface AttendanceEngine {
  * by the GUEST- external_id prefix minted at promotion time, or a `Tamu:%`
  * group label. Mirrors the predicates used in member.repo / event.repo.
  */
-function isGuestMember(member: {
+export function isGuestMember(member: {
   external_id: string;
   group_name: string | null;
 }): boolean {

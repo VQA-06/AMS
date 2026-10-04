@@ -111,7 +111,7 @@ export const AttendanceRosterTable: React.FC<AttendanceRosterTableProps> = ({
       </div>
 
       {/* Filter and Session Controls */}
-      <div className="surface flex flex-wrap items-center justify-between gap-3 rounded-panel p-3.5 shadow-ambient sm:p-4">
+      <div className="surface flex flex-wrap items-center justify-between gap-3 rounded-panel p-3.5 sm:p-4">
         {/* Session Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 w-full sm:w-auto">
           <button

@@ -119,7 +119,7 @@ const CustomLineTooltip: React.FC<CustomTooltipProps & { filter: StatusFilter }>
   if (!rawData || rawData.isBaseline) return null;
 
   return (
-    <div className="z-toast pointer-events-none min-w-[180px] space-y-2 rounded-panel border border-rule-strong bg-paper-raised px-3 py-2 text-xs shadow-ambient backdrop-blur-md">
+    <div className="z-toast pointer-events-none min-w-[180px] space-y-2 rounded-panel border border-rule-strong bg-paper-raised px-3 py-2 text-xs backdrop-blur-md">
       <div className="flex items-center justify-between gap-3 border-b border-rule pb-1.5">
         <span className="font-heading text-xs font-bold text-ink">Tahun {rawData.year || label}</span>
         <span className="font-oxanium text-[11px] font-semibold tabular-nums text-ink-2">
@@ -137,7 +137,7 @@ const CustomLineTooltip: React.FC<CustomTooltipProps & { filter: StatusFilter }>
           >
             <span className="flex items-center gap-1.5">
               <span
-                className={cn('h-1.5 w-1.5 rounded-full', series.focus ? 'bg-pen-500' : 'bg-info')}
+                className={cn('h-1.5 w-1.5 rounded-full', series.focus ? 'bg-pen-500' : 'bg-info-500')}
                 aria-hidden="true"
               />
               <span>{series.label}</span>
@@ -216,7 +216,7 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
 
   return (
     /* Chart container is a static surface: hairline edge only, never a rail. */
-    <div className="surface flex h-full min-w-0 flex-col rounded-panel p-4 shadow-ambient sm:p-5">
+    <div className="surface flex h-full min-w-0 flex-col rounded-panel p-4 sm:p-5">
       {/* Top Header: Title & Filter Pills */}
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -369,7 +369,10 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
                     )}
                   >
                     <span
-                      className={cn('h-2 w-2 rounded-full', series.focus ? 'bg-pen-500' : 'bg-info')}
+                      className={cn(
+                        'h-2 w-2 rounded-full',
+                        series.focus ? 'bg-pen-500' : 'bg-info-500'
+                      )}
                       aria-hidden="true"
                     />
                     <span className="font-semibold">

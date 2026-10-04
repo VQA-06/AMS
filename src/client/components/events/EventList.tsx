@@ -36,7 +36,7 @@ const iconButtonClass = (tone: 'pen' | 'neutral' | 'danger' | 'seal') =>
   cn(
     'flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip transition-colors duration-120 ease-out-expo',
     focusRing,
-    tone === 'pen' && 'text-pen hover:bg-pen-50/70',
+    tone === 'pen' && 'text-pen-deep hover:bg-pen-50/70',
     tone === 'neutral' && 'text-ink-2 hover:bg-paper-sunk hover:text-ink',
     tone === 'danger' && 'text-ink-2 hover:bg-pending-50 hover:text-pending-700',
     tone === 'seal' && 'text-seal-800 hover:bg-seal-50/70'

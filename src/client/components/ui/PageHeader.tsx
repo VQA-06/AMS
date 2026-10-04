@@ -42,7 +42,15 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           {subtitle && <p className="mt-1 text-xs text-ink-3 sm:text-sm">{subtitle}</p>}
         </div>
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+      {/* `shrink-0` alone held the actions at their max-content width — 467px
+          for a wide primary button — which overflowed a 420px viewport even
+          though the header itself wrapped. Full width on mobile lets the row
+          wrap internally; from `sm` up it takes only the space it needs. */}
+      {actions && (
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
+          {actions}
+        </div>
+      )}
     </header>
   );
 };

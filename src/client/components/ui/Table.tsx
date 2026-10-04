@@ -25,7 +25,7 @@ export const markToneClass: Record<MarkTone, string> = {
 /** The text hue for a mark tone. `idle` is ink-3 (5.00:1), never rule-strong. */
 export const markTextClass: Record<MarkTone, string> = {
   seal: 'text-seal-600',
-  pen: 'text-pen',
+  pen: 'text-pen-600',
   pending: 'text-pending-600',
   danger: 'text-pen-deep',
   info: 'text-info-600',

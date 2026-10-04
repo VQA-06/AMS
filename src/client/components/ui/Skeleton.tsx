@@ -58,7 +58,7 @@ export const SkeletonMemberList: React.FC<{ rows?: number }> = ({ rows = 8 }) =>
       </div>
 
       {/* Desktop Table Skeletons (>= md screens) */}
-      <div className="surface hidden overflow-hidden rounded-panel shadow-ambient md:block">
+      <div className="surface hidden overflow-hidden rounded-panel md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-ink">
             <thead className="surface-raised text-ink-2 font-semibold uppercase tracking-wider">
@@ -128,7 +128,7 @@ export const SkeletonEventList: React.FC<{ count?: number }> = ({ count = 4 }) =
       {Array.from({ length: count }).map((_, idx) => (
         <div
           key={`skel-event-${idx}`}
-          className="surface space-y-4 rounded-panel p-5 shadow-ambient"
+          className="surface space-y-4 rounded-panel p-5"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1.5 flex-1">
@@ -174,7 +174,7 @@ export const SkeletonStats: React.FC<{ count?: number }> = ({ count = 4 }) => {
       {Array.from({ length: count }).map((_, idx) => (
         <div
           key={`skel-stat-${idx}`}
-          className="surface space-y-2 rounded-panel p-4 shadow-ambient"
+          className="surface space-y-2 rounded-panel p-4"
         >
           <div className="flex items-center justify-between">
             <Skeleton className="h-3 w-20" />

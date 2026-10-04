@@ -55,11 +55,11 @@ const CODE_CONFIG: Record<
   '500': {
     badge: '500 SYSTEM ERROR',
     badgeVariant: 'danger',
-    ringClass: 'text-pen',
+    ringClass: 'text-pen-600',
     defaultTitle: 'Terjadi Kesalahan Aplikasi',
     defaultDesc:
       'Aplikasi mendeteksi kendala pada pemrosesan antarmuka. Anda dapat memuat ulang aplikasi atau memeriksa detail error.',
-    icon: <Warning className="h-10 w-10 text-pen" weight="fill" />,
+    icon: <Warning className="h-10 w-10 text-pen-600" weight="fill" />,
   },
   offline: {
     badge: 'OFFLINE MODE',
@@ -110,7 +110,7 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center p-4 text-center">
       {/* Centred bezel: a static surface, so a plain hairline edge and no rail. */}
-      <div className="bezel w-full max-w-md p-6 shadow-ambient sm:p-8">
+      <div className="bezel w-full max-w-md p-6 sm:p-8">
         <div className="bezel-core space-y-6 p-5 sm:p-6">
           <div className="flex flex-col items-center gap-3">
             <div

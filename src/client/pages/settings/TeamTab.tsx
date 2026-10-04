@@ -584,7 +584,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
       {isAddAdminOpen && (
         <ModalPortal onClose={() => setIsAddAdminOpen(false)}>
           <div className="modal-backdrop-full">
-            <div className="surface my-auto w-full max-w-md space-y-4 rounded-bezel p-5 shadow-ambient sm:p-6">
+            <div className="surface my-auto w-full max-w-md space-y-4 rounded-bezel p-5 sm:p-6">
               <div className="flex items-center justify-between border-b border-rule pb-3">
                 <div className="flex items-center gap-2">
                   <UserPlus className="h-5 w-5 text-ink-2" />
@@ -696,7 +696,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
       {editingAdmin && (
         <ModalPortal onClose={() => setEditingAdmin(null)}>
           <div className="modal-backdrop-full">
-            <div className="surface my-auto w-full max-w-md space-y-3.5 rounded-bezel p-4 shadow-ambient sm:space-y-4 sm:p-6">
+            <div className="surface my-auto w-full max-w-md space-y-3.5 rounded-bezel p-4 sm:space-y-4 sm:p-6">
               <div className="flex items-center justify-between border-b border-rule pb-3">
                 <div className="flex items-center gap-2">
                   <PencilSimple className="h-4 w-4 text-ink-2" />

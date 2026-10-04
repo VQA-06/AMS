@@ -146,7 +146,7 @@ export const EventHeaderSummary: React.FC<EventHeaderSummaryProps> = ({
       </div>
 
       {/* Event Details Ribbon */}
-      <div className="surface grid grid-cols-1 gap-3 rounded-panel p-4 text-xs shadow-ambient sm:grid-cols-2 lg:grid-cols-4">
+      <div className="surface grid grid-cols-1 gap-3 rounded-panel p-4 text-xs sm:grid-cols-2 lg:grid-cols-4">
         <div className="flex items-center gap-2.5 text-ink">
           <CalendarBlank size={16} className="shrink-0 text-ink-2" />
           <div>

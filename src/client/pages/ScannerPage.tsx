@@ -154,7 +154,7 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
   };
 
   return (
-    <div className="relative flex min-h-[calc(100vh-8rem)] flex-col items-center space-y-5 pb-4 md:space-y-8">
+    <div className="relative flex min-h-[calc(100dvh-8rem)] flex-col items-center space-y-5 pb-4 md:space-y-8">
       {/* Non-Blocking Floating Notification Banner */}
       <FloatingScanToast
         result={scanResult}
@@ -167,6 +167,9 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
           subtitle="Pindai QR anggota untuk mencatat presensi kegiatan aktif."
         />
 
+        {/* Mobile: the camera leads, because the sheet and the controls both
+            stack on top of it. Desktop keeps controls first — a wide viewport
+            has room for the settings to be read before scanning begins. */}
         <div className="space-y-5 md:space-y-8">
           {/* Auditor Read-Only Notice */}
           {!canScan && (
@@ -187,7 +190,7 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
           )}
 
           {/* Event and Session Controls */}
-          <Card className="p-4">
+          <Card className="order-2 p-4 md:order-1">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field
                 id="pages-scannerpage-field-1"
@@ -275,7 +278,9 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
             </div>
           </Card>
 
-          <CameraViewfinder onScan={handleScan} active={canScan} />
+          <div className="order-1 md:order-2">
+            <CameraViewfinder onScan={handleScan} active={canScan} />
+          </div>
         </div>
       </div>
 

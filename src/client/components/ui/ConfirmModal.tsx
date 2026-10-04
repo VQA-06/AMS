@@ -27,7 +27,7 @@ const PANEL: Record<ModalType, { rail: string; confirm: 'danger' | 'primary' | '
   danger: { rail: 'bg-pen-500', confirm: 'danger' },
   warning: { rail: 'bg-pending-500', confirm: 'primary' },
   success: { rail: 'bg-seal-500', confirm: 'primary' },
-  info: { rail: 'bg-info', confirm: 'outline' },
+  info: { rail: 'bg-info-500', confirm: 'outline' },
 };
 
 const focusRing =

@@ -95,7 +95,7 @@ export const GuestPassWorkspace: React.FC<GuestPassWorkspaceProps> = ({
   return (
     <div className="space-y-4">
       {/* Workspace Header Actions */}
-      <div className="surface flex flex-wrap items-center justify-between gap-3 rounded-panel p-3.5 shadow-ambient sm:p-4">
+      <div className="surface flex flex-wrap items-center justify-between gap-3 rounded-panel p-3.5 sm:p-4">
         <div>
           <h2 className="font-heading text-sm font-bold text-ink">Kelola Tiket QR Kegiatan</h2>
           <p className="mt-0.5 text-[11px] text-ink-2">
@@ -275,7 +275,7 @@ export const GuestPassWorkspace: React.FC<GuestPassWorkspaceProps> = ({
                             aria-label={`Hapus tiket ${tok.member_name || ''}`}
                             title="Hapus tiket dari event"
                           >
-                            <Trash size={14} className="text-pen" />
+                            <Trash size={14} className="text-pen-deep" />
                           </Button>
                         </>
                       )}

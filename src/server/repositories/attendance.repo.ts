@@ -11,6 +11,18 @@ export interface AttendanceFilterOptions {
   limit?: number;
 }
 
+/**
+ * Single source of truth for activity-tier thresholds. `getMemberActivityStats`
+ * is the only caller. `attended` is the distinct-event count from the
+ * aggregation query; `rate` is that count expressed as a percentage of the
+ * event baseline, already clamped to 0-100 by the caller.
+ */
+export function classifyActivityTier(attended: number, rate: number): ActivityTier {
+  if (attended >= 3 || rate >= 60) return 'highly_active';
+  if (attended >= 1 || rate > 0) return 'active';
+  return 'inactive';
+}
+
 export class AttendanceRepository {
   constructor(private db: D1Database) {}
 
@@ -331,17 +343,10 @@ export class AttendanceRepository {
       const rate = Math.min(100, Math.round((attended / totalEvents) * 100));
       totalRateSum += rate;
 
-      let tier: ActivityTier = 'inactive';
-      if (attended >= 3 || rate >= 60) {
-        tier = 'highly_active';
-        highlyActiveCount++;
-      } else if (attended >= 1 || rate > 0) {
-        tier = 'active';
-        activeCount++;
-      } else {
-        tier = 'inactive';
-        inactiveCount++;
-      }
+      const tier = classifyActivityTier(attended, rate);
+      if (tier === 'highly_active') highlyActiveCount++;
+      else if (tier === 'active') activeCount++;
+      else inactiveCount++;
 
       return {
         member_id: row.member_id,

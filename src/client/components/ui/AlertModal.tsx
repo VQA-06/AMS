@@ -23,7 +23,7 @@ const PANEL: Record<AlertType, { rail: string; action: 'danger' | 'primary' | 'o
   error: { rail: 'bg-pen-500', action: 'danger' },
   warning: { rail: 'bg-pending-500', action: 'primary' },
   success: { rail: 'bg-seal-500', action: 'primary' },
-  info: { rail: 'bg-info', action: 'outline' },
+  info: { rail: 'bg-info-500', action: 'outline' },
 };
 
 const focusRing =

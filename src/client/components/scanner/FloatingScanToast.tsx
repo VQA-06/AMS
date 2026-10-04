@@ -33,7 +33,7 @@ const outcomeTone: Record<
   error: {
     text: 'text-pen-deep',
     chip: 'border-pen-200/70 bg-pen-50/70 text-pen-deep',
-    icon: <XCircle className="h-5 w-5 shrink-0 text-pen" />,
+    icon: <XCircle className="h-5 w-5 shrink-0 text-pen-600" />,
   },
 };
 

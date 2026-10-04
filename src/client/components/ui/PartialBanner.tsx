@@ -25,11 +25,11 @@ export const PartialBanner: React.FC<PartialBannerProps> = ({ sections, onRetry,
       role="status"
       aria-live="polite"
       className={cn(
-        'flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 border-l-pending bg-paper-sunk px-4 py-3',
+        'flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 border-l-pending-500 bg-paper-sunk px-4 py-3',
         className
       )}
     >
-      <Warning size={16} weight="bold" className="shrink-0 text-pending" aria-hidden="true" />
+      <Warning size={16} weight="bold" className="shrink-0 text-pending-600" aria-hidden="true" />
       <p className="min-w-0 flex-1 text-[12px] leading-snug text-ink-2">
         Sebagian data gagal dimuat: {sections.join(', ')}. Angka di bawah mungkin tidak lengkap,
         bukan nol.
@@ -39,7 +39,7 @@ export const PartialBanner: React.FC<PartialBannerProps> = ({ sections, onRetry,
           type="button"
           onClick={onRetry}
           className={cn(
-            'shrink-0 text-[12px] font-semibold text-pen underline underline-offset-2',
+            'shrink-0 text-[12px] font-semibold text-pen-600 underline underline-offset-2',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-500',
             'focus-visible:ring-offset-2 focus-visible:ring-offset-paper'
           )}

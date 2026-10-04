@@ -147,7 +147,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({ currentAdmin, onSaved })
             role="alert"
             className="flex items-start gap-2.5 rounded-panel border border-pen-200 bg-pen-50/70 px-3.5 py-3 text-xs text-pen-deep"
           >
-            <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-pen" />
+            <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-pen-600" />
             <span>{profileErrorMsg}</span>
           </div>
         )}

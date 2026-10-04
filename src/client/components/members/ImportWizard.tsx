@@ -158,7 +158,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
   };
 
   return (
-    <div className="surface mx-auto max-w-4xl space-y-5 rounded-panel p-4 shadow-ambient sm:space-y-6 sm:p-6">
+    <div className="surface mx-auto max-w-4xl space-y-5 rounded-panel p-4 sm:space-y-6 sm:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule pb-4">
         <div>
@@ -262,7 +262,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
               <p className="font-oxanium text-lg font-bold text-seal-800">{previewReport.validCount}</p>
             </div>
             <div className="rounded-panel border border-pen-200 bg-pen-50/70 p-3.5">
-              <span className="text-[10px] font-semibold uppercase text-pen">Bermasalah</span>
+              <span className="text-[10px] font-semibold uppercase text-pen-600">Bermasalah</span>
               <p className="font-oxanium text-lg font-bold text-pen-deep">
                 {previewReport.invalidCount}
               </p>
@@ -297,7 +297,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
                           <CheckCircle className="w-3.5 h-3.5" /> Valid
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 font-sans text-[11px] font-semibold text-pen">
+                        <span className="inline-flex items-center gap-1 font-sans text-[11px] font-semibold text-pen-600">
                           <Warning className="w-3.5 h-3.5" /> Error
                         </span>
                       )}
@@ -322,7 +322,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
                       {res.valid ? (
                         <span className="text-ink-2">Siap diimpor</span>
                       ) : (
-                        <span className="font-semibold text-pen">
+                        <span className="font-semibold text-pen-600">
                           {res.errors?.map((e) => `${e.field}: ${e.message}`).join(', ')}
                         </span>
                       )}
@@ -386,7 +386,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
             </div>
             <div className="surface rounded-panel p-3.5">
               <span className="text-[10px] font-semibold uppercase text-ink-2">Gagal</span>
-              <p className="font-oxanium text-lg font-bold text-pen">{commitResult.failed}</p>
+              <p className="font-oxanium text-lg font-bold text-pen-deep">{commitResult.failed}</p>
             </div>
           </div>
 

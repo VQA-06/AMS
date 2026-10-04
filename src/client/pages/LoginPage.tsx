@@ -86,8 +86,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-ink p-4 text-paper">
-      <div className="bezel bezel-core w-full max-w-md space-y-6 p-6 shadow-ambient sm:p-8">
+    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-y-auto overflow-x-hidden bg-ink p-4 text-paper">
+      <div className="bezel bezel-core w-full max-w-md space-y-6 p-6 sm:p-8">
         {/* Brand Header */}
         <div className="space-y-1.5 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-panel border border-rule-strong bg-paper-raised p-2">
@@ -118,7 +118,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             role="alert"
             className="flex items-start gap-2.5 rounded-panel border border-pen-200 bg-pen-50/70 px-3.5 py-3 text-xs text-pen-deep"
           >
-            <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-pen" />
+            <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-pen-600" />
             <span>{error}</span>
           </div>
         )}

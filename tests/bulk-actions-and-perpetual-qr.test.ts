@@ -1,72 +1,60 @@
 import { describe, it, expect } from 'vitest';
-import { Member, Event } from '../src/shared/types';
+import { canDeleteAdmin } from '../src/server/routes/auth.routes';
 
-describe('Perpetual Universal Member QR & Bulk Operations', () => {
-  it('should identify universal member QR tokens as perpetual without fixed 30-day expiration', () => {
-    const universalTokenExpiresAt = '2099-12-31T23:59:59.999Z';
-    const eventTokenExpiresAt = '2026-09-01T12:00:00.000Z';
-
-    const isPerpetual = (scope: string, expiresAt: string): boolean => {
-      return scope === 'universal' || new Date(expiresAt).getFullYear() >= 2090;
-    };
-
-    expect(isPerpetual('universal', universalTokenExpiresAt)).toBe(true);
-    expect(isPerpetual('event', universalTokenExpiresAt)).toBe(true);
-    expect(isPerpetual('event', eventTokenExpiresAt)).toBe(false);
-  });
-
-  it('should correctly select all and toggle individual items in multi-select state', () => {
-    const mockMembers: Member[] = [
-      { id: 'm1', external_id: 'CC-001', name: 'Ahmad', email: null, phone: null, group_name: null, division: null, status: 'active', metadata: '{}', created_at: '', updated_at: '' },
-      { id: 'm2', external_id: 'CC-002', name: 'Budi', email: null, phone: null, group_name: null, division: null, status: 'active', metadata: '{}', created_at: '', updated_at: '' },
-      { id: 'm3', external_id: 'CC-003', name: 'Citra', email: null, phone: null, group_name: null, division: null, status: 'active', metadata: '{}', created_at: '', updated_at: '' },
-    ];
-
-    let selected = new Set<string>();
-
-    // Toggle m1
-    selected.add('m1');
-    expect(selected.has('m1')).toBe(true);
-    expect(selected.size).toBe(1);
-
-    // Toggle m2
-    selected.add('m2');
-    expect(selected.size).toBe(2);
-
-    // Select all
-    selected = new Set(mockMembers.map((m) => m.id));
-    expect(selected.size).toBe(3);
-    expect(selected.size === mockMembers.length).toBe(true);
-
-    // Deselect all
-    selected = new Set();
-    expect(selected.size).toBe(0);
-  });
-
+/**
+ * These assertions target `canDeleteAdmin`, the exact predicate the
+ * `POST /api/auth/admins/bulk-delete` loop calls for every id. Before this port
+ * the suite restated the rule in a local filter closure, so the rule that
+ * protects the default master owner was never exercised at its enforcement
+ * point — which is how `TeamTab.tsx` shipped a bulk delete that POSTed the
+ * literal id `"bulk"` while the suite stayed green.
+ */
+describe('Admin Bulk Delete Protection', () => {
   it('should protect current user and default master owner from bulk deletion', () => {
-    const currentAdminId = 'adm_current_user';
-    const defaultOwnerId = 'adm_owner_default';
+    const CURRENT = 'adm_cur';
 
-    const adminList = [
-      { id: 'adm_owner_default', role: 'owner', member_id: null, name: 'Default Super Admin' },
-      { id: 'adm_current_user', role: 'owner', member_id: 'mem_1', name: 'Current Owner' },
-      { id: 'adm_op_1', role: 'operator', member_id: 'mem_2', name: 'Operator 1' },
-      { id: 'adm_op_2', role: 'admin', member_id: 'mem_3', name: 'Admin 2' },
-    ];
+    const owner = { id: 'adm_owner', role: 'owner', member_id: null };
+    const currentOwner = { id: 'adm_cur', role: 'owner', member_id: 'mem_1' };
+    const operator = { id: 'adm_op', role: 'operator', member_id: 'mem_2' };
+    const auditor = { id: 'adm_aud', role: 'auditor', member_id: null };
+    const admin = { id: 'adm_admin', role: 'admin', member_id: 'mem_3' };
 
-    const requestedIdsToDelete = ['adm_owner_default', 'adm_current_user', 'adm_op_1', 'adm_op_2'];
+    // Self-protection: an owner may not delete their own account, even though
+    // they carry a member_id and so escape the default-master rule below.
+    expect(canDeleteAdmin(CURRENT, currentOwner)).toBe(false);
+    // Default master owner: role owner with no linked member.
+    expect(canDeleteAdmin(CURRENT, owner)).toBe(false);
 
-    // Protection rule applied in backend bulk delete
-    const safeToDelete = requestedIdsToDelete.filter((id) => {
-      if (id === currentAdminId) return false;
-      const target = adminList.find((a) => a.id === id);
-      if (!target) return false;
-      if (target.role === 'owner' && target.member_id === null) return false;
-      return true;
-    });
+    // Ordinary accounts are deletable.
+    expect(canDeleteAdmin(CURRENT, operator)).toBe(true);
+    expect(canDeleteAdmin(CURRENT, admin)).toBe(true);
 
-    expect(safeToDelete).toEqual(['adm_op_1', 'adm_op_2']);
-    expect(safeToDelete).not.toContain(currentAdminId);
-    expect(safeToDelete).not.toContain(defaultOwnerId);
+    // The default-master rule is scoped to role === 'owner'. A member-less
+    // auditor is not protected, proving the guard does not block every account
+    // that happens to have a null member_id.
+    expect(canDeleteAdmin(CURRENT, auditor)).toBe(true);
+  });
+
+  it('should let one owner delete a different owner that has a linked member', () => {
+    const current = { id: 'adm_cur', role: 'owner', member_id: 'mem_1' };
+    const otherLinkedOwner = { id: 'adm_other', role: 'owner', member_id: 'mem_9' };
+    const otherMasterOwner = { id: 'adm_master', role: 'owner', member_id: null };
+
+    expect(canDeleteAdmin(current.id, otherLinkedOwner)).toBe(true);
+    expect(canDeleteAdmin(current.id, otherMasterOwner)).toBe(false);
   });
 });
+
+/**
+ * NOTE: the perpetual-QR `year >= 2090` heuristic lived only as a local copy
+ * here. `isPerpetual` is component-local in `DigitalPassCard.tsx` and the server
+ * side hardcodes `defaultExp = '2099-12-31T23:59:59.999Z'`
+ * (`src/server/routes/members.routes.ts`). A test pinning the copy proved
+ * nothing about either, so it was removed rather than kept as false coverage.
+ *
+ * NOTE: the multi-select `Set` test for `useSelection` (`SelectionBar.tsx`)
+ * was removed here. It exercised `Set` semantics, not production code, and
+ * `useSelection` is a React hook that needs a DOM renderer — unavailable under
+ * the no-new-dependencies constraint. That test belongs with the hook, in a
+ * DOM-enabled suite, not here.
+ */

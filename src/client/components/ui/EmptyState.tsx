@@ -37,7 +37,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   return (
     <div
       className={cn(
-        'surface rounded-panel px-8 py-10 text-center shadow-ambient sm:px-12 sm:py-14',
+        'surface rounded-panel px-8 py-10 text-center sm:px-12 sm:py-14',
         'flex flex-col items-center justify-center',
         className
       )}

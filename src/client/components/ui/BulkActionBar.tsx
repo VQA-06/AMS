@@ -31,8 +31,8 @@ const actionClass = (variant?: string, disabled?: boolean) =>
     'flex items-center gap-1.5',
     disabled && 'cursor-not-allowed border border-rule bg-paper-sunk text-ink-3',
     !disabled && variant === 'primary' && 'bg-ink text-paper hover:bg-ink-2',
-    !disabled && variant === 'danger' && 'bg-pen text-paper hover:bg-pen-600',
-    !disabled && variant === 'warning' && 'bg-pending text-paper hover:bg-pending-600',
+    !disabled && variant === 'danger' && 'bg-pen-500 text-paper hover:bg-pen-600',
+    !disabled && variant === 'warning' && 'bg-pending-500 text-paper hover:bg-pending-600',
     !disabled &&
       (!variant || variant === 'default') &&
       'border border-rule-strong bg-paper-raised text-ink hover:bg-paper-sunk'

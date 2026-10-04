@@ -542,12 +542,15 @@ export const MemberTrackerPage: React.FC = () => {
             onClick={handleCloseInspect}
           />
 
-          <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
+          {/* Bounded by the wrapper, never by `w-screen`: the viewport width plus
+              a 40px left pad overflows any screen, so the panel used to push a
+              horizontal scrollbar and clip its own close button. */}
+          <div className="fixed inset-y-0 right-0 flex max-w-full">
             <aside
               role="dialog"
               aria-modal="true"
               aria-label={`Detail ${inspectingMember.member_name}`}
-              className="surface z-bar flex w-screen max-w-md flex-col justify-between overflow-y-auto border-l p-5 shadow-ambient sm:p-6"
+              className="surface z-bar flex w-full max-w-md flex-col justify-between overflow-y-auto p-5 sm:p-6"
             >
               <div className="space-y-6">
                 {/* Drawer Header */}

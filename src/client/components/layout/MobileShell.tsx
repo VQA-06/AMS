@@ -143,7 +143,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
           <nav className="space-y-5" aria-label="Navigasi utama">
             {desktopNavGroups.map((group) => (
               <div key={group.title}>
-                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-paper/50">
+                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-paper/70">
                   {group.title}
                 </div>
                 <div className="space-y-0.5">
@@ -198,7 +198,9 @@ export const MobileShell: React.FC<MobileShellProps> = ({
         </div>
       </aside>
 
-      <div className="flex h-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-paper pb-24 md:pb-8">
+      {/* `overflow-x-auto`, not `hidden`: a clipped child is content the user
+          can never reach, so a genuine overflow becomes scrollable instead. */}
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-x-auto overflow-y-auto bg-paper pb-24 md:pb-8">
         {/* One header, both layouts: breadcrumb on desktop, identity + role on mobile. */}
         <header className="sticky top-0 z-sticky flex shrink-0 items-center justify-between gap-3 border-b border-rule bg-ink/90 px-4 py-2.5 backdrop-blur-md sm:px-6 md:px-8">
           <div className="flex items-center gap-2.5 md:hidden">
@@ -214,10 +216,10 @@ export const MobileShell: React.FC<MobileShellProps> = ({
           </div>
 
           <div className="hidden min-w-0 items-center gap-2 text-xs md:flex">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-paper/50">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-paper/70">
               AMS
             </span>
-            <span className="text-paper/50" aria-hidden="true">
+            <span className="text-paper/70" aria-hidden="true">
               /
             </span>
             <span className="truncate font-semibold text-paper">
@@ -254,7 +256,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
       {/* Mobile dock: 5 items, Scanner centred, pb-safe, z above surfaces */}
       <nav
         aria-label="Navigasi bawah"
-        className="fixed inset-x-0 bottom-0 z-dock flex items-center justify-around border-t border-rule bg-ink/95 px-3 py-1.5 pb-safe shadow-ambient backdrop-blur-lg md:hidden"
+        className="fixed inset-x-0 bottom-0 z-dock flex items-center justify-around border-t border-rule bg-ink/95 px-3 py-1.5 pb-safe backdrop-blur-lg md:hidden"
       >
         {mobileNavItems.map((item) => {
           const active = currentTab === item.key;
@@ -274,7 +276,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               >
                 <span
                   className={cn(
-                    'flex h-14 w-14 items-center justify-center rounded-panel border transition-transform duration-200 ease-spring',
+                    'flex h-14 w-14 items-center justify-center rounded-panel border transition-transform duration-200',
                     active
                       ? 'rail-pulse border-pen-400 bg-pen-500 text-paper shadow-lift'
                       : 'border-rule-strong bg-paper-raised text-ink'

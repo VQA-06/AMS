@@ -236,7 +236,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
           <button
             onClick={handleDownloadPng}
             disabled={downloading}
-            className="flex min-w-0 items-center justify-center gap-1.5 rounded-chip bg-pen-500 px-2 py-2.5 text-xs font-bold text-paper shadow-ambient transition-transform duration-120 ease-spring active:scale-95 hover:bg-pen-400 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+            className="flex min-w-0 items-center justify-center gap-1.5 rounded-chip bg-pen-500 px-2 py-2.5 text-xs font-bold text-paper transition-transform duration-120 active:scale-95 hover:bg-pen-400 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             title="Unduh ID Card gambar PNG HD"
           >
             {downloading ? (
@@ -249,7 +249,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
 
           <button
             onClick={handlePrintSingle}
-            className="flex min-w-0 items-center justify-center gap-1.5 rounded-chip border border-rule-strong bg-paper-raised px-2 py-2.5 text-xs font-bold text-ink transition-transform duration-120 ease-spring hover:bg-paper-raised/70 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+            className="flex min-w-0 items-center justify-center gap-1.5 rounded-chip border border-rule-strong bg-paper-raised px-2 py-2.5 text-xs font-bold text-ink transition-transform duration-120 hover:bg-paper-raised/70 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             title="Cetak ID Card ukuran 54x85 mm"
           >
             <Printer size={14} className="shrink-0 text-ink-2" />
@@ -258,7 +258,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
 
           <button
             onClick={handleCopyToken}
-            className="flex min-w-0 items-center justify-center gap-1.5 rounded-chip border border-rule bg-ink px-2 py-2.5 text-xs font-bold text-paper transition-transform duration-120 ease-spring hover:text-ink active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+            className="flex min-w-0 items-center justify-center gap-1.5 rounded-chip border border-rule bg-ink px-2 py-2.5 text-xs font-bold text-paper transition-transform duration-120 hover:text-ink active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             title="Salin token QR"
           >
             {copied ? (

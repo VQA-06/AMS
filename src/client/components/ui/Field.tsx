@@ -59,6 +59,12 @@ export interface FieldProps {
   /** Control-level classes for genuine per-field needs (e.g. a monospace token). */
   controlClassName?: string;
   disabled?: boolean;
+  /**
+   * Set when the field sits on a dark ground (the login screen). The label,
+   * hint, and error invert to light; the control paints its own paper
+   * background, so it is unaffected.
+   */
+  onDark?: boolean;
 }
 
 /** One control surface for the whole app. Never stack a background or border override. */
@@ -91,6 +97,7 @@ export const Field: React.FC<FieldProps> = ({
   hideSelectArrow,
   controlClassName,
   disabled,
+  onDark,
 }) => {
   const [revealed, setRevealed] = React.useState(false);
   const describedBy =
@@ -261,17 +268,23 @@ export const Field: React.FC<FieldProps> = ({
 
   return (
     <div className={cn('space-y-1.5', className)}>
-      <label htmlFor={id} className="block text-[11px] font-semibold uppercase tracking-wide text-ink-2">
+      <label
+        htmlFor={id}
+        className={cn(
+          'block text-[11px] font-semibold uppercase tracking-wide',
+          onDark ? 'text-paper/80' : 'text-ink-2'
+        )}
+      >
         {label}
         {required && (
-          <span className="ml-1 text-pen" aria-hidden="true">
+          <span className={cn('ml-1', onDark ? 'text-paper/70' : 'text-pen')} aria-hidden="true">
             *
           </span>
         )}
       </label>
       {body}
       {hint && !error && (
-        <p id={`${id}-hint`} className="text-[11px] text-ink-3">
+        <p id={`${id}-hint`} className={cn('text-[11px]', onDark ? 'text-paper/70' : 'text-ink-3')}>
           {hint}
         </p>
       )}

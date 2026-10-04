@@ -94,7 +94,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <img src="/logo.webp" alt="AMS Logo" className="h-full w-full object-contain" />
           </div>
           <h1 className="pt-1 font-heading text-2xl font-bold text-paper-raised">AMS</h1>
-          <p className="text-xs font-semibold text-ink-2">
+          <p className="text-xs font-semibold text-paper-raised">
             Attendance Management System • Computer Community
           </p>
         </div>
@@ -127,6 +127,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         {loginMode === 'password' && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <Field
+              onDark
               id="pages-loginpage-field-1"
               label="Email / Username:"
               control="text"
@@ -138,6 +139,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             />
 
             <Field
+              onDark
               id="pages-loginpage-field-2"
               label="Password:"
               control="password"
@@ -163,7 +165,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         {loginMode === 'qr' && (
           <div className="space-y-3">
             <div className="space-y-1 text-center">
-              <p className="text-xs text-ink">
+              <p className="text-xs text-paper">
                 Arahkan kamera ke <strong>QR Universal Anggota</strong> Anda untuk login instan.
               </p>
               {qrStatus && (
@@ -182,7 +184,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               <CameraViewfinder active={loginMode === 'qr' && !loading} onScan={handleQrScan} />
             </div>
 
-            <p className="text-center text-[11px] italic text-ink-2">
+            <p className="text-center text-[11px] italic text-paper/70">
               * Login menggunakan QR hanya melakukan autentikasi masuk dan tidak mencatat absensi kegiatan.
             </p>
           </div>
@@ -204,8 +206,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </div>
         )}
 
-        <div className="flex items-center justify-center gap-1.5 border-t border-rule pt-3 text-center text-xs text-ink-2">
-          <ShieldCheck className="h-4 w-4 text-ink-2" />
+        <div className="flex items-center justify-center gap-1.5 border-t border-rule pt-3 text-center text-xs text-paper/70">
+          <ShieldCheck className="h-4 w-4 text-paper/70" />
           <span>Computer Community • Database-Secured Authentication</span>
         </div>
       </div>

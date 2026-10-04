@@ -32,9 +32,54 @@ export interface ResourceState {
 
 export type ResourceLoader = (force: boolean) => Promise<[string, PromiseSettledResult<unknown>][]>;
 
-export function useResource(load: ResourceLoader, deps: unknown[] = []): ResourceState & {
+/** What every screen reads: the loaded sections, what is still loading, and what failed. */
+export interface ResourceHandle extends ResourceState {
   reload: (force?: boolean) => void;
-} {
+}
+
+/** The loaded sections, after one loader pass has settled. */
+export interface SettledResource {
+  data: Record<string, unknown>;
+  failed: string[];
+  error: string | null;
+}
+
+/**
+ * Folds one loader pass into the next state.
+ *
+ * Exported separately from the hook because this is where the honesty
+ * contract actually lives, and it is a pure function: it can be tested
+ * without mounting React, which the test runner here cannot do.
+ *
+ * `previous` supplies last-known values. A rejected section contributes
+ * neither a key nor a value, so a screen that reads `data.anggota` for a
+ * failed section finds `undefined` — the shape that forces the caller to
+ * consult `failed` instead of rendering a confident empty list.
+ */
+export function settleSections(
+  results: readonly (readonly [string, PromiseSettledResult<unknown>])[],
+  previous: Record<string, unknown> = {}
+): SettledResource {
+  const data: Record<string, unknown> = { ...previous };
+  const failed: string[] = [];
+
+  for (const [label, result] of results) {
+    if (result.status === 'fulfilled') {
+      data[label] = result.value;
+    } else {
+      failed.push(label);
+    }
+  }
+
+  return { data, failed, error: failed.length ? failed.join(', ') : null };
+}
+
+/** The message for a loader that rejected outright, rather than per section. */
+export function loaderErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+export function useResource(load: ResourceLoader, deps: unknown[] = []): ResourceHandle {
   const [data, setData] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState<string[]>([]);
@@ -56,19 +101,10 @@ export function useResource(load: ResourceLoader, deps: unknown[] = []): Resourc
       .current(force)
       .then((results) => {
         if (!mounted.current) return;
-        const nextData: Record<string, unknown> = {};
-        const nextFailed: string[] = [];
-        for (const [label, result] of results) {
-          if (result.status === 'fulfilled') {
-            nextData[label] = result.value;
-          } else {
-            nextFailed.push(label);
-          }
-        }
-        // Keep last-known values for failed sections; overlay fresh ones.
-        setData((prev) => ({ ...prev, ...nextData }));
-        setFailed(nextFailed);
-        setError(nextFailed.length ? nextFailed.join(', ') : null);
+        const settled = settleSections(results);
+        setData((prev) => settled.data);
+        setFailed(settled.failed);
+        setError(settled.error);
         setLoading(false);
       })
       .catch((err: unknown) => {

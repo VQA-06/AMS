@@ -9,7 +9,7 @@ import { Member, Event } from '@/shared/types';
 import { ErrorPage } from './pages/ErrorPage';
 import { WarningCircle } from '@phosphor-icons/react/WarningCircle';
 import { Skeleton } from './components/ui/Skeleton';
-import { failedGlobalSections } from './lib/global-load-sections';
+import { useResource, type ResourceLoader } from './lib/useResource';
 
 // Route-based Code Splitting: Secondary routes loaded asynchronously on-demand
 const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
@@ -76,10 +76,44 @@ export const App: React.FC = () => {
     () => parseRoute(window.location.pathname, window.location.search)
   );
 
-  // Global cached data
-  const [members, setMembers] = useState<Member[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [divisions, setDivisions] = useState<string[]>([]);
+  /**
+   * The three boot reads. `useResource` owns the honesty contract: a rejected
+   * section is named in `failedSections` and contributes no value, so a
+   * backend outage can never render as a plausible zero.
+   */
+  const loadGlobalData = useCallback<ResourceLoader>(async (force) => {
+    const [members, events, divisions] = await Promise.allSettled([
+      fetchCached<{ members: Member[]; total: number }>('/api/members?limit=200', {
+        forceRefresh: force,
+        ttlMs: 15_000,
+      }),
+      fetchCached<{ events: Event[] }>('/api/agenda', { forceRefresh: force, ttlMs: 15_000 }),
+      fetchCached<{ divisions: string[] }>('/api/members/divisions', {
+        forceRefresh: force,
+        ttlMs: 15_000,
+      }),
+    ]);
+
+    return [
+      ['anggota', members],
+      ['kegiatan', events],
+      ['divisi', divisions],
+    ];
+  }, []);
+
+  const global = useResource(loadGlobalData, [admin]);
+  const { reload: reloadGlobal } = global;
+
+  /** Pages ask for a refresh that must not serve the 15s cache. */
+  const refreshGlobal = useCallback(() => reloadGlobal(true), [reloadGlobal]);
+
+  const memberList = global.data.anggota as { members: Member[] } | undefined;
+  const eventList = global.data.kegiatan as { events: Event[] } | undefined;
+  const divisionList = global.data.divisi as { divisions: string[] } | undefined;
+
+  const members: Member[] = memberList?.members ?? [];
+  const events: Event[] = eventList?.events ?? [];
+  const divisions: string[] = divisionList?.divisions ?? [];
 
   // QR Modal Global Trigger
   const [qrModalMember, setQrModalMember] = useState<Member | null>(null);
@@ -89,7 +123,7 @@ export const App: React.FC = () => {
   const [openAddMemberTrigger, setOpenAddMemberTrigger] = useState<boolean>(false);
   const [openCreateEventTrigger, setOpenCreateEventTrigger] = useState<boolean>(false);
   /** Which global sections failed their last load; drives the honesty banner. */
-  const [failedSections, setFailedSections] = useState<string[]>([]);
+  const failedSections = global.failed;
 
   // Listen to popstate (Browser Back/Forward buttons)
   useEffect(() => {
@@ -111,43 +145,6 @@ export const App: React.FC = () => {
     setCurrentRoute(parseRoute(pathname, searchStr ? `?${searchStr}` : ''));
   }, []);
 
-  const loadGlobalData = useCallback(async (force = false) => {
-    if (!admin) return;
-
-    const [membersResult, eventsResult, divisionsResult] = await Promise.allSettled([
-      fetchCached<{ members: Member[]; total: number }>('/api/members?limit=200', {
-        forceRefresh: force,
-        ttlMs: 15_000,
-      }),
-      fetchCached<{ events: Event[] }>('/api/agenda', { forceRefresh: force, ttlMs: 15_000 }),
-      fetchCached<{ divisions: string[] }>('/api/members/divisions', {
-        forceRefresh: force,
-        ttlMs: 15_000,
-      }),
-    ]);
-
-    if (membersResult.status === 'fulfilled' && membersResult.value?.members) {
-      setMembers(membersResult.value.members);
-    }
-    if (eventsResult.status === 'fulfilled' && eventsResult.value?.events) {
-      setEvents(eventsResult.value.events);
-    }
-    if (divisionsResult.status === 'fulfilled' && divisionsResult.value?.divisions) {
-      setDivisions(divisionsResult.value.divisions);
-    }
-
-    // A failed section keeps whatever it last held, which reads exactly like
-    // real data. Name the failures instead of silently rendering plausible
-    // zeros as though they were counts.
-    setFailedSections(
-      failedGlobalSections({
-        members: membersResult,
-        events: eventsResult,
-        divisions: divisionsResult,
-      })
-    );
-  }, [admin]);
-
   // Online / Offline listener
   const [isOffline, setIsOffline] = useState<boolean>(
     typeof navigator !== 'undefined' ? !navigator.onLine : false
@@ -167,18 +164,17 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadGlobalData();
-
-    // Listen for realtime mutation events across tabs, modals, and scanner
+    // Realtime mutation events across tabs, modals, and scanner force a
+    // refresh that bypasses the 15s cache.
     const handleMutation = () => {
-      loadGlobalData(true);
+      reloadGlobal(true);
     };
 
     window.addEventListener('ams:data-mutated', handleMutation);
     return () => {
       window.removeEventListener('ams:data-mutated', handleMutation);
     };
-  }, [loadGlobalData]);
+  }, [reloadGlobal]);
 
   // Auth Guard Routing Effects - Preserves exact subpage route on refresh
   useEffect(() => {
@@ -289,7 +285,7 @@ export const App: React.FC = () => {
             onGenerateQrForMember={handleGenerateQrForMember}
             openAddModalTrigger={openAddMemberTrigger}
             onResetAddModalTrigger={() => setOpenAddMemberTrigger(false)}
-            onRefreshGlobal={loadGlobalData}
+            onRefreshGlobal={refreshGlobal}
           />
         )}
 
@@ -300,10 +296,10 @@ export const App: React.FC = () => {
               event={selectedEvent}
               onBack={() => {
                 navigate('/events');
-                loadGlobalData();
+                refreshGlobal();
               }}
               onScanEvent={handleScanEvent}
-              onRefresh={loadGlobalData}
+              onRefresh={refreshGlobal}
               members={members}
               divisions={divisions}
               events={events}
@@ -311,12 +307,12 @@ export const App: React.FC = () => {
           ) : (
             <EventsPage
               onSelectEvent={(ev) => {
-                loadGlobalData();
+                refreshGlobal();
                 navigate(`/events/${ev.id}`);
               }}
               onScanEvent={handleScanEvent}
-              onEventCreated={() => loadGlobalData()}
-              onRefreshGlobal={loadGlobalData}
+              onEventCreated={() => refreshGlobal()}
+              onRefreshGlobal={refreshGlobal}
               openCreateModalTrigger={openCreateEventTrigger}
               onResetCreateModalTrigger={() => setOpenCreateEventTrigger(false)}
             />
@@ -328,7 +324,7 @@ export const App: React.FC = () => {
         {currentRoute.tab === 'scanner' && (
           <ScannerPage
             events={events}
-            onRefreshEvents={loadGlobalData}
+            onRefreshEvents={refreshGlobal}
             initialEventId={currentRoute.eventId}
           />
         )}
@@ -356,7 +352,7 @@ export const App: React.FC = () => {
             onClose={() => {
               setIsQrModalOpen(false);
               setQrModalMember(null);
-              loadGlobalData();
+              refreshGlobal();
             }}
             preselectedMember={qrModalMember}
             members={members}

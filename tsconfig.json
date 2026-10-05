@@ -17,13 +17,12 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "types": ["@cloudflare/workers-types", "vite/client"],
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@/client/*": ["src/client/*"],
-      "@/server/*": ["src/server/*"],
-      "@/shared/*": ["src/shared/*"],
-      "@/db/*": ["src/db/*"]
+      "@/*": ["./src/*"],
+      "@/client/*": ["./src/client/*"],
+      "@/server/*": ["./src/server/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/db/*": ["./src/db/*"]
     }
   },
   "include": ["src", "tests", "vite.config.ts"]

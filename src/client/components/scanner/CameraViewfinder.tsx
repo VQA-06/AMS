@@ -529,14 +529,7 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({
           className="w-full h-full object-cover"
         />
 
-        {/* Reticle + sweep. Both are gated on `isScanning`, which is only true
-            while a real MediaStream is decoding frames. */}
-        {isScanning && (
-          <span
-            aria-hidden="true"
-            className="scan-sweep pointer-events-none absolute inset-x-3 top-3 h-px bg-pen-100 sm:inset-x-4"
-          />
-        )}
+        {/* Reticle: gated on `isScanning`, which is only true while a real MediaStream is decoding frames. */}
 
         {/* Clean Vector SVG Reticle (No square boxes / No background artifacts) */}
         {isScanning && (

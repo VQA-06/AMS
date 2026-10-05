@@ -6,6 +6,7 @@ import { DownloadSimple } from '@phosphor-icons/react/DownloadSimple';
 import { Printer } from '@phosphor-icons/react/Printer';
 import { Spinner } from '@phosphor-icons/react/Spinner';
 import { generateIdCardDataUrl, downloadIdCardImage } from '../../lib/idcard-canvas';
+import { escapeHtml } from '../../lib/html-utils';
 
 export interface TemplateIdCardProps {
   memberName: string;
@@ -82,7 +83,8 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>ID Card - ${memberName}</title>
+          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; script-src 'unsafe-inline';" />
+          <title>ID Card - ${escapeHtml(memberName)}</title>
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
           <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@700;800&display=swap" rel="stylesheet" />
@@ -166,7 +168,7 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
             <div class="qr-container">
               ${svgHtml}
             </div>
-            <div class="name-text">${memberName}</div>
+            <div class="name-text">${escapeHtml(memberName)}</div>
           </div>
           <script>
             window.onload = function() {

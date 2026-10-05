@@ -69,7 +69,7 @@ export interface FieldProps {
 
 /** One control surface for the whole app. Never stack a background or border override. */
 const controlClass =
-  'w-full rounded-chip border border-rule-strong bg-paper px-3 py-2.5 text-sm text-ink ' +
+  'w-full rounded-chip border border-rule-strong bg-paper px-3 py-2 text-xs sm:py-2.5 sm:text-sm text-ink ' +
   'placeholder:text-ink-3 focus-visible:outline-none focus-visible:ring-2 ' +
   'focus-visible:ring-pen-500 focus-visible:ring-offset-2 focus-visible:ring-offset-paper ' +
   'transition-colors disabled:opacity-60';
@@ -267,7 +267,7 @@ export const Field: React.FC<FieldProps> = ({
   );
 
   return (
-    <div className={cn('space-y-1.5', className)}>
+    <div className={cn('space-y-1 sm:space-y-1.5', className)}>
       <label
         htmlFor={id}
         className={cn(

@@ -71,7 +71,7 @@ export const IosInstallGuideModal: React.FC<IosInstallGuideModalProps> = ({ isOp
           role="dialog"
           aria-modal="true"
           aria-labelledby="ios-install-guide-title"
-          className="bezel relative my-auto flex w-full max-w-sm flex-col gap-5 p-6"
+          className="surface bezel relative my-auto flex w-full max-w-sm flex-col gap-3.5 p-4 sm:gap-5 sm:p-6"
         >
           <button
             type="button"

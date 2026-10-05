@@ -227,7 +227,7 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
 
           {/* Status Filter Toggle Pills */}
           <div
-            className="flex items-center gap-0.5 rounded-panel border border-rule bg-paper-raised p-0.5 text-[10px]"
+            className="flex items-center gap-0.5 rounded-panel border border-rule bg-paper-raised p-1 text-[10px]"
             role="group"
             aria-label="Filter status anggota pada grafik"
           >

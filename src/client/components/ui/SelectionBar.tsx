@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo } from 'react';
+import { X } from '@phosphor-icons/react/X';
 import { cn } from '../../lib/cn';
 import { FloatingSurface } from './FloatingSurface';
 import { Button } from './Button';
-
 /**
  * Selection state, once. Six components used to keep their own
  * `useState<Set<string>>` plus hand-rolled toggle/toggleAll/clear, which is how
@@ -75,60 +75,66 @@ export const SelectionBar: React.FC<SelectionBarProps> = ({
   return (
     <FloatingSurface
       placement="bottom-bar"
-      offsetClass="bottom-[calc(4.5rem+env(safe-area-inset-bottom))] sm:bottom-6 px-3 sm:px-6"
-      className={cn('mx-auto flex max-w-4xl items-center gap-2', className)}
+      offsetClass="bottom-[calc(6.5rem+env(safe-area-inset-bottom))] sm:bottom-0 px-3 sm:left-64 sm:px-6"
+      className={cn('mx-auto flex max-w-4xl items-center justify-between gap-2', className)}
     >
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-chip bg-ink font-oxanium text-xs font-bold tabular-nums text-paper">
-        {count}
-      </span>
-      <span className="shrink-0 text-xs font-semibold leading-tight text-ink">
-        {count} {itemLabel} Terpilih
-        {totalCount !== undefined && (
-          <span className="block whitespace-nowrap text-[10px] font-normal text-ink-3">
-            dari total {totalCount} {itemLabel}
-          </span>
+      <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-chip bg-ink font-oxanium text-xs font-bold tabular-nums text-paper">
+          {count}
+        </span>
+        <span className="shrink-0 text-xs font-semibold leading-tight text-ink">
+          <span className="hidden sm:inline">{count} {itemLabel} </span>
+          Terpilih
+          {totalCount !== undefined && (
+            <span className="hidden whitespace-nowrap text-[10px] font-normal text-ink-3 sm:block">
+              dari total {totalCount} {itemLabel}
+            </span>
+          )}
+        </span>
+
+        {onToggleAll && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="hidden shrink-0 whitespace-nowrap sm:inline-flex"
+            aria-pressed={isAllSelected}
+            onClick={onToggleAll}
+          >
+            {isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua'}
+          </Button>
         )}
-      </span>
-
-      {onToggleAll && (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="hidden shrink-0 whitespace-nowrap sm:inline-flex"
-          aria-pressed={isAllSelected}
-          onClick={onToggleAll}
-        >
-          {isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua'}
-        </Button>
-      )}
-
-      <div className="flex w-full items-center gap-1.5 overflow-x-auto overscroll-contain sm:w-auto sm:justify-end">
-        {children}
       </div>
 
-      {onToggleAll && (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="shrink-0 sm:hidden"
-          aria-pressed={isAllSelected}
-          onClick={onToggleAll}
-        >
-          {isAllSelected ? 'Batal' : 'Semua'}
-        </Button>
-      )}
-      <button
-        type="button"
-        onClick={onClear}
-        aria-label="Batal Memilih"
-        className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-chip border border-rule bg-paper-raised text-ink-2 hover:bg-paper-sunk hover:text-ink',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-500',
-          'focus-visible:ring-offset-2 focus-visible:ring-offset-paper'
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:ml-auto sm:gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto overscroll-contain no-scrollbar sm:justify-end">
+          {children}
+        </div>
+
+        {onToggleAll && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="shrink-0 px-2.5 py-1 text-xs sm:hidden"
+            aria-pressed={isAllSelected}
+            onClick={onToggleAll}
+          >
+            {isAllSelected ? 'Batal' : 'Semua'}
+          </Button>
         )}
-      >
-        <span aria-hidden="true">✕</span>
-      </button>
+
+        <button
+          type="button"
+          onClick={onClear}
+          aria-label="Batal Memilih"
+          className={cn(
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-chip border border-rule bg-paper-raised text-ink-2 hover:bg-paper-sunk hover:text-ink sm:h-10 sm:w-10',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-500',
+            'focus-visible:ring-offset-2 focus-visible:ring-offset-paper'
+          )}
+        >
+          <X size={16} aria-hidden="true" />
+        </button>
+      </div>
     </FloatingSurface>
   );
 };

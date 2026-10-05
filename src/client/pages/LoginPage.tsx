@@ -180,7 +180,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               )}
             </div>
 
-            <div className="overflow-hidden rounded-panel border border-rule bg-ink">
+            <div className="overflow-hidden rounded-panel bg-ink">
               <CameraViewfinder active={loginMode === 'qr' && !loading} onScan={handleQrScan} />
             </div>
 

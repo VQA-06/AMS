@@ -584,8 +584,8 @@ export const TeamTab: React.FC<TeamTabProps> = ({
       {isAddAdminOpen && (
         <ModalPortal onClose={() => setIsAddAdminOpen(false)}>
           <div className="modal-backdrop-full">
-            <div className="surface my-auto w-full max-w-md space-y-4 rounded-bezel p-5 sm:p-6">
-              <div className="flex items-center justify-between border-b border-rule pb-3">
+            <div className="surface my-auto max-h-[86dvh] w-full max-w-md space-y-3 overflow-y-auto rounded-bezel p-3.5 sm:space-y-4 sm:p-6">
+              <div className="flex items-center justify-between border-b border-rule pb-2.5 sm:pb-3">
                 <div className="flex items-center gap-2">
                   <UserPlus className="h-5 w-5 text-ink-2" />
                   <h2 className="font-heading text-base font-bold text-ink">
@@ -696,8 +696,8 @@ export const TeamTab: React.FC<TeamTabProps> = ({
       {editingAdmin && (
         <ModalPortal onClose={() => setEditingAdmin(null)}>
           <div className="modal-backdrop-full">
-            <div className="surface my-auto w-full max-w-md space-y-3.5 rounded-bezel p-4 sm:space-y-4 sm:p-6">
-              <div className="flex items-center justify-between border-b border-rule pb-3">
+            <div className="surface my-auto max-h-[86dvh] w-full max-w-md space-y-3 overflow-y-auto rounded-bezel p-3.5 sm:space-y-4 sm:p-6">
+              <div className="flex items-center justify-between border-b border-rule pb-2.5 sm:pb-3">
                 <div className="flex items-center gap-2">
                   <PencilSimple className="h-4 w-4 text-ink-2" />
                   <h2 className="font-heading text-base font-bold text-ink">Edit Akun Panitia</h2>

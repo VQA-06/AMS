@@ -934,7 +934,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
           <div className="modal-backdrop-full">
             <form
               onSubmit={handleManualSubmit}
-              className="bezel my-auto max-h-[92dvh] w-full max-w-md space-y-4 overflow-y-auto p-5"
+              className="surface bezel my-auto max-h-[86dvh] w-full max-w-md space-y-3 sm:space-y-4 overflow-y-auto p-4 sm:p-5"
             >
               <h3 className="font-heading text-lg font-bold text-ink">Input Absensi Manual</h3>
               <p className="text-xs text-ink-2">
@@ -1001,8 +1001,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       {promotingGuest && (
         <ModalPortal onClose={() => setPromotingGuest(null)}>
           <div className="modal-backdrop-full">
-            <div className="bezel my-auto max-h-[92dvh] w-full max-w-md space-y-4 overflow-y-auto p-4 sm:p-6">
-              <div className="flex items-center justify-between border-b border-rule pb-3">
+            <div className="surface bezel my-auto max-h-[86dvh] w-full max-w-md space-y-3 sm:space-y-4 overflow-y-auto p-3.5 sm:p-6">
+              <div className="flex items-center justify-between border-b border-rule pb-2.5 sm:pb-3">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip bg-seal-50/60 text-seal-800">
                     <UserCheck size={16} />

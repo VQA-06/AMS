@@ -105,23 +105,29 @@ accent edge without a variant prop.
 - Looping `animate-bounce` on an icon is noise after the first second. Use
   `.pop-once`. Reserve looping `animate-pulse` for genuinely ongoing state (the
   offline banner).
-- `prefers-reduced-motion` is handled globally in `index.css:268`. **Any new
+- `prefers-reduced-motion` is handled globally in `index.css`. **Any new
   custom animation must be registered** in that block — the list is
-  `.pop-once, .rail-pulse, .scan-sweep, .reveal-up, .toast-progress,
+  `.pop-once, .rail-pulse, .reveal-up, .toast-progress,
   .skeleton-shimmer, .animate-pulse, .animate-spin`.
 
 ## Overlays and backdrops
 
 `FloatingSurface` is the one primitive for every transient surface (bulk bar,
-scan toast, install banner, recent-scans sheet). Two rules it enforces so no
+scan toast, install banner, recent-scans sheet). Three rules it enforces so no
 consumer can escape them:
 
-1. **Backdrops are click-through by construction** (`FloatingSurface.tsx:55`).
+1. **Only the sheet paints a scrim** (`FloatingSurface.tsx:55`). `bottom-sheet`
+   covers the page, so it alone renders the `bg-ink/40` backdrop; `bottom-bar`
+   and `top-bar` add `hidden` to it. A bar sits *on* a live page — dimming that
+   page composites it to 60% (`#f4f1e9` → `#9b9a94`) and reads as "a modal
+   opened". That was the "black translucent background during multi-select"
+   report. Never un-hide a bar's backdrop.
+2. **Backdrops are click-through by construction** (`FloatingSurface.tsx:53`).
    The backdrop is `pointer-events-none`; the content is `pointer-events-auto`.
    A full-viewport scrim that eats pointer events blocks the page underneath a
    surface whose owner already closed it — that was the "multi-action gets
    blocked" bug. Never re-add `pointer-events` to a backdrop.
-2. **Gate the render, not the CSS.** A collapsible surface passes `open={isOpen}`
+3. **Gate the render, not the CSS.** A collapsible surface passes `open={isOpen}`
    (default `true`, so a bar that owns its own presence needs no flag); when
    `open === false` the component returns `null` — see
    `RecentScansSheet.tsx:48`. A collapsed sheet must not paint a backdrop at

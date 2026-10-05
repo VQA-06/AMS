@@ -119,12 +119,12 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="bezel-core my-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden p-4 sm:max-h-[85vh] sm:p-6">
+        <div className="surface bezel-core my-auto flex max-h-[86dvh] w-full max-w-lg flex-col overflow-hidden p-3.5 sm:max-h-[85vh] sm:p-6">
           {/* Header */}
-          <div className="flex shrink-0 items-center justify-between border-b border-rule pb-3 sm:pb-4">
+          <div className="flex shrink-0 items-center justify-between border-b border-rule pb-2.5 sm:pb-4">
             <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-chip bg-pen-50/70 text-ink-2">
-                <UserPlus className="w-5 h-5" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip bg-pen-50/70 text-ink-2 sm:h-9 sm:w-9">
+                <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div className="min-w-0">
                 <h2 className="truncate font-heading text-base font-bold text-ink sm:text-lg">
@@ -151,7 +151,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
           {error && (
             <div
               role="alert"
-              className="mt-3 shrink-0 rounded-panel border border-pen-200 bg-pen-50/70 p-3 text-xs text-pen-deep"
+              className="mt-2.5 shrink-0 rounded-panel border border-pen-200 bg-pen-50/70 p-2.5 text-xs text-pen-deep sm:mt-3 sm:p-3"
             >
               {error}
             </div>
@@ -160,9 +160,9 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
           {/* Form Body */}
           <form
             onSubmit={handleSubmit}
-            className="flex-1 space-y-4 overflow-y-auto overscroll-contain py-4 pr-1 touch-auto"
+            className="flex-1 space-y-3 overflow-y-auto overscroll-contain py-3 pr-1 touch-auto sm:space-y-4 sm:py-4"
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <Field
                 id="member-form-modal-field-1"
                 label="ID / Kode Anggota"
@@ -245,7 +245,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <Field
                 id="member-form-modal-field-7"
                 label="Status"
@@ -260,7 +260,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-rule pt-4 sm:gap-3">
+            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
               <Button type="button" variant="ghost" size="sm" onClick={onClose}>
                 Batal
               </Button>

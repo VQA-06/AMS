@@ -128,7 +128,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
   return (
     <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-ink text-paper md:flex-row">
       {/* Desktop sidebar: fixed 264px, four zones, active item carries the rail */}
-      <aside className="sticky top-0 z-sticky hidden h-full w-64 shrink-0 flex-col justify-between border-r border-rule bg-ink/95 p-5 md:flex">
+      <aside className="sticky top-0 z-sticky hidden h-full w-64 shrink-0 flex-col justify-between bg-ink/95 p-5 md:flex">
         <div className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-panel border border-rule-strong bg-paper-raised p-1">

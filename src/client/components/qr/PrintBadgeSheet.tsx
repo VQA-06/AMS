@@ -6,6 +6,7 @@ import { Printer } from '@phosphor-icons/react/Printer';
 import { Spinner } from '@phosphor-icons/react/Spinner';
 import { X } from '@phosphor-icons/react/X';
 import { generateIdCardDataUrl, downloadIdCardImage } from '../../lib/idcard-canvas';
+import { escapeHtml } from '../../lib/html-utils';
 import { ModalPortal } from '../ui/ModalPortal';
 import { cn } from '../../lib/cn';
 
@@ -59,7 +60,7 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
             <div class="qr-container">
               ${svgHtml}
             </div>
-            <div class="name-text" style="font-size: ${printFontSize};">${tok.member_name}</div>
+            <div class="name-text" style="font-size: ${printFontSize};">${escapeHtml(tok.member_name)}</div>
           </div>
         `;
       })
@@ -76,7 +77,8 @@ export const PrintBadgeSheet: React.FC<PrintBadgeSheetProps> = ({
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>Cetak ID Card (${tokens.length} Kartu) - ${eventName || 'AMS Computer Community'}</title>
+          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; script-src 'unsafe-inline';" />
+          <title>Cetak ID Card (${tokens.length} Kartu) - ${escapeHtml(eventName || 'AMS Computer Community')}</title>
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
           <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@700;800&display=swap" rel="stylesheet" />

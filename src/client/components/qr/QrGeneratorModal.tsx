@@ -166,12 +166,12 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="surface my-auto flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-bezel p-4 sm:max-h-[88vh] sm:p-6">
+        <div className="surface my-auto flex max-h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-bezel p-3.5 sm:max-h-[88vh] sm:p-6">
           {/* Header */}
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-rule pb-3 sm:pb-4">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-rule pb-2.5 sm:pb-4">
             <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-chip bg-pen-50/70 text-ink-2">
-                <QrCode size={20} weight="regular" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip bg-pen-50/70 text-ink-2 sm:h-9 sm:w-9">
+                <QrCode size={18} weight="regular" />
               </div>
               <div className="min-w-0">
                 <h3 className="truncate font-heading text-base font-bold text-ink sm:text-lg">
@@ -200,7 +200,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
           {error && (
             <div
               role="alert"
-              className="mt-3 shrink-0 rounded-panel border border-pen-200 bg-pen-50 px-3 py-2.5 text-xs text-pen-deep"
+              className="mt-2.5 shrink-0 rounded-panel border border-pen-200 bg-pen-50/70 p-2.5 text-xs text-pen-deep sm:mt-3 sm:p-3"
             >
               {error}
             </div>
@@ -237,7 +237,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
             </div>
           ) : (
             /* Generator configuration form */
-            <div className="no-scrollbar my-3 flex-1 space-y-3.5 overflow-y-auto pr-1 sm:my-4 sm:space-y-4">
+            <div className="no-scrollbar my-2.5 flex-1 space-y-3 overflow-y-auto pr-1 sm:my-4 sm:space-y-4">
               {/* Scope selection — universal is the community-wide pass, event is
                   bound to one agenda. */}
               <fieldset>
@@ -435,7 +435,7 @@ export const QrGeneratorModal: React.FC<QrGeneratorModalProps> = ({
               </div>
 
               {/* Footer */}
-              <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
+              <div className="flex shrink-0 items-center justify-end gap-2 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
                 <Button variant="ghost" onClick={onClose}>
                   Batal
                 </Button>

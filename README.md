@@ -9,7 +9,7 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
 ![PWA Ready](https://img.shields.io/badge/PWA-Ready-10B981?style=for-the-badge&logo=pwa)
-![Vitest](https://img.shields.io/badge/Vitest-2.1_(124/124_Pass)-6E9F18?style=for-the-badge&logo=vitest)
+![Vitest](https://img.shields.io/badge/Vitest-2.1_(241/241_Pass)-6E9F18?style=for-the-badge&logo=vitest)
 
 **Sistem Manajemen Presensi & Kegiatan Modern Berbasis QR Code Terenkripsi AES-256-GCM JWE untuk Komunitas Komputer (Computer Community).**
 
@@ -288,12 +288,12 @@ Aplikasi aktif dan dapat diakses melalui custom domain resmi: `https://ams.ccunb
 ## Keamanan & Hardening Sistem
 
 1. **Enkripsi JWE AES-256-GCM:** Tiket QR dienkripsi menggunakan WebCrypto API standar industri dengan rotasi Key ID (`kid: k1`). Payload tidak dapat dimanipulasi atau dibaca tanpa kunci privat server.
-2. **Perlindungan CSV Formula Injection (CWE-1236):** Sanitasi otomatis (`sanitizeCsvCell`) pada seluruh fitur ekspor guna menetralkan karakter berbahaya (`=`, `+`, `-`, `@`, `\t`, `\r`) saat dibuka di Microsoft Excel atau Google Sheets.
-3. **Security Headers Lengkap:** Injeksi otomatis `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, dan `Permissions-Policy: camera=(self)`.
-4. **Anti-Timing Attack:** Menggunakan perbandingan string waktu konstan (`timingSafeEqualStrings`) untuk seluruh verifikasi hash kata sandi dan token otentikasi.
-5. **Anti-Brute Force Rate Limiting:** Pembatasan percobaan login berbasis *in-memory sliding window* tanpa membebani kuota I/O database.
-6. **Integritas Relasional Manual Cascade D1:** Karena Cloudflare D1 menonaktifkan foreign key cascade secara default antar request worker, seluruh operasi penghapusan kegiatan atau anggota mengeksekusi batch statement pembersihan bertingkat untuk mencegah baris yatim (*orphan rows*).
-7. **Zero Cross-Request I/O Overhead:** Edge cache menyimpan payload serializable murni, mencegah error *stream lock* pada runtime V8 Cloudflare Workers.
+2. **DOM XSS & Template Sanitization (CWE-79 Defense):** Sanitasi entitas HTML menyeluruh (`escapeHtml`) pada pencetakan kartu tanda anggota (*ID Card*) dan lembar *badge* massal, diperkuat dengan *Content Security Policy* ketat (`default-src 'none'`) pada jendela cetak untuk memblokir injeksi skrip.
+3. **CORS & Credential Isolation:** Validasi *whitelist* origin dinamis dengan jaminan isolasi header `Access-Control-Allow-Credentials` hanya untuk origin sah terverifikasi guna mencegah eksfiltrasi sesi lintas domain (*Cross-Origin Data Leaks*).
+4. **Perlindungan CSV Formula Injection (CWE-1236):** Sanitasi otomatis (`sanitizeCsvCell`) pada seluruh fitur ekspor guna menetralkan karakter berbahaya (`=`, `+`, `-`, `@`, `\t`, `\r`) saat dibuka di Microsoft Excel atau Google Sheets.
+5. **Security Headers Lengkap:** Injeksi otomatis `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, dan `Permissions-Policy: camera=(self)`.
+6. **Anti-Timing Attack:** Menggunakan perbandingan string waktu konstan (`timingSafeEqualStrings`) pada token dan kunci rahasia untuk mencegah serangan *timing side-channel*.
+7. **Rate Limiting Adaptif:** Pembatasan frekuensi autentikasi dan API sensitif berbasis *sliding window* memori untuk mencegah serangan *brute force* dan *credential stuffing*.
 
 ---
 
@@ -307,9 +307,9 @@ npm test
 
 Hasil pengujian otomatis:
 ```text
- Test Files  21 passed (21)
-      Tests  124 passed (124)
-   Duration  2.03s
+ Test Files  32 passed (32)
+      Tests  241 passed (241)
+   Duration  2.45s
 ```
 
 Kompilasi statis TypeScript:

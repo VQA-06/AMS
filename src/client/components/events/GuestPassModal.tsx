@@ -262,12 +262,12 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="surface my-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-bezel p-4 sm:max-h-[88vh] sm:p-6">
+        <div className="surface my-auto flex max-h-[86dvh] w-full max-w-lg flex-col overflow-hidden rounded-bezel p-3.5 sm:max-h-[88vh] sm:p-6">
           {/* Header */}
-          <div className="flex shrink-0 items-center justify-between border-b border-rule pb-3 sm:pb-4">
+          <div className="flex shrink-0 items-center justify-between border-b border-rule pb-2.5 sm:pb-4">
             <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-chip bg-pen-50/70 text-ink-2">
-                <UserPlus size={20} />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip bg-pen-50/70 text-ink-2 sm:h-9 sm:w-9">
+                <UserPlus size={18} />
               </div>
               <div className="min-w-0">
                 <h3 className="truncate font-heading text-base font-bold text-ink sm:text-lg">
@@ -287,13 +287,13 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
           </div>
 
           {error && (
-            <div role="alert" className="mt-3 shrink-0 rounded-panel border border-pen-200 bg-pen-50/70 p-3 text-xs text-pen-deep">
+            <div role="alert" className="mt-2.5 shrink-0 rounded-panel border border-pen-200 bg-pen-50/70 p-2.5 text-xs text-pen-deep sm:mt-3 sm:p-3">
               {error}
             </div>
           )}
 
-          {/* Mode Switcher - 3 Tabs */}
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mt-3 sm:mt-4 shrink-0">
+          {/* Mode Switcher Tabs */}
+          <div className="mt-2.5 flex shrink-0 rounded-chip border border-rule bg-paper p-1 sm:mt-3">
             <button
               type="button"
               onClick={() => setMode('names')}
@@ -334,8 +334,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
             </button>
           </div>
 
-          {/* Form Body */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto overscroll-contain touch-auto pr-1 py-3 space-y-3.5 sm:space-y-4">
+          <form onSubmit={handleSubmit} className="flex-1 space-y-3 overflow-y-auto overscroll-contain py-3 pr-1 sm:space-y-4 sm:py-4">
             {mode === 'names' ? (
               <>
                 <div>
@@ -620,7 +619,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
             )}
 
             {/* Action Buttons */}
-            <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
+            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
               <Button variant="ghost" size="sm" onClick={onClose}>
                 Batal
               </Button>

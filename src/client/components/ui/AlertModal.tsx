@@ -57,7 +57,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
         <div
           role="dialog"
           aria-modal="true"
-          className="bezel relative my-auto flex w-full max-w-md flex-col gap-4 p-5 text-ink sm:gap-5 sm:p-6"
+          className="surface bezel relative my-auto flex w-full max-w-md flex-col gap-3.5 p-4 text-ink sm:gap-5 sm:p-6"
         >
           <span aria-hidden="true" className={cn('rail absolute bottom-6 left-0 top-6', panel.rail)} />
           <button
@@ -77,7 +77,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
             <div className="mt-1 break-words text-xs leading-relaxed text-ink">{message}</div>
           </div>
 
-          <div className="flex items-center justify-end border-t border-rule pt-4">
+          <div className="flex items-center justify-end border-t border-rule pt-3 sm:pt-4">
             <Button variant={panel.action} size="md" onClick={onClose}>
               {buttonText}
             </Button>

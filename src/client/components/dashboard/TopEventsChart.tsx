@@ -246,7 +246,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
         <div className="flex w-full flex-wrap items-center justify-start gap-2 lg:w-auto lg:justify-end">
           {/* Period Filter */}
           <div
-            className="flex items-center gap-0.5 rounded-panel border border-rule bg-paper-raised p-0.5 text-[11px]"
+            className="flex items-center gap-0.5 rounded-panel border border-rule bg-paper-raised p-1 text-[11px]"
             role="group"
             aria-label="Filter periode kegiatan"
           >
@@ -445,7 +445,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
                     onClick={() => onSelectEvent?.(ev.id)}
                     aria-label={`${ev.name}: ${ev.value} hadir (${totalPct}%)`}
                     className={cn(
-                      'flex items-center gap-1.5 rounded-chip border border-rule bg-paper-raised px-3 py-1 font-oxanium text-[11px] tabular-nums transition-colors hover:border-pen-200',
+                      'flex items-center gap-1.5 rounded-chip border border-rule bg-paper-raised text-ink-2 px-3 py-1 font-oxanium text-[11px] tabular-nums transition-colors hover:border-pen-200',
                       focusRing
                     )}
                   >

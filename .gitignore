@@ -7,6 +7,7 @@ node_modules/
 dist/
 build/
 .dist/
+.vite/
 
 # Cloudflare & Wrangler artifacts
 .wrangler/
@@ -42,3 +43,12 @@ Thumbs.db
 
 # Skills
 .agents/
+
+# Testing & Coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Security Audits & Pentest Tools (Strix, etc.)
+strix_runs/
+.strix/

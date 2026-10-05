@@ -35,7 +35,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 export const Card: React.FC<CardProps> = ({ children, mark, className, ...props }) => {
   return (
     <div className={cn('rounded-panel border border-rule bg-paper-raised', className)} {...props}>
-      <div className="flex gap-0 overflow-hidden rounded-panel">
+      <div className="flex gap-0 rounded-panel">
         {mark && (
           <>
             {/* Invisible to assistive tech: the mark restates what the row's

@@ -24,7 +24,7 @@ interface BulkActionBarProps {
 
 const actionClass = (variant?: string, disabled?: boolean) =>
   cn(
-    'shrink-0 select-none whitespace-nowrap rounded-chip px-3 py-1.5 text-xs font-bold',
+    'shrink-0 select-none whitespace-nowrap rounded-chip px-2.5 py-1.5 text-xs font-bold sm:px-3',
     'transition-colors duration-120 ease-out-expo',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-500',
     'focus-visible:ring-offset-2 focus-visible:ring-offset-paper',

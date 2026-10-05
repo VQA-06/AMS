@@ -64,11 +64,13 @@ export function isAllowedOrigin(origin: string | undefined, env?: Partial<Env>):
 }
 
 app.use('*', async (c, next) => {
+  const originHeader = c.req.header('origin');
+  const allowed = isAllowedOrigin(originHeader, c.env);
   const corsMiddleware = cors({
-    origin: (origin) => (isAllowedOrigin(origin, c.env) ? (origin || '*') : ''),
+    origin: (origin) => (allowed ? (origin || '*') : ''),
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
+    credentials: allowed,
     maxAge: 86400,
   });
   return corsMiddleware(c, next);

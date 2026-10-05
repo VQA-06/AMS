@@ -246,7 +246,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <Stat
           label="Kegiatan Aktif"
           value={statValue('Agenda', activeEvents.length)}
-          mark={failed('Agenda') ? undefined : activeEvents.length > 0 ? 'seal' : 'idle'}
+          // mark={failed('Agenda') ? undefined : activeEvents.length > 0 ? 'seal' : 'idle'}
           hint={failed('Agenda') ? 'Gagal dimuat' : `${events.length} total agenda`}
           icon={<CalendarBlank />}
         />

@@ -83,8 +83,8 @@ membersRoutes.get('/stats/yearly', authMiddleware, edgeCache({ ttlSeconds: 60, t
 membersRoutes.get('/reports/yearly', authMiddleware, edgeCache({ ttlSeconds: 60, tag: 'members' }), getYearlyStatsHandler);
 membersRoutes.get('/analytics/yearly-stats', authMiddleware, edgeCache({ ttlSeconds: 60, tag: 'members' }), getYearlyStatsHandler);
 
-// GET /api/members/universal-tokens - Get or generate universal QR tokens for all active members (Bulk download/print)
-membersRoutes.get('/universal-tokens', authMiddleware, async (c) => {
+// GET /api/members/universal-tokens - Get or generate universal QR tokens for all active members (Bulk download/print - Owner & Admin only)
+membersRoutes.get('/universal-tokens', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
   const memberRepo = new MemberRepository(c.env.DB);
   const qrRepo = new QrTokenRepository(c.env.DB);
 
@@ -173,9 +173,26 @@ membersRoutes.get('/universal-tokens', authMiddleware, async (c) => {
   });
 });
 
-// GET /api/members/:id/universal-qr - Get or generate perpetual universal QR token for a single member
+// GET /api/members/:id/universal-qr - Get or generate perpetual universal QR token for a single member (Owner/Admin or Self)
 membersRoutes.get('/:id/universal-qr', authMiddleware, async (c) => {
   const memberId = c.req.param('id') || '';
+  const admin = c.get('admin');
+  const isPrivileged = admin && (admin.role === 'owner' || admin.role === 'admin');
+  const isSelf = admin && admin.member_id === memberId;
+
+  if (!isPrivileged && !isSelf) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.FORBIDDEN,
+          message: 'Anda tidak memiliki izin untuk melihat QR Pass anggota lain.',
+        },
+      },
+      403
+    );
+  }
+
   const memberRepo = new MemberRepository(c.env.DB);
   const member = await memberRepo.findById(memberId);
 
@@ -289,6 +306,23 @@ membersRoutes.post('/', authMiddleware, requireRole(['owner', 'admin']), async (
           error: {
             code: ErrorCode.EXTERNAL_ID_TAKEN,
             message: `Kode Anggota "${input.external_id}" sudah digunakan.`,
+          },
+        },
+        400
+      );
+    }
+  }
+
+  // Check unique email if provided
+  if (input.email && input.email.trim() !== '') {
+    const existingEmail = await repo.findByEmail(input.email);
+    if (existingEmail) {
+      return c.json<ApiResponse>(
+        {
+          ok: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: `Email "${input.email.trim()}" sudah digunakan oleh anggota lain.`,
           },
         },
         400
@@ -422,6 +456,23 @@ membersRoutes.patch('/:id', authMiddleware, requireRole(['owner', 'admin']), asy
           error: {
             code: ErrorCode.EXTERNAL_ID_TAKEN,
             message: `Kode Anggota "${input.external_id}" sudah digunakan.`,
+          },
+        },
+        400
+      );
+    }
+  }
+
+  // Check unique email if changing
+  if (input.email && input.email.trim() !== '' && input.email.trim().toLowerCase() !== (existing.email || '').toLowerCase()) {
+    const duplicateEmail = await repo.findByEmail(input.email);
+    if (duplicateEmail && duplicateEmail.id !== id) {
+      return c.json<ApiResponse>(
+        {
+          ok: false,
+          error: {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: `Email "${input.email.trim()}" sudah digunakan oleh anggota lain.`,
           },
         },
         400
@@ -828,8 +879,8 @@ membersRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'admin'
   });
 });
 
-// POST /api/members/bulk-tokens - Get or generate perpetual universal tokens for selected members
-membersRoutes.post('/bulk-tokens', authMiddleware, async (c) => {
+// POST /api/members/bulk-tokens - Get or generate perpetual universal tokens for selected members (Owner & Admin only)
+membersRoutes.post('/bulk-tokens', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
   const body = await c.req.json<{ ids: string[] }>();
   const ids = Array.isArray(body.ids) ? body.ids : [];
   if (ids.length === 0) {

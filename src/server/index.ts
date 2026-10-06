@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { getCookie } from 'hono/cookie';
 import { Env } from './env';
 import { errorHandler } from './middleware/error-handler';
 import { securityHeaders } from './middleware/security-headers';
@@ -12,62 +13,22 @@ import { qrRoutes } from './routes/qr.routes';
 import { scanRoutes } from './routes/scan.routes';
 import { attendanceRoutes } from './routes/attendance.routes';
 import { auditRoutes } from './routes/audit.routes';
+import { ApiResponse } from '@/shared/types';
+import { ErrorCode } from '@/shared/constants/error-codes';
 
 const app = new Hono<{ Bindings: Env }>();
 
 // Middlewares
 app.use('*', logger());
 app.use('*', securityHeaders());
-// Helper for validating trusted CORS origins dynamically
-export function isAllowedOrigin(origin: string | undefined, env?: Partial<Env>): boolean {
-  if (!origin) return true; // same-origin or non-browser requests
-  try {
-    const url = new URL(origin);
-    const host = url.hostname;
-    // Allow local development and test environments
-    if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') return true;
-
-    // Check dynamically configured ALLOWED_ORIGINS from env
-    if (env?.ALLOWED_ORIGINS) {
-      const allowedList = env.ALLOWED_ORIGINS.split(',').map((item) => item.trim());
-      for (const allowed of allowedList) {
-        try {
-          if (new URL(allowed).hostname === host) return true;
-        } catch {
-          if (allowed === host) return true;
-        }
-      }
-    }
-
-    // Check APP_DOMAIN or APP_ISSUER from env
-    if (env?.APP_DOMAIN && (host === env.APP_DOMAIN || host.endsWith(`.${env.APP_DOMAIN}`))) return true;
-    if (env?.APP_ISSUER) {
-      try {
-        if (new URL(env.APP_ISSUER).hostname === host) return true;
-      } catch {
-        // Ignore malformed issuer URL
-      }
-    }
-
-    // Default trusted official domains
-    if (
-      host === 'ams.ccunbaja.web.id' ||
-      host.endsWith('.ccunbaja.web.id') ||
-      host === 'ams.humanone.workers.dev'
-    ) {
-      return true;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
+import { isAllowedOrigin } from './lib/cors-origin';
+export { isAllowedOrigin } from './lib/cors-origin';
 
 app.use('*', async (c, next) => {
   const originHeader = c.req.header('origin');
   const allowed = isAllowedOrigin(originHeader, c.env);
   const corsMiddleware = cors({
-    origin: (origin) => (allowed ? (origin || '*') : ''),
+    origin: (origin) => (allowed && origin ? origin : ''),
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     credentials: allowed,
@@ -75,6 +36,48 @@ app.use('*', async (c, next) => {
   });
   return corsMiddleware(c, next);
 });
+
+// Server-Side CSRF Defense for Cookie-Authenticated Mutating Requests
+app.use('/api/*', async (c, next) => {
+  const method = c.req.method.toUpperCase();
+  const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+
+  if (isMutating) {
+    const authHeader = c.req.header('authorization');
+    const cookieSession = getCookie(c, 'absen_session');
+
+    // If request authenticates via ambient cookie and does not use explicit Authorization header
+    if (cookieSession && !authHeader) {
+      const origin = c.req.header('origin');
+      const referer = c.req.header('referer');
+
+      let callerOrigin: string | undefined = origin;
+      if (!callerOrigin && referer) {
+        try {
+          callerOrigin = new URL(referer).origin;
+        } catch {
+          // ignore malformed referer
+        }
+      }
+
+      if (!callerOrigin || !isAllowedOrigin(callerOrigin, c.env)) {
+        return c.json<ApiResponse>(
+          {
+            ok: false,
+            error: {
+              code: ErrorCode.FORBIDDEN,
+              message: 'Permintaan lintas asal (CSRF) ditolak.',
+            },
+          },
+          403
+        );
+      }
+    }
+  }
+
+  return next();
+});
+
 app.use('/api/*', etagMiddleware());
 
 // Global Error Handler

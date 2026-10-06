@@ -198,20 +198,18 @@ export class EventRepository {
       .prepare(`
         SELECT m.id FROM members m
         WHERE (
-          json_extract(m.metadata, '$.event_id') = ?
+          (json_valid(m.metadata) = 1 AND json_extract(m.metadata, '$.event_id') = ?)
           OR m.metadata LIKE ?
           OR m.id IN (SELECT member_id FROM event_guests WHERE event_id = ?)
           OR m.id IN (SELECT member_id FROM qr_tokens WHERE event_id = ?)
         )
         AND (
-          json_extract(m.metadata, '$.temporary') = 1
-          OR json_extract(m.metadata, '$.temporary') = true
+          (json_valid(m.metadata) = 1 AND (json_extract(m.metadata, '$.temporary') = 1 OR json_extract(m.metadata, '$.temporary') = true))
           OR m.metadata LIKE '%"temporary":true%'
           OR m.metadata LIKE '%"temporary": true%'
           OR m.external_id LIKE 'GUEST-%'
           OR m.group_name LIKE 'Tamu:%'
         )
-        AND m.id NOT IN (
           SELECT member_id FROM event_guests WHERE event_id != ?
         )
         AND m.id NOT IN (

@@ -116,6 +116,16 @@ export class MemberRepository {
     return res ?? null;
   }
 
+  async findByEmail(email: string): Promise<Member | null> {
+    if (!email || !email.trim()) return null;
+    const normalized = email.trim().toLowerCase();
+    const res = await this.db
+      .prepare('SELECT * FROM members WHERE LOWER(email) = ? LIMIT 1')
+      .bind(normalized)
+      .first<Member>();
+    return res ?? null;
+  }
+
   async findByIds(ids: string[]): Promise<Member[]> {
     if (!ids || ids.length === 0) return [];
     const chunks = chunkArray(ids, 50);
@@ -361,13 +371,11 @@ export class MemberRepository {
         SELECT id FROM members
         WHERE external_id LIKE 'GUEST-%'
            OR group_name LIKE 'Tamu:%'
-           OR json_extract(metadata, '$.temporary') = 1
-           OR json_extract(metadata, '$.temporary') = true
+           OR (json_valid(metadata) = 1 AND (json_extract(metadata, '$.temporary') = 1 OR json_extract(metadata, '$.temporary') = true))
            OR metadata LIKE '%"temporary":true%'
            OR metadata LIKE '%"temporary": true%'
       `)
       .all<{ id: string }>();
-
     const ids = (guestMembers.results || []).map((r) => r.id);
     if (ids.length === 0) return 0;
 

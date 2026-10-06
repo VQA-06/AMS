@@ -204,20 +204,22 @@ attendanceRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'adm
     .prepare(`DELETE FROM attendances WHERE id IN (${placeholders})`)
     .bind(...ids);
 
-  await coordinator.execute({
+  const results = await coordinator.execute({
     statements: [deleteStmt],
     cacheTags: ['attendance', 'agenda', 'members'],
     audit: {
       adminId: admin?.id,
       action: 'BULK_DELETE_ATTENDANCES',
       entityType: 'attendance',
-      meta: { count: ids.length, ids },
+      meta: { requestedCount: ids.length, ids },
     },
   });
 
+  const actualCount = results[0]?.meta?.changes ?? ids.length;
+
   return c.json<ApiResponse>({
     ok: true,
-    data: { count: ids.length, message: `Berhasil menghapus ${ids.length} data absensi.` },
+    data: { count: actualCount, message: `Berhasil menghapus ${actualCount} data absensi.` },
   });
 });
 

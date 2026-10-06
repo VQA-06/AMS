@@ -184,6 +184,38 @@ export class DefaultAttendanceEngine implements AttendanceEngine {
       }
     }
 
+    // Validate session_modes
+    let allowedModes: string[] = ['checkin'];
+    if (event.session_modes) {
+      try {
+        const parsed = typeof event.session_modes === 'string' ? JSON.parse(event.session_modes) : event.session_modes;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          allowedModes = parsed.map((m: unknown) => String(m).toLowerCase());
+        }
+      } catch {
+        allowedModes = [String(event.session_modes).toLowerCase()];
+      }
+    }
+
+    const reqMode = String(cmd.sessionType || '').toLowerCase();
+    if (!allowedModes.includes(reqMode)) {
+      await this.auditRepo.recordFailedScan({
+        eventId: cmd.eventId,
+        reason: ErrorCode.VALIDATION_ERROR,
+        stationId: cmd.stationId,
+        operatorId: cmd.operatorId,
+      });
+      return {
+        success: false,
+        status: 'rejected',
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: `Sesi presensi "${cmd.sessionType}" tidak diaktifkan pada kegiatan ini.`,
+          status_code: 400,
+        },
+      };
+    }
+
     // 2. Decrypt and verify QR JWE token
     let decrypted;
     try {
@@ -497,6 +529,32 @@ export class DefaultAttendanceEngine implements AttendanceEngine {
         error: {
           code: ErrorCode.FORBIDDEN,
           message: 'Pencatatan presensi manual dinonaktifkan pada kegiatan ini.',
+          status_code: 400,
+        },
+      };
+    }
+
+    // Validate session_modes
+    let allowedManualModes: string[] = ['checkin'];
+    if (event.session_modes) {
+      try {
+        const parsed = typeof event.session_modes === 'string' ? JSON.parse(event.session_modes) : event.session_modes;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          allowedManualModes = parsed.map((m: unknown) => String(m).toLowerCase());
+        }
+      } catch {
+        allowedManualModes = [String(event.session_modes).toLowerCase()];
+      }
+    }
+
+    const reqManualMode = String(cmd.sessionType || '').toLowerCase();
+    if (!allowedManualModes.includes(reqManualMode)) {
+      return {
+        success: false,
+        status: 'rejected',
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: `Sesi presensi "${cmd.sessionType}" tidak diaktifkan pada kegiatan ini.`,
           status_code: 400,
         },
       };

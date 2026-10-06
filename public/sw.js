@@ -145,6 +145,12 @@ self.addEventListener('fetch', (event) => {
 
   // 3. API Requests: Strict Network-First with graceful offline fallback
   if (url.pathname.startsWith('/api/')) {
+    // Exclude authentication and sensitive security endpoints from caching
+    if (url.pathname.startsWith('/api/auth/')) {
+      event.respondWith(fetch(request));
+      return;
+    }
+
     event.respondWith(
       fetch(request)
         .then(async (networkRes) => {
@@ -296,10 +302,12 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 
-  if (event.data.type === 'CLEAR_CACHE') {
-    caches.keys().then((keys) => {
-      return Promise.all(keys.map((k) => caches.delete(k)));
-    });
+  if (event.data.type === 'CLEAR_CACHE' || event.data.type === 'PURGE_AUTH_CACHE') {
+    event.waitUntil(
+      caches.keys().then((keys) => {
+        return Promise.all(keys.map((k) => caches.delete(k)));
+      })
+    );
   }
 
   if (event.data.type === 'INVALIDATE_API_CACHE' || event.data.type === 'PURGE_API_CACHE') {

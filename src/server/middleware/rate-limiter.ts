@@ -26,19 +26,22 @@ function cleanupStaleRecords(now: number): void {
 }
 
 export interface RateLimitOptions {
-  maxAttempts?: number; // default: 10
+  maxAttempts?: number; // default: 10 attempts per IP
+  maxAccountAttempts?: number; // default: 5 failed attempts per Account identifier
   windowMs?: number; // default: 15 minutes (15 * 60 * 1000)
   lockoutMs?: number; // default: 15 minutes
   keyPrefix?: string;
 }
 
 /**
- * In-Memory Sliding Window Rate Limiter for Authentication & Sensitive Endpoints
- * Mitigates credential stuffing, password guessing, and automated brute-force attacks.
+ * In-Memory Sliding Window Multi-Key Rate Limiter for Authentication & Sensitive Endpoints
+ * Tracks failed attempts across both client IP and targeted account identifiers.
+ * Prevents credential stuffing, distributed brute-force, and IP-rotation password spray attacks.
  * 100% compliant with Cloudflare Workers / workerd execution scope constraints.
  */
 export function authRateLimiter(options: RateLimitOptions = {}) {
   const maxAttempts = options.maxAttempts || 10;
+  const maxAccountAttempts = options.maxAccountAttempts || 5;
   const windowMs = options.windowMs || 15 * 60 * 1000;
   const lockoutMs = options.lockoutMs || 15 * 60 * 1000;
   const keyPrefix = options.keyPrefix || 'auth';
@@ -48,50 +51,98 @@ export function authRateLimiter(options: RateLimitOptions = {}) {
       c.req.header('cf-connecting-ip') ||
       c.req.header('x-forwarded-for')?.split(',')[0].trim() ||
       'unknown-client';
-    const key = `${keyPrefix}:${clientIp}`;
+    const ipKey = `${keyPrefix}:ip:${clientIp}`;
     const now = Date.now();
+
+    // Safely extract account identifier from JSON body if present without consuming the stream
+    let accountEmail: string | null = null;
+    const contentType = c.req.header('content-type') || '';
+    if (contentType.toLowerCase().includes('application/json')) {
+      try {
+        const clonedReq = c.req.raw.clone();
+        const body = (await clonedReq.json()) as Record<string, unknown>;
+        if (body && typeof body.email === 'string' && body.email.trim()) {
+          accountEmail = body.email.trim().toLowerCase();
+        }
+      } catch {
+        // Ignore parse errors here; validation schema will handle invalid bodies downstream
+      }
+    }
+
+    const accountKey = accountEmail ? `${keyPrefix}:account:${accountEmail}` : null;
 
     // Lazy cleanup of old entries inside request cycle
     cleanupStaleRecords(now);
 
-    const record = rateLimitStore.get(key);
-
-    if (record) {
-      // Check if currently locked out
-      if (record.lockedUntil && record.lockedUntil > now) {
-        const remainingMinutes = Math.ceil((record.lockedUntil - now) / 60000);
+    // 1. Check IP-based lockout
+    const ipRecord = rateLimitStore.get(ipKey);
+    if (ipRecord) {
+      if (ipRecord.lockedUntil && ipRecord.lockedUntil > now) {
+        const remainingMinutes = Math.ceil((ipRecord.lockedUntil - now) / 60000);
         return c.json<ApiResponse>(
           {
             ok: false,
             error: {
               code: ErrorCode.RATE_LIMITED,
-              message: `Terlalu banyak percobaan gagal. Silakan coba kembali dalam ${remainingMinutes} menit.`,
+              message: `Terlalu banyak percobaan gagal dari IP ini. Silakan coba kembali dalam ${remainingMinutes} menit.`,
             },
           },
           429
         );
       }
+      if (now - ipRecord.firstAttemptAt > windowMs) {
+        rateLimitStore.set(ipKey, { attempts: 0, firstAttemptAt: now });
+      }
+    }
 
-      // If window has passed, reset record
-      if (now - record.firstAttemptAt > windowMs) {
-        rateLimitStore.set(key, { attempts: 0, firstAttemptAt: now });
+    // 2. Check Account-based lockout (prevents distributed brute force via IP rotation)
+    if (accountKey) {
+      const accRecord = rateLimitStore.get(accountKey);
+      if (accRecord) {
+        if (accRecord.lockedUntil && accRecord.lockedUntil > now) {
+          const remainingMinutes = Math.ceil((accRecord.lockedUntil - now) / 60000);
+          return c.json<ApiResponse>(
+            {
+              ok: false,
+              error: {
+                code: ErrorCode.RATE_LIMITED,
+                message: `Akun ini sementara dikunci karena terlalu banyak percobaan gagal. Silakan coba kembali dalam ${remainingMinutes} menit.`,
+              },
+            },
+            429
+          );
+        }
+        if (now - accRecord.firstAttemptAt > windowMs) {
+          rateLimitStore.set(accountKey, { attempts: 0, firstAttemptAt: now });
+        }
       }
     }
 
     await next();
 
-    // If request failed with 401 or 400 (failed authentication), increment attempt count
+    // If request failed with 401 or 400 (failed authentication), increment attempt counters
     if (c.res.status === 401 || c.res.status === 400) {
-      const current = rateLimitStore.get(key) || { attempts: 0, firstAttemptAt: now };
-      current.attempts += 1;
-
-      if (current.attempts >= maxAttempts) {
-        current.lockedUntil = now + lockoutMs;
+      const currentIp = rateLimitStore.get(ipKey) || { attempts: 0, firstAttemptAt: now };
+      currentIp.attempts += 1;
+      if (currentIp.attempts >= maxAttempts) {
+        currentIp.lockedUntil = now + lockoutMs;
       }
-      rateLimitStore.set(key, current);
+      rateLimitStore.set(ipKey, currentIp);
+
+      if (accountKey) {
+        const currentAcc = rateLimitStore.get(accountKey) || { attempts: 0, firstAttemptAt: now };
+        currentAcc.attempts += 1;
+        if (currentAcc.attempts >= maxAccountAttempts) {
+          currentAcc.lockedUntil = now + lockoutMs;
+        }
+        rateLimitStore.set(accountKey, currentAcc);
+      }
     } else if (c.res.status >= 200 && c.res.status < 300) {
-      // Successful login resets rate limit counter for this IP
-      rateLimitStore.delete(key);
+      // Successful login resets rate limit counter for this IP and account
+      rateLimitStore.delete(ipKey);
+      if (accountKey) {
+        rateLimitStore.delete(accountKey);
+      }
     }
   };
 }

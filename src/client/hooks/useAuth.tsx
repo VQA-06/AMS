@@ -128,6 +128,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (typeof window !== 'undefined') {
         localStorage.removeItem('ams_admin');
         localStorage.removeItem('ams_session_token');
+        sessionStorage.clear();
+
+        // Message service worker to purge API caches
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'PURGE_AUTH_CACHE' });
+          navigator.serviceWorker.controller.postMessage({ type: 'PURGE_API_CACHE' });
+        }
+
+        // Direct client-side CacheStorage purge
+        if ('caches' in window) {
+          caches.keys().then((keys) => {
+            keys.forEach((key) => caches.delete(key));
+          }).catch(() => {});
+        }
       }
     }
   };

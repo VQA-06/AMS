@@ -12,17 +12,22 @@ import {
   loginSchema,
   profileUpdateSchema,
 } from '@/shared/schemas/auth.schema';
-import { authMiddleware, requireRole, invalidateAdminCache } from '../middleware/auth';
+import {
+  authMiddleware,
+  requireRole,
+  invalidateAdminCache,
+  revokeSessionToken,
+  revokeAllSessionsForAdmin,
+  memorySessionStore,
+} from '../middleware/auth';
+export { memorySessionStore } from '../middleware/auth';
 import { authRateLimiter } from '../middleware/rate-limiter';
-import { ApiResponse } from '@/shared/types';
+import { ApiResponse, Role, Status } from '@/shared/types';
 import { ErrorCode } from '@/shared/constants/error-codes';
-import { hashPassword, verifyPassword } from '../crypto/password-crypto';
+import { hashPassword, verifyPassword, verifyPasswordAndCheckUpgrade } from '../crypto/password-crypto';
 import { verifyQrToken } from '../crypto/qr-crypto';
 import { createSessionToken } from '../crypto/session-crypto';
-
-// In-memory session store fallback for development / KV environments
-export const memorySessionStore = new Map<string, string>();
-
+import { isAllowedOrigin } from '../lib/cors-origin';
 const authRoutes = new Hono<{ Bindings: Env }>();
 
 // GET /api/auth/me
@@ -34,21 +39,56 @@ authRoutes.get('/me', authMiddleware, async (c) => {
   });
 });
 
-// POST /api/auth/login (Database-Driven Password Authentication with Anti-Brute-Force Rate Limiting)
+// POST /api/auth/login (Database-Driven Password Authentication with Anti-Brute-Force Rate Limiting & Constant-Time Response)
 authRoutes.post('/login', authRateLimiter({ maxAttempts: 10, windowMs: 15 * 60 * 1000 }), async (c) => {
+  // Enforce strict Content-Type to mitigate login CSRF
+  const contentType = c.req.header('content-type') || '';
+  if (!contentType.toLowerCase().includes('application/json')) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: 'Content-Type harus application/json.',
+        },
+      },
+      415
+    );
+  }
+
+  // Origin / Referer validation for browser clients
+  const origin = c.req.header('origin');
+  if (origin && !isAllowedOrigin(origin, c.env)) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.FORBIDDEN,
+          message: 'Origin tidak diizinkan.',
+        },
+      },
+      403
+    );
+  }
+
   const body = await c.req.json();
   const input = loginSchema.parse(body);
 
   const adminRepo = new AdminRepository(c.env.DB);
   const admin = await adminRepo.findByEmail(input.email);
 
+  // Timing-safe constant-time failure response: Execute dummy password verification if account not found/inactive
   if (!admin || admin.status !== 'active') {
+    await verifyPassword(
+      input.password,
+      '00000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000'
+    );
     return c.json<ApiResponse>(
       {
         ok: false,
         error: {
           code: ErrorCode.INVALID_CREDENTIALS,
-          message: 'Akun admin dengan email tersebut tidak ditemukan atau tidak aktif.',
+          message: 'Email atau password salah.',
         },
       },
       401
@@ -61,33 +101,43 @@ authRoutes.post('/login', authRateLimiter({ maxAttempts: 10, windowMs: 15 * 60 *
     const member = await memberRepo.findById(admin.member_id);
     if (!member || member.status !== 'active') {
       await adminRepo.deactivateByMemberId(admin.member_id);
+      revokeAllSessionsForAdmin(admin.email);
       return c.json<ApiResponse>(
         {
           ok: false,
           error: {
-            code: ErrorCode.FORBIDDEN,
-            message: 'Status keanggotaan Anda sudah tidak aktif, akses tim dinonaktifkan.',
+            code: ErrorCode.INVALID_CREDENTIALS,
+            message: 'Email atau password salah.',
           },
         },
-        403
+        401
       );
     }
   }
 
-  // Verify password from database
+  // Verify password from database with automatic upgrade to 600,000 iterations
   if (admin.password_hash) {
-    const isPasswordValid = await verifyPassword(input.password, admin.password_hash);
+    const { valid: isPasswordValid, needsUpgrade } = await verifyPasswordAndCheckUpgrade(
+      input.password,
+      admin.password_hash
+    );
     if (!isPasswordValid) {
       return c.json<ApiResponse>(
         {
           ok: false,
           error: {
             code: ErrorCode.INVALID_CREDENTIALS,
-            message: 'Password yang Anda masukkan salah.',
+            message: 'Email atau password salah.',
           },
         },
         401
       );
+    }
+
+    // Transparently upgrade legacy iteration hashes to 600,000 PBKDF2 iterations
+    if (needsUpgrade) {
+      const upgradedHash = await hashPassword(input.password);
+      await adminRepo.update(admin.id, { password_hash: upgradedHash });
     }
   } else {
     // If admin has no password hash set yet, set it from this first login
@@ -95,12 +145,10 @@ authRoutes.post('/login', authRateLimiter({ maxAttempts: 10, windowMs: 15 * 60 *
     await adminRepo.update(admin.id, { password_hash: newHash });
   }
 
-  // Create stateless signed session token (0 KV writes, <0.2ms CPU)
   const sessionToken = await createSessionToken(
     { email: admin.email, role: admin.role },
     c.env.SESSION_SECRET || 'ams-default-session-secret-key-32-chars-minimum'
   );
-  memorySessionStore.set(sessionToken, admin.email);
 
   if (c.env.KV) {
     try {
@@ -144,6 +192,36 @@ authRoutes.post('/login', authRateLimiter({ maxAttempts: 10, windowMs: 15 * 60 *
 // POST /api/auth/login-qr (QR-Code Based Authentication for Member-Linked Admins with Rate Limiting)
 // NOTE: This route ONLY logs the admin in; it DOES NOT record attendance!
 authRoutes.post('/login-qr', authRateLimiter({ maxAttempts: 10, windowMs: 15 * 60 * 1000 }), async (c) => {
+  // Enforce strict Content-Type
+  const contentType = c.req.header('content-type') || '';
+  if (!contentType.toLowerCase().includes('application/json')) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: 'Content-Type harus application/json.',
+        },
+      },
+      415
+    );
+  }
+
+  // Origin validation for browser clients
+  const origin = c.req.header('origin');
+  if (origin && !isAllowedOrigin(origin, c.env)) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.FORBIDDEN,
+          message: 'Origin tidak diizinkan.',
+        },
+      },
+      403
+    );
+  }
+
   const body = await c.req.json();
   const input = qrLoginSchema.parse(body);
 
@@ -162,7 +240,7 @@ authRoutes.post('/login-qr', authRateLimiter({ maxAttempts: 10, windowMs: 15 * 6
     decrypted = await verifyQrToken(input.qr, {
       expectedIssuer: trustedIssuers,
       expectedAudience: c.env.APP_AUDIENCE || 'ams',
-      env: c.env as any,
+      env: c.env,
     });
   } catch (err) {
     return c.json<ApiResponse>(
@@ -300,6 +378,36 @@ authRoutes.patch('/profile', authMiddleware, async (c) => {
   }
 
   if (input.email && input.email.trim().toLowerCase() !== dbAdmin.email.toLowerCase()) {
+    // Enforce re-authentication for email changes
+    if (dbAdmin.password_hash) {
+      if (!input.current_password) {
+        return c.json<ApiResponse>(
+          {
+            ok: false,
+            error: {
+              code: ErrorCode.INVALID_CREDENTIALS,
+              message: 'Password saat ini wajib diisi untuk mengubah alamat email.',
+            },
+          },
+          400
+        );
+      }
+
+      const isCurrentValid = await verifyPassword(input.current_password, dbAdmin.password_hash);
+      if (!isCurrentValid) {
+        return c.json<ApiResponse>(
+          {
+            ok: false,
+            error: {
+              code: ErrorCode.INVALID_CREDENTIALS,
+              message: 'Password saat ini yang Anda masukkan salah.',
+            },
+          },
+          400
+        );
+      }
+    }
+
     const existing = await adminRepo.findByEmail(input.email);
     if (existing && existing.id !== dbAdmin.id) {
       return c.json<ApiResponse>(
@@ -378,10 +486,14 @@ authRoutes.post('/logout', async (c) => {
   const sessionToken =
     getCookie(c, 'absen_session') || c.req.header('authorization')?.replace(/^Bearer\s+/i, '');
   if (sessionToken) {
+    revokeSessionToken(sessionToken);
     memorySessionStore.delete(sessionToken);
     if (c.env.KV) {
       try {
         await c.env.KV.delete(`session:${sessionToken}`);
+        await c.env.KV.put(`revoked:${sessionToken}`, '1', {
+          expirationTtl: 60 * 60 * 24 * 7,
+        });
       } catch {
         // ignore
       }
@@ -542,17 +654,23 @@ authRoutes.patch('/admins/:id', authMiddleware, requireRole(['owner']), async (c
 
   const updateData: any = {};
   if (input.role) updateData.role = input.role;
-  if (input.status) updateData.status = input.status;
+  if (input.status) {
+    updateData.status = input.status;
+    if (input.status === 'inactive') {
+      revokeAllSessionsForAdmin(targetAdmin.email);
+    }
+  }
   if (input.password) {
     updateData.password_hash = await hashPassword(input.password);
+    revokeAllSessionsForAdmin(targetAdmin.email);
   }
 
   const updated = await adminRepo.update(id, updateData);
   invalidateAdminCache(targetAdmin.email);
   if (updateData.email && updateData.email !== targetAdmin.email) {
+    revokeAllSessionsForAdmin(targetAdmin.email);
     invalidateAdminCache(updateData.email);
   }
-
   const auditRepo = new AuditRepository(c.env.DB);
   const currentAdmin = c.get('admin');
   await auditRepo.logAction({
@@ -629,13 +747,11 @@ authRoutes.delete('/admins/:id', authMiddleware, requireRole(['owner']), async (
       404
     );
   }
-
   await adminRepo.delete(id);
+  revokeAllSessionsForAdmin(targetAdmin.email);
   invalidateAdminCache(targetAdmin.email);
-
   const auditRepo = new AuditRepository(c.env.DB);
   await auditRepo.logAction({
-    admin_id: currentAdmin.id,
     action: 'ADMIN_DELETED',
     entity_type: 'admin',
     entity_id: id,
@@ -689,6 +805,7 @@ authRoutes.post('/admins/bulk-delete', authMiddleware, requireRole(['owner']), a
     if (!canDeleteAdmin(currentAdmin.id, target)) continue;
 
     await adminRepo.delete(id);
+    revokeAllSessionsForAdmin(target.email);
     invalidateAdminCache(target.email);
     deletedCount++;
   }

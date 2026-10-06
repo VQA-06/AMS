@@ -3,8 +3,10 @@ import { getCookie } from 'hono/cookie';
 import { Env } from '../env';
 import { AdminRepository, sanitizeAdmin } from '../repositories/admin.repo';
 import { MemberRepository } from '../repositories/member.repo';
-import { memorySessionStore } from '../routes/auth.routes';
 import { Admin, ApiResponse, Role } from '@/shared/types';
+
+// In-memory session store fallback for development / KV environments
+export const memorySessionStore = new Map<string, string>();
 import { ErrorCode } from '@/shared/constants/error-codes';
 import { verifySessionToken } from '../crypto/session-crypto';
 
@@ -25,14 +27,70 @@ interface CachedAdminSession {
 }
 const inMemoryAdminCache = new Map<string, CachedAdminSession>();
 
+// In-Memory Store for Revoked Session Tokens (mapped to expiration timestamp in ms)
+const revokedTokenStore = new Map<string, number>();
+
+// In-Memory Store for Admin Revocation Timestamps (maps admin email to timestamp ms)
+const adminRevocationTimestamps = new Map<string, number>();
+
+export function revokeSessionToken(token: string, expiresAtMs: number = Date.now() + 7 * 86400 * 1000): void {
+  if (!token) return;
+  revokedTokenStore.set(token, expiresAtMs);
+  const parts = token.split('.');
+  if (parts.length === 2 && parts[1]) {
+    revokedTokenStore.set(parts[1], expiresAtMs);
+  }
+  if (revokedTokenStore.size > 1000) {
+    const now = Date.now();
+    for (const [key, exp] of revokedTokenStore.entries()) {
+      if (exp <= now) revokedTokenStore.delete(key);
+    }
+  }
+}
+
+export async function isSessionTokenRevoked(token: string, env?: Env): Promise<boolean> {
+  if (!token) return true;
+  const now = Date.now();
+  const exp = revokedTokenStore.get(token);
+  if (exp && exp > now) return true;
+
+  const parts = token.split('.');
+  if (parts.length === 2 && parts[1]) {
+    const sigExp = revokedTokenStore.get(parts[1]);
+    if (sigExp && sigExp > now) return true;
+  }
+
+  if (env?.KV) {
+    try {
+      const kvRevoked = await env.KV.get(`revoked:${token}`);
+      if (kvRevoked) return true;
+    } catch {
+      // ignore KV errors
+    }
+  }
+  return false;
+}
+
+export function revokeAllSessionsForAdmin(email: string): void {
+  if (!email) return;
+  const normalized = email.toLowerCase().trim();
+  adminRevocationTimestamps.set(normalized, Date.now());
+  invalidateAdminCache(normalized);
+}
+
+export function resetAuthStore(): void {
+  inMemoryAdminCache.clear();
+  revokedTokenStore.clear();
+  adminRevocationTimestamps.clear();
+}
+
 export function invalidateAdminCache(email?: string) {
   if (email) {
-    inMemoryAdminCache.delete(email);
+    inMemoryAdminCache.delete(email.toLowerCase().trim());
   } else {
     inMemoryAdminCache.clear();
   }
 }
-
 export async function authMiddleware(c: Context<{ Bindings: Env; Variables: { admin: Admin } }>, next: Next) {
   const adminRepo = new AdminRepository(c.env.DB);
   const memberRepo = new MemberRepository(c.env.DB);
@@ -60,13 +118,29 @@ export async function authMiddleware(c: Context<{ Bindings: Env; Variables: { ad
     c.req.header('authorization')?.replace(/^Bearer\s+/i, '');
 
   if (sessionToken) {
+    // Check if token has been revoked on logout
+    if (await isSessionTokenRevoked(sessionToken, c.env)) {
+      return c.json<ApiResponse>(
+        {
+          ok: false,
+          error: {
+            code: ErrorCode.UNAUTHORIZED,
+            message: 'Sesi login telah berakhir atau dicabut. Silakan login kembali.',
+          },
+        },
+        401
+      );
+    }
+
     let adminEmail: string | null = null;
+    let tokenIat: number | null = null;
 
     // A. Verify Stateless Cryptographic Token (0 KV writes/reads, ultra-fast <0.2ms)
     const secret = c.env.SESSION_SECRET || 'ams-default-session-secret-key-32-chars-minimum';
     const verifiedPayload = await verifySessionToken(sessionToken, secret);
     if (verifiedPayload) {
       adminEmail = verifiedPayload.email;
+      tokenIat = verifiedPayload.iat;
     }
 
     // B. Fallback to memory session store / KV for legacy tokens
@@ -83,23 +157,41 @@ export async function authMiddleware(c: Context<{ Bindings: Env; Variables: { ad
     }
 
     if (adminEmail) {
+      const normalizedEmail = adminEmail.toLowerCase().trim();
+
+      // Check if all sessions for this admin were invalidated (e.g. deactivation or password change)
+      if (tokenIat && adminRevocationTimestamps.has(normalizedEmail)) {
+        const revokedTimestamp = adminRevocationTimestamps.get(normalizedEmail)!;
+        if (tokenIat * 1000 <= revokedTimestamp) {
+          return c.json<ApiResponse>(
+            {
+              ok: false,
+              error: {
+                code: ErrorCode.UNAUTHORIZED,
+                message: 'Sesi akun telah dinonaktifkan atau diatur ulang. Silakan login kembali.',
+              },
+            },
+            401
+          );
+        }
+      }
+
       const now = Date.now();
-      const cached = inMemoryAdminCache.get(adminEmail);
+      const cached = inMemoryAdminCache.get(normalizedEmail);
       if (cached && cached.expiresAt > now && cached.admin.status === 'active') {
         c.set('admin', cached.admin);
         return next();
       }
 
-      const admin = await adminRepo.findByEmail(adminEmail);
+      const admin = await adminRepo.findByEmail(normalizedEmail);
       if (await validateAndSetAdmin(admin)) {
         if (admin) {
-          inMemoryAdminCache.set(adminEmail, { admin, expiresAt: now + 60_000 });
+          inMemoryAdminCache.set(normalizedEmail, { admin, expiresAt: now + 60_000 });
         }
         return next();
       }
     }
   }
-
   // 3. First run initialization (cached flag ensures D1 count query only runs once)
   if (!hasCheckedDefaultAdmin) {
     const adminCount = await adminRepo.count();

@@ -262,7 +262,10 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="surface my-auto flex max-h-[86dvh] w-full max-w-lg flex-col overflow-hidden rounded-bezel p-3.5 sm:max-h-[88vh] sm:p-6">
+        <form
+          onSubmit={handleSubmit}
+          className="surface my-auto flex max-h-[86dvh] w-full max-w-lg flex-col overflow-hidden rounded-bezel p-3.5 sm:max-h-[88vh] sm:p-6"
+        >
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-rule pb-2.5 sm:pb-4">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -334,7 +337,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex-1 space-y-3 overflow-y-auto overscroll-contain py-3 pr-1 sm:space-y-4 sm:py-4">
+          <div className="no-scrollbar flex-1 space-y-3 overflow-y-auto overscroll-contain py-3 pr-1 sm:space-y-4 sm:py-4">
             {mode === 'names' ? (
               <>
                 <div>
@@ -617,36 +620,36 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                 )}
               </div>
             )}
+          </div>
 
-            {/* Action Buttons */}
-            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                Batal
-              </Button>
-              <button
-                type="submit"
-                disabled={
-                  loading ||
-                  (mode === 'import_events' && (selectedMemberIds.size === 0 || sources.length === 0))
-                }
-                className="flex items-center gap-2 rounded-chip bg-pen-500 px-4 py-2 text-xs font-bold text-paper transition-transform duration-120 active:scale-95 hover:bg-pen-400 disabled:pointer-events-none disabled:opacity-50 sm:px-5 sm:py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
-              >
-                <Sparkle size={16} className="shrink-0" />
-                <span>
-                  {loading
-                    ? mode === 'import_events'
-                      ? 'Mengimpor Tamu...'
-                      : 'Membuat Tiket...'
-                    : mode === 'import_events'
-                    ? selectedMemberIds.size > 0
-                      ? `Impor ${selectedMemberIds.size} Tamu (Gunakan QR Lama)`
-                      : 'Pilih Tamu untuk Diimpor'
-                    : 'Buat Tiket QR Tamu'}
-                </span>
-              </button>
-            </div>
-          </form>
-        </div>
+          {/* Action Buttons */}
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              Batal
+            </Button>
+            <button
+              type="submit"
+              disabled={
+                loading ||
+                (mode === 'import_events' && (selectedMemberIds.size === 0 || sources.length === 0))
+              }
+              className="flex items-center gap-2 rounded-chip bg-pen-500 px-4 py-2 text-xs font-bold text-paper transition-transform duration-120 active:scale-95 hover:bg-pen-400 disabled:pointer-events-none disabled:opacity-50 sm:px-5 sm:py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+            >
+              <Sparkle size={16} className="shrink-0" />
+              <span>
+                {loading
+                  ? mode === 'import_events'
+                    ? 'Mengimpor Tamu...'
+                    : 'Membuat Tiket...'
+                  : mode === 'import_events'
+                  ? selectedMemberIds.size > 0
+                    ? `Impor ${selectedMemberIds.size} Tamu (Gunakan QR Lama)`
+                    : 'Pilih Tamu untuk Diimpor'
+                  : 'Buat Tiket QR Tamu'}
+              </span>
+            </button>
+          </div>
+        </form>
       </div>
     </ModalPortal>
   );

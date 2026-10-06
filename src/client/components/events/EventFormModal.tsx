@@ -96,7 +96,10 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="surface bezel-core my-auto flex max-h-[86dvh] w-full max-w-lg flex-col overflow-hidden p-3.5 sm:max-h-[85vh] sm:p-6">
+        <form
+          onSubmit={handleSubmit}
+          className="surface bezel-core my-auto flex max-h-[86dvh] w-full max-w-lg flex-col overflow-hidden p-3.5 sm:max-h-[85vh] sm:p-6"
+        >
           {/* Header — no rail: the panel's state is not variable per-row. */}
           <div className="flex shrink-0 items-center justify-between border-b border-rule pb-2.5 sm:pb-4">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -135,10 +138,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
           )}
 
           {/* Form Body - Smooth Independent Scrolling */}
-          <form
-            onSubmit={handleSubmit}
-            className="no-scrollbar flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 py-3 sm:space-y-4 sm:py-4"
-          >
+          <div className="no-scrollbar flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 py-3 sm:space-y-4 sm:py-4">
             <Field
               id="components-events-eventformmodal-field-1"
               label="Nama Kegiatan"
@@ -275,7 +275,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
               onChange={(v) => setFormData({ ...formData, allow_manual_attendance: v === 'true' ? 1 : 0 })}
               placeholder="Izinkan input absensi manual oleh operator dengan alasan"
             />
-          </form>
+          </div>
 
           {/* Action Buttons */}
           <div className="flex shrink-0 items-center justify-end gap-2 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
@@ -291,7 +291,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
               {loading ? 'Menyimpan...' : 'Simpan Kegiatan'}
             </Button>
           </div>
-        </div>
+        </form>
       </div>
     </ModalPortal>
   );

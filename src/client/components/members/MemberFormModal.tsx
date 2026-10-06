@@ -119,7 +119,10 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   return (
     <ModalPortal onClose={onClose}>
       <div className="modal-backdrop-full">
-        <div className="surface bezel-core my-auto flex max-h-[86dvh] w-full max-w-lg flex-col overflow-hidden p-3.5 sm:max-h-[85vh] sm:p-6">
+        <form
+          onSubmit={handleSubmit}
+          className="surface bezel-core my-auto flex max-h-[86dvh] w-full max-w-lg flex-col overflow-hidden p-3.5 sm:max-h-[85vh] sm:p-6"
+        >
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-rule pb-2.5 sm:pb-4">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -158,10 +161,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
           )}
 
           {/* Form Body */}
-          <form
-            onSubmit={handleSubmit}
-            className="flex-1 space-y-3 overflow-y-auto overscroll-contain py-3 pr-1 touch-auto sm:space-y-4 sm:py-4"
-          >
+          <div className="no-scrollbar flex-1 space-y-3 overflow-y-auto overscroll-contain py-3 pr-1 touch-auto sm:space-y-4 sm:py-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <Field
                 id="member-form-modal-field-1"
@@ -258,24 +258,24 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                 controlClassName="cursor-pointer"
               />
             </div>
+          </div>
 
-            {/* Action Buttons */}
-            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
-              <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-                Batal
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                disabled={loading}
-                icon={<FloppyDisk className="w-4 h-4" />}
-              >
-                {loading ? 'Menyimpan...' : 'Simpan Data'}
-              </Button>
-            </div>
-          </form>
-        </div>
+          {/* Action Buttons */}
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-rule pt-3 sm:gap-3 sm:pt-4">
+            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={loading}
+              icon={<FloppyDisk className="w-4 h-4" />}
+            >
+              {loading ? 'Menyimpan...' : 'Simpan Data'}
+            </Button>
+          </div>
+        </form>
       </div>
     </ModalPortal>
   );

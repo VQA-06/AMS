@@ -85,6 +85,10 @@ export default {
         sticky: 20,
         reveal: 30,
         bar: 40,
+        // The persistent page FAB sits above the transient selection bar:
+        // the bar yields because it only paints while rows are selected.
+        fab: 44,
+        popover: 45,
         dock: 50,
         modal: 60,
         toast: 70,
@@ -95,9 +99,6 @@ export default {
       transitionTimingFunction: {
         'out-expo': 'cubic-bezier(0.16, 1, 0.3, 1)',
         'in-quint': 'cubic-bezier(0.64, 0, 0.78, 0)',
-      },
-      animation: {
-        'reveal-up': 'reveal-up 720ms cubic-bezier(0.16, 1, 0.3, 1) both',
       },
     },
   },

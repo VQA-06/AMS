@@ -171,7 +171,7 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
                 aria-expanded={showDetails}
                 aria-controls={detailsId}
                 className={cn(
-                  'flex w-full items-center justify-between gap-2 rounded-chip py-1 text-xs text-ink-2 transition-colors hover:text-ink',
+                  'flex w-full min-h-[44px] items-center justify-between gap-2 rounded-chip py-1 text-xs text-ink-2 transition-colors hover:text-ink',
                   focusRing,
                 )}
               >
@@ -192,7 +192,7 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
                     type="button"
                     onClick={handleCopyDetails}
                     className={cn(
-                      'absolute right-2 top-2 flex items-center gap-1 rounded-chip border border-rule-strong bg-paper-raised px-2 py-1.5 text-[10px] text-ink transition-colors hover:bg-paper-raised/70',
+                      'absolute right-2 top-2 flex min-h-[44px] items-center gap-1 rounded-chip border border-rule-strong bg-paper-raised px-2 py-1.5 text-[10px] text-ink transition-colors hover:bg-paper-raised/70',
                       focusRing,
                     )}
                     title="Salin Error"

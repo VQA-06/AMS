@@ -138,7 +138,12 @@ function ownGround(tokens: string[]): 'dark' | 'light' | null {
     if (!token.startsWith('bg-')) continue;
     if (token === 'bg-transparent' || token === 'bg-none' || token.endsWith('/0')) continue;
     const name = token.slice(3).split('/')[0];
-    ground = DARK_GROUND_NAMES.has(name) ? 'dark' : 'light';
+    // `DARK_GROUNDS` is spelled `bg-ink`; `name` is `ink`. Comparing the
+    // stripped name against the prefixed set resolved every ground to
+    // 'light', so the guard was blind to `bg-ink` — the app's own chrome
+    // ground. Accept either spelling so a future rename cannot re-break it.
+    ground =
+      DARK_GROUND_NAMES.has(name) || DARK_GROUND_NAMES.has(`bg-${name}`) ? 'dark' : 'light';
   }
   return ground;
 }

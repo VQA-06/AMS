@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import app from '../src/server/index';
+import { createSessionToken } from '../src/server/crypto/session-crypto';
 import { canDeleteAdmin } from '../src/server/routes/auth.routes';
+import { chunkArray, D1_MAX_SAFE_PARAM_CHUNK } from '../src/server/lib/d1-utils';
+import { EventRepository } from '../src/server/repositories/event.repo';
 
 /**
  * These assertions target `canDeleteAdmin`, the exact predicate the
@@ -45,6 +49,128 @@ describe('Admin Bulk Delete Protection', () => {
   });
 });
 
+describe('D1 Safe Parameter Chunking for Multi-Select Bulk Actions', () => {
+  it('should chunk large item selections (e.g. 262 items) into safe sub-100 parameter chunks', () => {
+    const items = Array.from({ length: 262 }, (_, i) => `item_${i + 1}`);
+    const chunks = chunkArray(items, D1_MAX_SAFE_PARAM_CHUNK);
+
+    expect(chunks.length).toBe(6); // 50 * 5 + 12 = 262
+    expect(chunks[0].length).toBe(50);
+    expect(chunks[5].length).toBe(12);
+
+    for (const chunk of chunks) {
+      expect(chunk.length).toBeLessThanOrEqual(D1_MAX_SAFE_PARAM_CHUNK);
+      expect(chunk.length).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it('should chunk large guest deletion cascades safely in EventRepository.delete', async () => {
+    const largeGuestIds = Array.from({ length: 150 }, (_, i) => ({ id: `guest_${i + 1}` }));
+    const executedStatements: Array<{ sql: string; params: any[] }> = [];
+
+    const mockDb: any = {
+      prepare: (sql: string) => ({
+        bind: (...params: any[]) => {
+          if (sql.includes('SELECT m.id FROM members m')) {
+            return {
+              sql,
+              params,
+              all: async () => ({ results: largeGuestIds }),
+            };
+          }
+          return { sql, params };
+        },
+      }),
+      batch: async (stmts: any[]) => {
+        executedStatements.push(...stmts);
+        return [];
+      },
+    };
+
+    const repo = new EventRepository(mockDb);
+    const success = await repo.delete('evt_bulk_test');
+
+    expect(success).toBe(true);
+
+    // Verify all statement bound parameters stay within D1 limit
+    for (const stmt of executedStatements) {
+      expect(stmt.params.length).toBeLessThanOrEqual(50);
+    }
+
+    // Verify DELETE FROM members was chunked into 3 batches (50 + 50 + 50 = 150)
+    const memberDeleteStmts = executedStatements.filter((s) => s.sql?.includes('DELETE FROM members WHERE id IN'));
+    expect(memberDeleteStmts.length).toBe(3);
+    expect(memberDeleteStmts[0].params.length).toBe(50);
+    expect(memberDeleteStmts[1].params.length).toBe(50);
+    expect(memberDeleteStmts[2].params.length).toBe(50);
+  });
+
+  it('should unlink admins (UPDATE admins SET member_id = NULL) and NOT delete admins during POST /api/members/bulk-delete', async () => {
+    const token = await createSessionToken(
+      { email: 'owner@ams.local', role: 'owner' },
+      'super-secure-session-secret-key-32b!'
+    );
+
+    const executedStatements: Array<{ sql: string; params: any[] }> = [];
+    const mockDb: any = {
+      prepare: (sql: string) => ({
+        bind: (...params: any[]) => {
+          if (sql.includes('FROM admins')) {
+            return {
+              first: async () => ({ id: 'adm_owner', email: 'owner@ams.local', role: 'owner', status: 'active', member_id: null }),
+              all: async () => ({ results: [] }),
+              run: async () => ({ meta: { changes: 1 } }),
+            };
+          }
+          return { sql, params, run: async () => ({ meta: { changes: 1 } }) };
+        },
+      }),
+      batch: async (stmts: any[]) => {
+        executedStatements.push(...stmts);
+        return stmts.map(() => ({ meta: { changes: 1 } }));
+      },
+    };
+
+    const res = await app.request(
+      '/api/members/bulk-delete',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ids: ['mem_1', 'mem_2'] }),
+      },
+      {
+        DB: mockDb,
+        SESSION_SECRET: 'super-secure-session-secret-key-32b!',
+      }
+    );
+
+    expect(res.status).toBe(200);
+    const json = await res.json<{ ok: boolean; data: { count: number } }>();
+    expect(json.ok).toBe(true);
+    expect(json.data.count).toBe(2);
+
+    // Assert: NEVER executes DELETE FROM admins
+    const deleteAdminStmts = executedStatements.filter((s) => s.sql?.includes('DELETE FROM admins'));
+    expect(deleteAdminStmts.length).toBe(0);
+
+    // Assert: Executes UPDATE admins SET member_id = NULL
+    const updateAdminStmts = executedStatements.filter((s) =>
+      s.sql?.includes('UPDATE admins SET member_id = NULL WHERE member_id IN')
+    );
+    expect(updateAdminStmts.length).toBe(1);
+    expect(updateAdminStmts[0].params).toEqual(['mem_1', 'mem_2']);
+
+    // Assert: Members table is deleted
+    const deleteMemberStmts = executedStatements.filter((s) =>
+      s.sql?.includes('DELETE FROM members WHERE id IN')
+    );
+    expect(deleteMemberStmts.length).toBe(1);
+    expect(deleteMemberStmts[0].params).toEqual(['mem_1', 'mem_2']);
+  });
+});
 /**
  * NOTE: the perpetual-QR `year >= 2090` heuristic lived only as a local copy
  * here. `isPerpetual` is component-local in `DigitalPassCard.tsx` and the server

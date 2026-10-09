@@ -71,13 +71,13 @@ export const IosInstallGuideModal: React.FC<IosInstallGuideModalProps> = ({ isOp
           role="dialog"
           aria-modal="true"
           aria-labelledby="ios-install-guide-title"
-          className="surface bezel relative my-auto flex w-full max-w-sm flex-col gap-3.5 p-4 sm:gap-5 sm:p-6"
+          className="surface bezel relative my-auto flex max-h-[86dvh] w-full max-w-sm flex-col gap-3.5 overflow-y-auto p-4 sm:max-h-[85vh] sm:gap-5 sm:p-6"
         >
           <button
             type="button"
             onClick={onClose}
             aria-label="Tutup dialog"
-            className="absolute right-3 top-3 flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+            className="absolute right-3 top-3 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           >
             <X size={16} aria-hidden="true" />
           </button>

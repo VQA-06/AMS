@@ -1,4 +1,4 @@
-import { Attendance, SessionType, MemberActivityEntry, ActivityTier, MemberActivitySummary, Status } from '@/shared/types';
+import { Attendance, SessionType, MemberActivityEntry, ActivityTier, MemberActivitySummary, Status, AttendedEventEntry } from '@/shared/types';
 import { escapeLikePattern } from '../lib/sql-utils';
 
 export interface AttendanceFilterOptions {
@@ -268,6 +268,7 @@ export class AttendanceRepository {
     division?: string;
     search?: string;
     tier?: ActivityTier;
+    status?: Status | 'all';
   } = {}): Promise<{
     entries: MemberActivityEntry[];
     summary: MemberActivitySummary;
@@ -280,13 +281,17 @@ export class AttendanceRepository {
 
     // 2. Query members with aggregated attendance (excluding temporary/guest participants)
     const conditions: string[] = [
-      'm.status = ?',
       "(m.group_name NOT LIKE 'Tamu:%' OR m.group_name IS NULL)",
       "m.external_id NOT LIKE 'GUEST-%'",
       "(m.metadata NOT LIKE '%\"temporary\":true%' AND m.metadata NOT LIKE '%\"temporary\": true%' OR m.metadata IS NULL)",
     ];
-    const params: (string | number)[] = ['active'];
+    const params: (string | number)[] = [];
 
+    const statusFilter = options.status ?? 'active';
+    if (statusFilter !== 'all') {
+      conditions.push('m.status = ?');
+      params.push(statusFilter);
+    }
     if (options.division && options.division.trim() !== '' && options.division !== 'all') {
       conditions.push('m.division = ?');
       params.push(options.division.trim());
@@ -381,5 +386,28 @@ export class AttendanceRepository {
         average_attendance_rate: averageRate,
       },
     };
+  }
+  /**
+   * Lists all events attended by a specific member along with attendance details,
+   * sorted by scanned_at descending.
+   */
+  async listMemberAttendedEvents(memberId: string): Promise<AttendedEventEntry[]> {
+    const query = `
+      SELECT 
+        e.id as event_id,
+        e.name as event_name,
+        e.location_name as event_location,
+        e.starts_at,
+        e.ends_at,
+        a.scanned_at as attended_at,
+        a.session_type,
+        a.method
+      FROM attendances a
+      JOIN events e ON e.id = a.event_id
+      WHERE a.member_id = ?
+      ORDER BY a.scanned_at DESC
+    `;
+    const res = await this.db.prepare(query).bind(memberId).all<AttendedEventEntry>();
+    return res.results || [];
   }
 }

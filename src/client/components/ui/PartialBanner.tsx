@@ -4,7 +4,9 @@ import { cn } from '../../lib/cn';
 
 export interface PartialBannerProps {
   /** Labels of the sections that rejected, in declaration order. */
-  sections: string[];
+  sections?: string[];
+  /** Optional custom message override. */
+  message?: string;
   onRetry?: () => void;
   className?: string;
 }
@@ -17,8 +19,17 @@ export interface PartialBannerProps {
  * `role="status" aria-live="polite"` because a partial outage is news, not an
  * interruption: it must be announced without stealing focus.
  */
-export const PartialBanner: React.FC<PartialBannerProps> = ({ sections, onRetry, className }) => {
-  if (sections.length === 0) return null;
+export const PartialBanner: React.FC<PartialBannerProps> = ({
+  sections,
+  message,
+  onRetry,
+  className,
+}) => {
+  if (!message && (!sections || sections.length === 0)) return null;
+
+  const text =
+    message ??
+    `Sebagian data gagal dimuat: ${sections!.join(', ')}. Angka di bawah mungkin tidak lengkap, bukan nol.`;
 
   return (
     <div
@@ -31,8 +42,7 @@ export const PartialBanner: React.FC<PartialBannerProps> = ({ sections, onRetry,
     >
       <Warning size={16} weight="bold" className="shrink-0 text-pending-600" aria-hidden="true" />
       <p className="min-w-0 flex-1 text-[12px] leading-snug text-ink-2">
-        Sebagian data gagal dimuat: {sections.join(', ')}. Angka di bawah mungkin tidak lengkap,
-        bukan nol.
+        {text}
       </p>
       {onRetry && (
         <button

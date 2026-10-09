@@ -14,17 +14,13 @@ export interface BulkActionItem {
 
 interface BulkActionBarProps {
   selectedCount: number;
-  totalCount?: number;
   onClearSelection: () => void;
-  onSelectAll?: () => void;
-  isAllSelected?: boolean;
   actions: BulkActionItem[];
-  itemLabel?: string;
 }
 
 const actionClass = (variant?: string, disabled?: boolean) =>
   cn(
-    'shrink-0 select-none whitespace-nowrap rounded-chip px-2.5 py-1.5 text-xs font-bold sm:px-3',
+    'shrink-0 select-none whitespace-nowrap rounded-chip px-2.5 py-1.5 min-h-[44px] text-xs font-bold sm:px-3',
     'transition-colors duration-120 ease-out-expo',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-500',
     'focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
@@ -39,27 +35,16 @@ const actionClass = (variant?: string, disabled?: boolean) =>
   );
 
 /**
- * Selection counter plus its actions. All presentation now lives in
- * `SelectionBar`; this only decides which buttons a page offers.
+ * Selection actions. All presentation now lives in `SelectionBar`; this only
+ * decides which buttons a page offers.
  */
 export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   selectedCount,
-  totalCount,
   onClearSelection,
-  onSelectAll,
-  isAllSelected = false,
   actions,
-  itemLabel = 'Item',
 }) => {
   return (
-    <SelectionBar
-      count={selectedCount}
-      totalCount={totalCount}
-      onClear={onClearSelection}
-      onToggleAll={onSelectAll}
-      isAllSelected={isAllSelected}
-      itemLabel={itemLabel}
-    >
+    <SelectionBar count={selectedCount} onClear={onClearSelection}>
       {actions.map((act, index) => (
         <button
           key={index}

@@ -13,5 +13,6 @@ export interface Env {
   ALLOWED_ORIGINS?: string;
   TRUSTED_ISSUERS?: string;
   DEV_ADMIN_EMAIL?: string;
+  ENABLE_GUEST_CONVERSION?: string;
   [key: string]: unknown;
 }

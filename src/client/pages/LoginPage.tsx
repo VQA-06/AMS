@@ -86,7 +86,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-y-auto overflow-x-hidden bg-ink p-4 text-paper">
+    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-y-auto overflow-x-hidden bg-ink p-4 py-8 text-paper">
       <div className="bezel bezel-core w-full max-w-md space-y-6 p-6 sm:p-8">
         {/* Brand Header */}
         <div className="space-y-1.5 text-center">

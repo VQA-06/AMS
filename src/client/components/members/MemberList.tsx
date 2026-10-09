@@ -7,7 +7,7 @@ import { Member } from '@/shared/types';
 import { cn } from '../../lib/cn';
 import { EmptyState } from '../ui/EmptyState';
 import { RowList, type RowListItem } from '../ui/RowList';
-
+import { RowActions, type RowActionItem } from '../ui/RowActions';
 interface MemberListProps {
   members: Member[];
   loading?: boolean;
@@ -28,7 +28,7 @@ const focusRing =
 
 const iconButtonClass = (tone: 'pen' | 'neutral' | 'danger') =>
   cn(
-    'flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip transition-colors duration-120 ease-out-expo',
+    'flex min-h-[44px] min-w-[44px] items-center justify-center rounded-chip transition-colors duration-120 ease-out-expo',
     focusRing,
     tone === 'pen' && 'text-pen-600 hover:bg-pen-50/70',
     tone === 'neutral' && 'text-ink-2 hover:bg-paper-sunk hover:text-ink',
@@ -64,6 +64,29 @@ export const MemberList: React.FC<MemberListProps> = ({
       .filter(Boolean)
       .join('  ·  ');
 
+    // Same actions and the same announced labels as the inline buttons.
+    const menuItems: RowActionItem[] = [
+      {
+        label: `Lihat Pass QR`,
+        icon: <Eye className="h-4 w-4" />,
+        onSelect: () => onViewPass(member),
+      },
+      ...(canManage
+        ? [
+            {
+              label: `Edit`,
+              icon: <PencilSimple className="h-4 w-4" />,
+              onSelect: () => onEdit(member),
+            },
+            {
+              label: `Hapus`,
+              icon: <Trash className="h-4 w-4" />,
+              onSelect: () => onDelete(member.id, member.name),
+              tone: 'danger' as const,
+            },
+          ]
+        : []),
+    ];
     return {
       id: member.id,
       title: member.name,
@@ -74,37 +97,46 @@ export const MemberList: React.FC<MemberListProps> = ({
       },
       action: (
         <span className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onViewPass(member)}
-            title="Lihat & Unduh QR Universal"
-            aria-label={`Lihat Pass QR ${member.name}`}
-            className={iconButtonClass('pen')}
-          >
-            <Eye className="w-4 h-4" />
-          </button>
-          {canManage && (
-            <>
-              <button
-                type="button"
-                onClick={() => onEdit(member)}
-                title="Edit Anggota"
-                aria-label={`Edit ${member.name}`}
-                className={iconButtonClass('neutral')}
-              >
-                <PencilSimple className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onDelete(member.id, member.name)}
-                title="Hapus Anggota"
-                aria-label={`Hapus ${member.name}`}
-                className={iconButtonClass('danger')}
-              >
-                <Trash className="w-4 h-4" />
-              </button>
-            </>
-          )}
+          {/* Desktop keeps the inline cluster; below `sm` the same actions live
+              in the kebab, because five 44px targets do not fit a 344px row. */}
+          <span className="hidden items-center gap-1 sm:flex">
+            <button
+              type="button"
+              onClick={() => onViewPass(member)}
+              title="Lihat & Unduh QR Universal"
+              aria-label={`Lihat Pass QR`}
+              className={iconButtonClass('pen')}
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+            {canManage && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onEdit(member)}
+                  title="Edit Anggota"
+                  aria-label={`Edit`}
+                  className={iconButtonClass('neutral')}
+                >
+                  <PencilSimple className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(member.id, member.name)}
+                  title="Hapus Anggota"
+                  aria-label={`Hapus`}
+                  className={iconButtonClass('danger')}
+                >
+                  <Trash className="w-4 h-4" />
+                </button>
+              </>
+            )}
+          </span>
+          <RowActions
+            className="sm:hidden"
+            label={`Menu aksi`}
+            items={menuItems}
+          />
         </span>
       ),
     };

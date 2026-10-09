@@ -86,11 +86,11 @@ export const PwaInstallBanner: React.FC = () => {
       <FloatingSurface
         placement="bottom-bar"
         mark={updateAvailable ? 'pending' : 'pen'}
-        offsetClass="bottom-[calc(4.5rem+env(safe-area-inset-bottom))] px-3 sm:bottom-6 sm:px-6"
+        offsetClass="bottom-[calc(6.5rem+env(safe-area-inset-bottom))] px-3 sm:bottom-0 sm:px-6"
         className="pop-once mx-auto max-w-3xl gap-2.5"
       >
         {/* App icon + compact info */}
-        <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
           <img
             src="/logo.webp"
             alt=""
@@ -109,7 +109,7 @@ export const PwaInstallBanner: React.FC = () => {
         </div>
 
         {/* Actions */}
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             onClick={handleInstallClick}
@@ -117,7 +117,7 @@ export const PwaInstallBanner: React.FC = () => {
             aria-label={
               updateAvailable ? 'Muat versi terbaru sekarang' : 'Pasang aplikasi di perangkat ini'
             }
-            className={`flex min-h-[36px] items-center gap-1 whitespace-nowrap rounded-chip bg-pen-500 px-3 py-1.5 text-xs font-bold text-paper transition-colors hover:bg-pen-400 active:bg-pen-600 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
+            className={`flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-chip bg-pen-500 px-3 py-1.5 text-xs font-bold text-paper transition-colors hover:bg-pen-400 active:bg-pen-600 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
           >
             {actionIcon}
             <span>{actionLabel}</span>
@@ -128,7 +128,7 @@ export const PwaInstallBanner: React.FC = () => {
               type="button"
               onClick={() => dismissPrompt(7)}
               aria-label="Tutup ajakan pasang, ingatkan lagi dalam 7 hari"
-              className={`flex h-9 w-9 items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper hover:text-ink ${focusRing}`}
+              className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:bg-paper hover:text-ink ${focusRing}`}
             >
               <X size={14} aria-hidden="true" />
             </button>

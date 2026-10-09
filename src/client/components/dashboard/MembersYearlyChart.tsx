@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { TrendUp } from '@phosphor-icons/react/TrendUp';
 import { UserPlus } from '@phosphor-icons/react/UserPlus';
 import { Users } from '@phosphor-icons/react/Users';
 import {
@@ -119,7 +118,7 @@ const CustomLineTooltip: React.FC<CustomTooltipProps & { filter: StatusFilter }>
   if (!rawData || rawData.isBaseline) return null;
 
   return (
-    <div className="z-toast pointer-events-none min-w-[180px] space-y-2 rounded-panel border border-rule-strong bg-paper-raised px-3 py-2 text-xs backdrop-blur-md">
+    <div className="z-reveal pointer-events-none min-w-[180px] space-y-2 rounded-panel border border-rule-strong bg-paper-raised px-3 py-2 text-xs backdrop-blur-md">
       <div className="flex items-center justify-between gap-3 border-b border-rule pb-1.5">
         <span className="font-heading text-xs font-bold text-ink">Tahun {rawData.year || label}</span>
         <span className="font-oxanium text-[11px] font-semibold tabular-nums text-ink-2">
@@ -221,7 +220,6 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-2">
-            <TrendUp size={14} className="text-ink-2" aria-hidden="true" />
             <span>Tren Pendaftaran &amp; Keaktifan</span>
           </span>
 
@@ -241,7 +239,7 @@ export const MembersYearlyChart: React.FC<MembersYearlyChartProps> = ({
                   aria-pressed={on}
                   title={title}
                   className={cn(
-                    'flex min-h-[32px] items-center rounded-chip px-2 py-1 font-bold transition-colors',
+                    'flex items-center rounded-chip px-2 py-1 font-bold transition-colors',
                     focusRing,
                     on
                       ? 'bg-pen-500 text-paper'

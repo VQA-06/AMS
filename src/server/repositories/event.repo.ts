@@ -1,6 +1,6 @@
 import { Event, EventStatus, QrPolicy } from '@/shared/types';
+import { chunkArray, D1_MAX_SAFE_PARAM_CHUNK } from '../lib/d1-utils';
 import { escapeLikePattern } from '../lib/sql-utils';
-
 export class EventRepository {
   constructor(private db: D1Database) {}
 
@@ -210,6 +210,7 @@ export class EventRepository {
           OR m.external_id LIKE 'GUEST-%'
           OR m.group_name LIKE 'Tamu:%'
         )
+        AND m.id NOT IN (
           SELECT member_id FROM event_guests WHERE event_id != ?
         )
         AND m.id NOT IN (
@@ -241,16 +242,19 @@ export class EventRepository {
     ];
 
     if (guestIds.length > 0) {
-      const placeholders = guestIds.map(() => '?').join(',');
-      statements.push(
-        this.db.prepare(`DELETE FROM event_guests WHERE member_id IN (${placeholders})`).bind(...guestIds),
-        this.db.prepare(`DELETE FROM attendances WHERE member_id IN (${placeholders})`).bind(...guestIds),
-        this.db.prepare(`DELETE FROM scan_attempts WHERE member_id IN (${placeholders})`).bind(...guestIds),
-        this.db.prepare(`DELETE FROM qr_tokens WHERE member_id IN (${placeholders})`).bind(...guestIds),
-        this.db.prepare(`DELETE FROM members WHERE id IN (${placeholders})`).bind(...guestIds),
-      );
+      const guestChunks = chunkArray(guestIds, D1_MAX_SAFE_PARAM_CHUNK);
+      for (const chunk of guestChunks) {
+        const placeholders = chunk.map(() => '?').join(',');
+        statements.push(
+          this.db.prepare(`UPDATE admins SET member_id = NULL WHERE member_id IN (${placeholders})`).bind(...chunk),
+          this.db.prepare(`DELETE FROM event_guests WHERE member_id IN (${placeholders})`).bind(...chunk),
+          this.db.prepare(`DELETE FROM attendances WHERE member_id IN (${placeholders})`).bind(...chunk),
+          this.db.prepare(`DELETE FROM scan_attempts WHERE member_id IN (${placeholders})`).bind(...chunk),
+          this.db.prepare(`DELETE FROM qr_tokens WHERE member_id IN (${placeholders})`).bind(...chunk),
+          this.db.prepare(`DELETE FROM members WHERE id IN (${placeholders})`).bind(...chunk),
+        );
+      }
     }
-
     statements.push(this.db.prepare('DELETE FROM events WHERE id = ?').bind(id));
 
     await this.db.batch(statements);

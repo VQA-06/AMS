@@ -5,7 +5,7 @@ import { FunnelSimple } from '@phosphor-icons/react/FunnelSimple';
 import { MagnifyingGlass } from '@phosphor-icons/react/MagnifyingGlass';
 import { Plus } from '@phosphor-icons/react/Plus';
 import { Trash } from '@phosphor-icons/react/Trash';
-import { Warning } from '@phosphor-icons/react/Warning';
+import { PartialBanner } from '../components/ui/PartialBanner';
 import { X } from '@phosphor-icons/react/X';
 import { Event } from '@/shared/types';
 import { EventInput } from '@/shared/schemas/event.schema';
@@ -442,16 +442,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
       />
 
       {loadFailed && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-center gap-2 rounded-panel border border-pending-200 bg-pending-50/70 px-4 py-3 text-xs text-pending-800"
-        >
-          <Warning className="h-4 w-4 shrink-0 text-pending-600" />
-          <span>
-            Daftar kegiatan gagal dimuat. Daftar di bawah mungkin tidak lengkap, bukan kosong.
-          </span>
-        </div>
+        <PartialBanner message="Daftar kegiatan gagal dimuat. Daftar di bawah mungkin tidak lengkap, bukan kosong." />
       )}
 
       {/* Unified Command Toolbar */}
@@ -478,7 +469,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
               onClick={() => setSearch('')}
               aria-label="Hapus teks pencarian"
               className={cn(
-                'absolute right-2.5 top-1/2 -translate-y-1/2 rounded-chip p-1 text-ink-2 transition-colors hover:text-ink',
+                'absolute right-2.5 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center rounded-chip text-ink-2 transition-colors hover:text-ink',
                 focusRing
               )}
             >
@@ -552,11 +543,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({
       {/* Contextual Floating Bulk Action Bar */}
       <BulkActionBar
         selectedCount={selectedEventIds.size}
-        totalCount={events.length}
-        itemLabel="Kegiatan"
         onClearSelection={handleClearSelection}
-        onSelectAll={handleToggleSelectAll}
-        isAllSelected={events.length > 0 && selectedEventIds.size === events.length}
         actions={bulkActions}
       />
 

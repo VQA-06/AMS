@@ -32,7 +32,7 @@ export const memberSchema = z.object({
     .nullish()
     .or(z.literal(''))
     .transform((val) => (val && val.trim() !== '' ? val.trim() : null)),
-  status: z.enum(['active', 'inactive']).default('active'),
+  status: z.enum(['active', 'inactive', 'candidate', 'archived']).default('active'),
   metadata: z.record(z.unknown()).optional().default({}),
 });
 
@@ -45,10 +45,43 @@ export const memberImportRowSchema = z.object({
   phone: z.string().nullable().optional().or(z.literal('')),
   group_name: z.string().nullable().optional().or(z.literal('')),
   division: z.string().nullable().optional().or(z.literal('')),
-  status: z.enum(['active', 'inactive']).default('active'),
+  status: z.enum(['active', 'inactive', 'candidate', 'archived']).default('active'),
   metadata: z.string().optional().default('{}'),
 });
 
 export type MemberInput = z.infer<typeof memberSchema>;
 export type MemberUpdateInput = z.infer<typeof memberUpdateSchema>;
 export type MemberImportRow = z.infer<typeof memberImportRowSchema>;
+
+export const candidateInductionSchema = z.object({
+  member_ids: z.array(z.string().min(1)).min(1, 'Pilih minimal satu calon anggota untuk dilantik'),
+  archive_remaining: z.boolean().default(false),
+  batch_group: z.string().optional(),
+  division: z.string().optional(),
+});
+
+export const candidateBatchActionSchema = z.object({
+  member_ids: z.array(z.string().min(1)).min(1, 'Pilih minimal satu anggota'),
+  batch_group: z.string().optional(),
+});
+
+export const candidatePurgeSchema = z
+  .object({
+    member_ids: z.array(z.string().min(1)).optional(),
+    all_archived: z.boolean().optional(),
+  })
+  .refine((d) => (d.member_ids && d.member_ids.length > 0) || d.all_archived === true, {
+    message: 'Tentukan ID anggota yang akan dihapus atau aktifkan all_archived',
+  });
+
+export type CandidateInductionInput = z.infer<typeof candidateInductionSchema>;
+export type CandidateBatchActionInput = z.infer<typeof candidateBatchActionSchema>;
+export type CandidatePurgeInput = z.infer<typeof candidatePurgeSchema>;
+
+export const convertGuestsToCandidatesSchema = z.object({
+  guest_member_ids: z.array(z.string().min(1)).min(1, 'Pilih minimal satu peserta tamu'),
+  target_group: z.string().max(50).optional(),
+  target_division: z.string().max(50).optional(),
+});
+
+export type ConvertGuestsToCandidatesInput = z.infer<typeof convertGuestsToCandidatesSchema>;

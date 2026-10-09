@@ -110,7 +110,7 @@ const LogoutButton: React.FC<{ onLogout: () => void; size?: 'sm' | 'md' }> = ({
     className={cn(
       'flex items-center justify-center rounded-chip text-paper/70 transition-colors hover:text-paper hover:bg-paper/10',
       focusRing,
-      size === 'sm' ? 'h-9 w-9' : 'h-10 w-10'
+      'min-h-[44px] min-w-[44px]'
     )}
   >
     <SignOut size={16} />
@@ -159,7 +159,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
                           'flex w-full items-center gap-2.5 rounded-chip px-3 py-2 text-xs font-medium transition-colors duration-120 ease-out-expo',
                           focusRing,
                           active
-                            ? 'bg-paper-raised font-semibold text-ink-2'
+                            ? 'bg-paper-raised font-semibold text-ink'
                             : 'text-paper/70 hover:bg-paper/80 hover:text-ink'
                         )}
                       >
@@ -202,7 +202,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
           can never reach, so a genuine overflow becomes scrollable instead. */}
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-x-auto overflow-y-auto bg-paper pb-24 md:pb-8">
         {/* One header, both layouts: breadcrumb on desktop, identity + role on mobile. */}
-        <header className="sticky top-0 z-sticky flex shrink-0 items-center justify-between gap-3 border-b border-rule bg-ink/90 px-4 py-2.5 backdrop-blur-md sm:px-6 md:px-8">
+        <header className="sticky top-0 z-bar flex shrink-0 items-center justify-between gap-3 border-b border-rule bg-ink/90 px-4 py-2.5 backdrop-blur-md sm:px-6 md:px-8">
           <div className="flex items-center gap-2.5 md:hidden">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip border border-rule-strong bg-paper-raised p-0.5">
               <img src="/logo.webp" alt="AMS Logo" className="h-full w-full object-contain" />
@@ -237,10 +237,10 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               aria-label="Buka Pengaturan"
               title="Pengaturan"
               className={cn(
-                'flex h-10 w-10 items-center justify-center rounded-chip transition-colors md:hidden',
+                'flex min-h-[44px] min-w-[44px] items-center justify-center rounded-chip transition-colors md:hidden',
                 focusRing,
                 currentTab === 'settings'
-                  ? 'bg-paper-raised text-ink-2'
+                  ? 'bg-paper-raised text-ink'
                   : 'text-paper/70 hover:bg-paper-raised/60 hover:text-ink'
               )}
             >
@@ -256,7 +256,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
       {/* Mobile dock: 5 items, Scanner centred, pb-safe, z above surfaces */}
       <nav
         aria-label="Navigasi bawah"
-        className="fixed inset-x-0 bottom-0 z-dock flex items-center justify-around border-t border-rule bg-ink/95 px-3 py-1.5 pb-safe backdrop-blur-lg md:hidden"
+        className="fixed inset-x-0 bottom-0 z-bar flex items-center justify-around border-t border-rule bg-ink/95 px-3 py-1.5 pb-safe backdrop-blur-lg md:hidden"
       >
         {mobileNavItems.map((item) => {
           const active = currentTab === item.key;

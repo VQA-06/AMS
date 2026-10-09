@@ -397,12 +397,48 @@ export function collectClassCandidates(dir: string = CLIENT): Map<string, { at: 
   return found;
 }
 
+export interface UnusedLocalClass {
+  className: string;
+  line: number;
+}
+
 /** Class names defined by the hand-written layer in `index.css`. */
 export function localCssClasses(): Set<string> {
   const css = readFileSync(join(CLIENT, 'index.css'), 'utf8');
   return new Set([...css.matchAll(/(?:^|\n)\s*\.([a-z][a-z0-9-]*)/g)].map((m) => m[1]));
 }
 
+/**
+ * Reports every class defined in `index.css` that has zero occurrences in client JSX/TSX.
+ * Strips comments first so comments mentioning e.g. document.body are not read as classes.
+ */
+export function findUnusedLocalCss(dir: string = CLIENT): UnusedLocalClass[] {
+  const css = readFileSync(join(dir, 'index.css'), 'utf8');
+  const cleanCss = css.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+  const candidates = collectClassCandidates(dir);
+  const usedClasses = new Set<string>();
+  for (const token of candidates.keys()) {
+    usedClasses.add(token.split(':').pop()!);
+  }
+
+  const EXEMPT: Record<string, true> = { 'animate-pulse': true, 'animate-spin': true };
+
+  const unused: UnusedLocalClass[] = [];
+  const lines = cleanCss.split('\n');
+
+  lines.forEach((line, index) => {
+    const matches = line.matchAll(/(?:^|[\s,{])\.([a-z][a-z0-9-]*)/g);
+    for (const match of matches) {
+      const className = match[1];
+      if (EXEMPT[className]) continue;
+      if (!usedClasses.has(className) && !unused.some((u) => u.className === className)) {
+        unused.push({ className, line: index + 1 });
+      }
+    }
+  });
+
+  return unused;
+}
 /**
  * Selectors Tailwind emitted for the supplied candidates.
  *

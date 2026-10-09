@@ -12,6 +12,7 @@ import { ApiResponse, Event, Status } from '@/shared/types';
 import { ErrorCode } from '@/shared/constants/error-codes';
 import { DefaultGuestPassManager } from '../domain/guest/guest-pass-manager';
 import { MutationCoordinator } from '../lib/mutation-coordinator';
+import { chunkArray, D1_MAX_SAFE_PARAM_CHUNK } from '../lib/d1-utils';
 const eventsRoutes = new Hono<{ Bindings: Env }>();
 
 // GET /api/events - List events
@@ -507,13 +508,16 @@ eventsRoutes.post('/bulk-close', authMiddleware, requireRole(['owner', 'admin'])
 
   const admin = c.get('admin');
   const coordinator = new MutationCoordinator(c.env.DB, c);
-  const placeholders = ids.map(() => '?').join(',');
-  const updateStmt = c.env.DB
-    .prepare(`UPDATE events SET status = 'closed', updated_at = datetime('now') WHERE id IN (${placeholders})`)
-    .bind(...ids);
+  const idChunks = chunkArray(ids, D1_MAX_SAFE_PARAM_CHUNK);
+  const statements: D1PreparedStatement[] = idChunks.map((chunk) => {
+    const placeholders = chunk.map(() => '?').join(',');
+    return c.env.DB
+      .prepare(`UPDATE events SET status = 'closed', updated_at = datetime('now') WHERE id IN (${placeholders})`)
+      .bind(...chunk);
+  });
 
   await coordinator.execute({
-    statements: [updateStmt],
+    statements,
     cacheTags: ['agenda', 'attendance'],
     audit: {
       adminId: admin?.id,
@@ -522,7 +526,6 @@ eventsRoutes.post('/bulk-close', authMiddleware, requireRole(['owner', 'admin'])
       meta: { count: ids.length, ids },
     },
   });
-
   return c.json<ApiResponse>({
     ok: true,
     data: { count: ids.length, message: `Berhasil menutup ${ids.length} kegiatan.` },

@@ -8,11 +8,12 @@ import { createRateLimiter } from '../middleware/rate-limit';
 import { edgeCache } from '../middleware/edge-cache';
 import { invalidateEdgeCache } from '../lib/edge-cache';
 import { manualAttendanceSchema } from '@/shared/schemas/scan.schema';
-import { ApiResponse, SessionType } from '@/shared/types';
+import { ActivityTier, ApiResponse, SessionType, Status } from '@/shared/types';
 import { ErrorCode } from '@/shared/constants/error-codes';
 import { sanitizeCsvRow } from '../lib/csv-sanitizer';
 import { DefaultAttendanceEngine } from '../domain/attendance/attendance-engine';
 import { MutationCoordinator } from '../lib/mutation-coordinator';
+import { chunkArray, D1_MAX_SAFE_PARAM_CHUNK } from '../lib/d1-utils';
 const attendanceRoutes = new Hono<{ Bindings: Env }>();
 
 // GET /api/attendances/event/:id - List attendances for an event
@@ -169,10 +170,20 @@ const getMemberActivityStatsHandler = async (c: Context<{ Bindings: Env }>) => {
   const query = c.req.query();
   const repo = new AttendanceRepository(c.env.DB);
 
+  const rawTier = query.tier;
+  const tier: ActivityTier | undefined =
+    rawTier === 'highly_active' || rawTier === 'active' || rawTier === 'inactive' ? rawTier : undefined;
+  const rawStatus = query.status;
+  const status: Status | 'all' | undefined =
+    rawStatus === 'active' || rawStatus === 'inactive' || rawStatus === 'candidate' || rawStatus === 'archived' || rawStatus === 'all'
+      ? rawStatus
+      : undefined;
+
   const result = await repo.getMemberActivityStats({
     division: query.division,
     search: query.search,
-    tier: query.tier as any,
+    tier,
+    status,
   });
 
   return c.json<ApiResponse>({
@@ -199,13 +210,16 @@ attendanceRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'adm
 
   const admin = c.get('admin');
   const coordinator = new MutationCoordinator(c.env.DB, c);
-  const placeholders = ids.map(() => '?').join(',');
-  const deleteStmt = c.env.DB
-    .prepare(`DELETE FROM attendances WHERE id IN (${placeholders})`)
-    .bind(...ids);
+  const idChunks = chunkArray(ids, D1_MAX_SAFE_PARAM_CHUNK);
+  const statements: D1PreparedStatement[] = idChunks.map((chunk) => {
+    const placeholders = chunk.map(() => '?').join(',');
+    return c.env.DB
+      .prepare(`DELETE FROM attendances WHERE id IN (${placeholders})`)
+      .bind(...chunk);
+  });
 
   const results = await coordinator.execute({
-    statements: [deleteStmt],
+    statements,
     cacheTags: ['attendance', 'agenda', 'members'],
     audit: {
       adminId: admin?.id,
@@ -215,7 +229,11 @@ attendanceRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'adm
     },
   });
 
-  const actualCount = results[0]?.meta?.changes ?? ids.length;
+  const deleteResults = results.slice(0, idChunks.length);
+  const actualCount =
+    deleteResults.length > 0 && deleteResults.some((r) => r?.meta?.changes !== undefined)
+      ? deleteResults.reduce((acc, r) => acc + (r?.meta?.changes ?? 0), 0)
+      : ids.length;
 
   return c.json<ApiResponse>({
     ok: true,

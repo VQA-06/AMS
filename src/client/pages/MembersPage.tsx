@@ -8,10 +8,12 @@ import { Plus } from '@phosphor-icons/react/Plus';
 import { Printer } from '@phosphor-icons/react/Printer';
 import { Trash } from '@phosphor-icons/react/Trash';
 import { UploadSimple } from '@phosphor-icons/react/UploadSimple';
+import { UserCheck } from '@phosphor-icons/react/UserCheck';
 import { UserMinus } from '@phosphor-icons/react/UserMinus';
-import { Warning } from '@phosphor-icons/react/Warning';
+import { Users } from '@phosphor-icons/react/Users';
+import { PartialBanner } from '../components/ui/PartialBanner';
 import { X } from '@phosphor-icons/react/X';
-import { Member } from '@/shared/types';
+import { Member, MemberStatsSummary, Status } from '@/shared/types';
 import { MemberInput } from '@/shared/schemas/member.schema';
 import { fetchApi } from '../lib/api-client';
 import { fetchCached, invalidateCache } from '../lib/swr-client';
@@ -21,6 +23,7 @@ import { canManageMembers, canExportData, canGenerateQR } from '../lib/permissio
 import { MemberList } from '../components/members/MemberList';
 import { MemberFormModal } from '../components/members/MemberFormModal';
 import { ImportWizard } from '../components/members/ImportWizard';
+import { CandidateWorkspace } from '../components/members/CandidateWorkspace';
 import { DigitalPassCard } from '../components/qr/DigitalPassCard';
 import { PrintBadgeSheet, PrintableToken } from '../components/qr/PrintBadgeSheet';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -28,9 +31,10 @@ import { AlertModal } from '../components/ui/AlertModal';
 import { ModalPortal } from '../components/ui/ModalPortal';
 import { Button } from '../components/ui/Button';
 import { Field } from '../components/ui/Field';
+import { Stat } from '../components/ui/Stat';
+import { Tabs } from '../components/ui/Tabs';
 import { PageHeader } from '../components/ui/PageHeader';
 import { BulkActionBar, BulkActionItem } from '@/client/components/ui/BulkActionBar';
-
 /** One focus quartet. Never `focus:outline-none` alone. */
 const focusRing =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
@@ -53,9 +57,19 @@ export const MembersPage: React.FC<MembersPageProps> = ({
   const canExport = canExportData(admin?.role);
   const canGenerate = canGenerateQR(admin?.role);
 
+  const [mainTab, setMainTab] = useState<'official' | 'candidates'>('official');
+  const [formDefaultStatus, setFormDefaultStatus] = useState<Status>('active');
+
   const [members, setMembers] = useState<Member[]>([]);
   const [divisions, setDivisions] = useState<string[]>([]);
   const [groups, setGroups] = useState<string[]>([]);
+  const [stats, setStats] = useState<MemberStatsSummary>({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    candidate: 0,
+    archived: 0,
+  });
   const [total, setTotal] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
   const [limit] = useState<number>(20);
@@ -64,8 +78,6 @@ export const MembersPage: React.FC<MembersPageProps> = ({
   const [failedSections, setFailedSections] = useState<string[]>([]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState<boolean>(false);
-
-  // Filters
   const [search, setSearch] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
 
@@ -129,26 +141,34 @@ export const MembersPage: React.FC<MembersPageProps> = ({
 
   const loadMembers = useCallback(async (opts?: { forceRefresh?: boolean }) => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (debouncedSearch) params.set('search', debouncedSearch);
-    if (selectedDivision) params.set('division', selectedDivision);
-    if (selectedStatus && selectedStatus !== 'all') params.set('status', selectedStatus);
-    params.set('limit', '100');
-
-    const url = `/api/members?${params.toString()}`;
+    setFailedSections((prev) => prev.filter((s) => s !== 'anggota'));
     try {
-      const res = await fetchCached<{ members: Member[]; total: number }>(url, {
-        forceRefresh: opts?.forceRefresh,
-        ttlMs: 30_000,
-      });
-      setMembers(res.members || []);
-      setTotal(res.total || 0);
-      setFailedSections([]);
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (selectedDivision) params.set('division', selectedDivision);
+      if (selectedStatus && selectedStatus !== 'all') {
+        params.set('status', selectedStatus);
+      }
+      params.set('limit', '500');
+
+      const data = await fetchCached<{ members: Member[]; total: number }>(
+        `/api/members?${params.toString()}`,
+        {
+          forceRefresh: opts?.forceRefresh,
+          ttlMs: 5_000,
+        }
+      );
+
+      // Anggota Resmi view strictly includes active and inactive members, excluding candidate and archived.
+      const officialMembers = (data.members || []).filter(
+        (m) => m.status === 'active' || m.status === 'inactive'
+      );
+
+      setMembers(officialMembers);
+      setTotal(officialMembers.length);
     } catch (err) {
-      // Never render a failed fetch as a plausible zero: keep the last good
-      // rows and name the failure in the banner instead.
       console.error('Failed to load members:', err);
-      setFailedSections(['anggota']);
+      setFailedSections((prev) => [...prev.filter((s) => s !== 'anggota'), 'anggota']);
     } finally {
       setLoading(false);
     }
@@ -168,15 +188,31 @@ export const MembersPage: React.FC<MembersPageProps> = ({
       return rest;
     });
   };
+  const loadStats = useCallback(async (opts?: { forceRefresh?: boolean }) => {
+    try {
+      const summary = await fetchCached<MemberStatsSummary>('/api/members/stats/summary', {
+        forceRefresh: opts?.forceRefresh,
+        ttlMs: 5_000,
+      });
+      setStats(summary);
+      setFailedSections((prev) => prev.filter((s) => s !== 'statistik'));
+    } catch (err) {
+      console.error('Failed to load member stats:', err);
+      setFailedSections((prev) => [...prev.filter((s) => s !== 'statistik'), 'statistik']);
+    }
+  }, []);
+
 
 
   useEffect(() => {
     loadMembers();
+    loadStats();
     loadOptions();
 
     // Listen for realtime mutation events across tabs and modals
     const handleMutation = () => {
       loadMembers({ forceRefresh: true });
+      loadStats({ forceRefresh: true });
       loadOptions({ forceRefresh: true });
     };
 
@@ -184,15 +220,16 @@ export const MembersPage: React.FC<MembersPageProps> = ({
     return () => {
       window.removeEventListener('ams:data-mutated', handleMutation);
     };
-  }, [loadMembers]);
+  }, [loadMembers, loadStats]);
 
   useEffect(() => {
     if (openAddModalTrigger) {
+      setFormDefaultStatus(mainTab === 'candidates' ? 'candidate' : 'active');
       setEditingMember(null);
       setIsFormOpen(true);
       onResetAddModalTrigger?.();
     }
-  }, [openAddModalTrigger, onResetAddModalTrigger]);
+  }, [openAddModalTrigger, onResetAddModalTrigger, mainTab]);
 
   const handleSaveMember = async (data: MemberInput) => {
     if (editingMember) {
@@ -210,6 +247,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
     invalidateCache('/api/attendances');
     await loadMembers({ forceRefresh: true });
     await loadOptions({ forceRefresh: true });
+    await loadStats({ forceRefresh: true });
     onRefreshGlobal?.();
   };
 
@@ -234,6 +272,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           await loadMembers({ forceRefresh: true });
           await loadOptions({ forceRefresh: true });
+          await loadStats({ forceRefresh: true });
           onRefreshGlobal?.();
           setAlertModal({
             isOpen: true,
@@ -356,6 +395,27 @@ export const MembersPage: React.FC<MembersPageProps> = ({
     }
   };
 
+  const handleBulkPrintForList = async (targetMembers: Member[]) => {
+    if (targetMembers.length === 0) return;
+    try {
+      setBulkLoading(true);
+      const res = await fetchApi<{ tokens: PrintableToken[] }>('/api/members/bulk-tokens', {
+        method: 'POST',
+        body: JSON.stringify({ ids: targetMembers.map((m) => m.id) }),
+      });
+      setBulkPrintTokens(res.tokens || []);
+      setIsPrintSheetOpen(true);
+    } catch (err) {
+      setAlertModal({
+        isOpen: true,
+        title: 'Gagal Memuat Tiket Cetak',
+        message: err instanceof Error ? err.message : 'Gagal memuat tiket QR Universal.',
+        type: 'error',
+      });
+    } finally {
+      setBulkLoading(false);
+    }
+  };
   const handleBulkDeactivateSelected = () => {
     const ids = Array.from(selectedMemberIds);
     if (ids.length === 0) return;
@@ -382,6 +442,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
           setSelectedMemberIds(new Set());
           await loadMembers({ forceRefresh: true });
+          await loadStats({ forceRefresh: true });
           onRefreshGlobal?.();
         } catch (err) {
           setAlertModal({
@@ -434,6 +495,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
             type: 'error',
           });
         } finally {
+          await loadStats({ forceRefresh: true });
           setConfirmLoading(false);
         }
       },
@@ -493,202 +555,312 @@ export const MembersPage: React.FC<MembersPageProps> = ({
               </span>
             )}
 
-            {canGenerate && (
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<Printer className="w-4 h-4 text-ink-2" />}
-                onClick={handleOpenBulkPrint}
-                loading={bulkLoading}
-                title="Cetak A4 / Simpan PDF QR Universal Seluruh Anggota Aktif"
-              >
-                Cetak Semua Badge / PDF
-              </Button>
-            )}
-
-            {isManager && (
+            {mainTab === 'official' ? (
               <>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  icon={<Plus className="w-4 h-4" />}
-                  onClick={() => {
-                    setEditingMember(null);
-                    setIsFormOpen(true);
-                  }}
-                >
-                  Tambah Anggota
-                </Button>
+                {canGenerate && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<Printer className="w-4 h-4 text-ink-2" />}
+                    onClick={handleOpenBulkPrint}
+                    loading={bulkLoading}
+                    title="Cetak A4 / Simpan PDF QR Universal Seluruh Anggota Aktif"
+                  >
+                    Cetak Semua Badge / PDF
+                  </Button>
+                )}
+                {isManager && (
+                  <>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={<Plus className="w-4 h-4" />}
+                      onClick={() => {
+                        setFormDefaultStatus('active');
+                        setEditingMember(null);
+                        setIsFormOpen(true);
+                      }}
+                    >
+                      Tambah Anggota
+                    </Button>
 
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon={<UploadSimple className="w-4 h-4 text-ink-2" />}
-                  onClick={() => setIsImportOpen(true)}
-                >
-                  Impor CSV / Excel
-                </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<UploadSimple className="w-4 h-4 text-ink-2" />}
+                      onClick={() => {
+                        setFormDefaultStatus('active');
+                        setIsImportOpen(true);
+                      }}
+                    >
+                      Impor CSV / Excel
+                    </Button>
+                  </>
+                )}
+                {canExport && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<DownloadSimple className="w-4 h-4 text-seal-600" />}
+                    onClick={handleExportCsv}
+                    title="Ekspor CSV"
+                  >
+                    Ekspor CSV
+                  </Button>
+                )}
               </>
-            )}
+            ) : (
+              <>
+                {isManager && (
+                  <>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={<Plus className="w-4 h-4" />}
+                      onClick={() => {
+                        setFormDefaultStatus('candidate');
+                        setEditingMember(null);
+                        setIsFormOpen(true);
+                      }}
+                    >
+                      Tambah Calon
+                    </Button>
 
-            {canExport && (
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<DownloadSimple className="w-4 h-4 text-seal-600" />}
-                onClick={handleExportCsv}
-                title="Ekspor CSV Anggota"
-              >
-                Ekspor CSV
-              </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<UploadSimple className="w-4 h-4 text-ink-2" />}
+                      onClick={() => {
+                        setFormDefaultStatus('candidate');
+                        setIsImportOpen(true);
+                      }}
+                    >
+                      Impor Calon
+                    </Button>
+                  </>
+                )}
+                {canExport && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<DownloadSimple className="w-4 h-4 text-seal-600" />}
+                    onClick={() => {
+                      window.open('/api/members/export?status=candidate&format=csv', '_blank');
+                    }}
+                    title="Ekspor CSV Calon Anggota"
+                  >
+                    Ekspor CSV
+                  </Button>
+                )}
+              </>
             )}
           </>
         }
       />
 
-      {/* Honest partial-failure notice: a failed fetch is never a zero. */}
-      {failedSections.length > 0 && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-start gap-2 rounded-panel border border-pending-200 bg-pending-50/70 px-3 py-2.5 text-xs text-pending-800"
-        >
-          <Warning className="mt-0.5 w-3.5 h-3.5 shrink-0" />
-          <p>
-            Sebagian data gagal dimuat: {failedSections.join(', ')}. Angka di bawah mungkin tidak
-            lengkap, bukan nol.
-          </p>
-        </div>
-      )}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Tabs
+          items={[
+            { id: 'official', label: 'Anggota Resmi' },
+            { id: 'candidates', label: 'Calon Anggota & Pelantikan' },
+          ]}
+          active={mainTab}
+          onChange={(id) => {
+            setMainTab(id as 'official' | 'candidates');
+            setSelectedMemberIds(new Set());
+          }}
+          className="w-full sm:w-auto"
+        />
+      </div>
 
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col items-stretch gap-2.5 rounded-panel border border-rule bg-paper-raised p-2.5 md:flex-row md:items-center md:justify-between sm:p-3">
-        <Field
-          id="members-page-field-1"
-          label="Cari Anggota"
-          control="text"
-          value={search}
-          onChange={setSearch}
-          placeholder="Cari berdasarkan nama, NIM/ID, email, atau no HP..."
-          className="flex-1"
-          controlClassName="py-2 pl-9 pr-8 text-xs"
-          leadingIcon={<MagnifyingGlass className="h-4 w-4" />}
-          trailing={
-            search ? (
+      {mainTab === 'candidates' ? (
+        <CandidateWorkspace
+          canManage={isManager}
+          canExport={canExport}
+          canGenerate={canGenerate}
+          divisions={divisions}
+          groups={groups}
+          onViewPass={handleViewPass}
+          onBulkPrint={handleBulkPrintForList}
+          onOpenAddCandidate={() => {
+            setFormDefaultStatus('candidate');
+            setEditingMember(null);
+            setIsFormOpen(true);
+          }}
+          onOpenImportCandidate={() => {
+            setFormDefaultStatus('candidate');
+            setIsImportOpen(true);
+          }}
+          onEditCandidate={(m) => {
+            setFormDefaultStatus(m.status);
+            setEditingMember(m);
+            setIsFormOpen(true);
+          }}
+          onRefreshGlobal={() => {
+            loadStats({ forceRefresh: true });
+            onRefreshGlobal?.();
+          }}
+        />
+      ) : (
+        <>
+          {/* Honest partial-failure notice: a failed fetch is never a zero. */}
+          <PartialBanner sections={failedSections} />
+          {/* Member Summary Metrics */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Stat
+              label="Total Anggota"
+              value={stats.active + stats.inactive}
+              hint="Seluruh anggota resmi terdaftar"
+              icon={<Users className="w-4 h-4" />}
+              failed={failedSections.includes('statistik')}
+            />
+            <Stat
+              label="Anggota Aktif"
+              value={stats.active}
+              hint="Memiliki hak akses & pass QR aktif"
+              // mark="seal"
+              icon={<UserCheck className="w-4 h-4" />}
+              failed={failedSections.includes('statistik')}
+            />
+            <Stat
+              label="Anggota Nonaktif"
+              value={stats.inactive}
+              hint="Akun & pass dinonaktifkan sementara"
+              // mark="idle"
+              icon={<UserMinus className="w-4 h-4" />}
+              failed={failedSections.includes('statistik')}
+            />
+          </div>
+
+
+          {/* Filter & Search Bar */}
+          <div className="flex flex-col items-stretch gap-2.5 rounded-panel border border-rule bg-paper-raised p-2.5 md:flex-row md:items-center md:justify-between sm:p-3">
+            <Field
+              id="members-page-field-1"
+              label="Cari Anggota"
+              control="text"
+              value={search}
+              onChange={setSearch}
+              placeholder="Cari berdasarkan nama, NIM/ID, email, atau no HP..."
+              className="flex-1"
+              controlClassName="py-2 pl-9 pr-8 text-xs"
+              leadingIcon={<MagnifyingGlass className="h-4 w-4" />}
+              trailing={
+                search ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    aria-label="Hapus teks pencarian"
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-ink-2 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-500 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null
+              }
+            />
+
+            <div className="flex w-full flex-wrap items-center gap-2 md:w-auto sm:flex-nowrap">
+              {/* Division Filter */}
+              <Field
+                id="members-page-field-2"
+                label="Filter Divisi"
+                control="select"
+                value={selectedDivision}
+                onChange={setSelectedDivision}
+                className="min-w-[140px] flex-1 sm:flex-initial"
+                controlClassName="py-2 pl-8 pr-7 text-xs font-medium"
+                leadingIcon={<Buildings className="h-3.5 w-3.5" />}
+                hideSelectArrow
+                trailing={<FunnelSimple className="h-3 w-3 text-ink-2" />}
+                options={[
+                  { value: '', label: 'Semua Divisi' },
+                  ...divisions.map((div) => ({ value: div, label: div })),
+                ]}
+              />
+
+              {/* Status Filter */}
+              <Field
+                id="members-page-field-3"
+                label="Filter Status"
+                control="select"
+                value={selectedStatus}
+                onChange={setSelectedStatus}
+                className="min-w-[140px] flex-1 sm:flex-initial"
+                controlClassName="py-2 px-3 text-xs font-medium"
+                hideSelectArrow
+                trailing={<FunnelSimple className="h-3 w-3 text-ink-2" />}
+                options={[
+                  { value: 'all', label: 'Semua Status' },
+                  { value: 'active', label: 'Aktif' },
+                  { value: 'inactive', label: 'Nonaktif' },
+                ]}
+              />
+
+              {(search || selectedDivision || (selectedStatus && selectedStatus !== 'all')) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setSelectedDivision('');
+                    setSelectedStatus('all');
+                  }}
+                  aria-label="Reset semua filter"
+                  className={cn(
+                    'flex shrink-0 items-center gap-1.5 rounded-chip border border-pen-200 bg-pen-50/70 px-3 py-2 text-xs font-semibold text-pen-deep transition-colors hover:bg-pen-50/70 hover:text-ink',
+                    focusRing
+                  )}
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Reset</span>
+                </button>
+              )}
+
               <button
                 type="button"
-                onClick={() => setSearch('')}
-                aria-label="Hapus teks pencarian"
-                className="rounded-full p-0.5 text-ink-2 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-500 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                onClick={() => loadMembers({ forceRefresh: true })}
+                aria-label="Refresh daftar anggota"
+                className={cn(
+                  'flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-chip border border-rule-strong bg-paper px-2.5 py-2 text-ink-2 transition-colors hover:text-ink',
+                  focusRing
+                )}
+                title="Refresh"
               >
-                <X className="h-3.5 w-3.5" />
+                <ArrowClockwise className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
               </button>
-            ) : null
-          }
-        />
+            </div>
+          </div>
 
-        <div className="flex w-full flex-wrap items-center gap-2 md:w-auto sm:flex-nowrap">
-          {/* Division Filter */}
-          <Field
-            id="members-page-field-2"
-            label="Filter Divisi"
-            control="select"
-            value={selectedDivision}
-            onChange={setSelectedDivision}
-            className="min-w-[140px] flex-1 sm:flex-initial"
-            controlClassName="py-2 pl-8 pr-7 text-xs font-medium"
-            leadingIcon={<Buildings className="h-3.5 w-3.5" />}
-            hideSelectArrow
-            trailing={<FunnelSimple className="h-3 w-3 text-ink-2" />}
-            options={[
-              { value: '', label: 'Semua Divisi' },
-              ...divisions.map((div) => ({ value: div, label: div })),
-            ]}
+          {/* Member List */}
+          <MemberList
+            members={members}
+            loading={loading}
+            canManage={isManager}
+            selectedIds={selectedMemberIds}
+            onToggleSelect={handleToggleSelect}
+            onToggleSelectAll={handleToggleSelectAll}
+            isAllSelected={members.length > 0 && selectedMemberIds.size === members.length}
+            onEdit={(m) => {
+              setFormDefaultStatus(m.status);
+              setEditingMember(m);
+              setIsFormOpen(true);
+            }}
+            onDelete={handleDelete}
+            onViewPass={handleViewPass}
           />
 
-          {/* Status Filter */}
-          <Field
-            id="members-page-field-3"
-            label="Filter Status"
-            control="select"
-            value={selectedStatus}
-            onChange={setSelectedStatus}
-            className="min-w-[140px] flex-1 sm:flex-initial"
-            controlClassName="py-2 px-3 text-xs font-medium"
-            hideSelectArrow
-            trailing={<FunnelSimple className="h-3 w-3 text-ink-2" />}
-            options={[
-              { value: 'all', label: 'Semua Status' },
-              { value: 'active', label: 'Aktif' },
-              { value: 'inactive', label: 'Nonaktif' },
-            ]}
+          {/* Contextual Floating Bulk Action Bar */}
+          <BulkActionBar
+            selectedCount={selectedMemberIds.size}
+            onClearSelection={handleClearSelection}
+            actions={bulkActions}
           />
-
-          {(search || selectedDivision || (selectedStatus && selectedStatus !== 'all')) && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearch('');
-                setSelectedDivision('');
-                setSelectedStatus('all');
-              }}
-              aria-label="Reset semua filter"
-              className={cn(
-                'flex shrink-0 items-center gap-1.5 rounded-chip border border-pen-200 bg-pen-50/70 px-3 py-2 text-xs font-semibold text-pen-deep transition-colors hover:bg-pen-50/70 hover:text-ink',
-                focusRing
-              )}
-            >
-              <X className="w-3.5 h-3.5" />
-              <span>Reset</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => loadMembers({ forceRefresh: true })}
-            aria-label="Refresh daftar anggota"
-            className={cn(
-              'flex min-h-[36px] min-w-[36px] shrink-0 items-center justify-center rounded-chip border border-rule-strong bg-paper px-2.5 py-2 text-ink-2 transition-colors hover:text-ink',
-              focusRing
-            )}
-            title="Refresh"
-          >
-            <ArrowClockwise className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
-          </button>
-        </div>
-      </div>
-      {/* Member List */}
-      <MemberList
-        members={members}
-        loading={loading}
-        canManage={isManager}
-        selectedIds={selectedMemberIds}
-        onToggleSelect={handleToggleSelect}
-        onToggleSelectAll={handleToggleSelectAll}
-        isAllSelected={members.length > 0 && selectedMemberIds.size === members.length}
-        onEdit={(m) => {
-          setEditingMember(m);
-          setIsFormOpen(true);
-        }}
-        onDelete={handleDelete}
-        onViewPass={handleViewPass}
-      />
-
-      {/* Contextual Floating Bulk Action Bar */}
-      <BulkActionBar
-        selectedCount={selectedMemberIds.size}
-        totalCount={members.length}
-        itemLabel="Anggota"
-        onClearSelection={handleClearSelection}
-        onSelectAll={handleToggleSelectAll}
-        isAllSelected={members.length > 0 && selectedMemberIds.size === members.length}
-        actions={bulkActions}
-      />
-
+        </>
+      )}
       {/* Modals */}
       <MemberFormModal
         isOpen={isFormOpen}
         member={editingMember}
+        defaultStatus={formDefaultStatus}
         onClose={() => setIsFormOpen(false)}
         onSave={handleSaveMember}
         divisionList={divisions}
@@ -725,6 +897,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({
           <div className="modal-backdrop-full">
             <div className="surface w-full max-w-4xl my-auto max-h-[92dvh] overflow-y-auto">
               <ImportWizard
+                defaultStatus={formDefaultStatus}
                 onSuccess={() => {
                   setIsImportOpen(false);
                   invalidateCache('/api/members');

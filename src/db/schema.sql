@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS members (
   phone TEXT,
   group_name TEXT,
   division TEXT,
-  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive','candidate','archived')),
   metadata TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))

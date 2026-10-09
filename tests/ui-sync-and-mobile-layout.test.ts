@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   mobileNavItems,
   desktopNavGroups,
@@ -73,5 +75,49 @@ describe('Shared colour semantics', () => {
     expect(eventStatusVariant('active')).toBe('seal');
     expect(eventStatusVariant('closed')).toBe('danger');
     expect(eventStatusVariant('unknown-future-status')).toBe('neutral');
+  });
+});
+
+describe('Touch target floor', () => {
+  it('enforces 44px minimum target height on interactive elements', () => {
+    const violations: string[] = [];
+    const clientDir = join(process.cwd(), 'src/client');
+
+    function collect(dir: string, acc: string[] = []): string[] {
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) collect(full, acc);
+        else if (entry.endsWith('.tsx') || entry.endsWith('.ts')) acc.push(full);
+      }
+      return acc;
+    }
+
+    const files = collect(clientDir);
+    const UNDERSIZED_RE = /\b(?:min-[hw]-\[3\dpx\]|[hw]-(?:8|9))\b/;
+
+    for (const file of files) {
+      const rel = file.slice(clientDir.length + 1);
+      const src = readFileSync(file, 'utf8');
+      const lines = src.split('\n');
+
+      lines.forEach((line, idx) => {
+        const clean = line.replace(/\/\*.*?\*\/|\/\/.*/, '');
+        if (!UNDERSIZED_RE.test(clean)) return;
+
+        const isInteractive =
+          /<button|<a\s|role=["'](?:button|tab)["']|iconButtonClass|sizeClasses|actionClass|LogoutButton/.test(
+            clean
+          ) || /<[A-Z]\w+[^>]*\b(?:onClick|onToggle|onClose|onSelect)\b/.test(clean);
+
+        if (isInteractive && !clean.includes('touch-target') && !clean.includes('min-h-[44px]')) {
+          violations.push(`${rel}:${idx + 1}  ${line.trim()}`);
+        }
+      });
+    }
+
+    expect(
+      violations,
+      `Interactive elements below 44px violate touch target floor:\n${violations.join('\n')}`
+    ).toEqual([]);
   });
 });

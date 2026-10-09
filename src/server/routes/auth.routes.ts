@@ -115,7 +115,7 @@ authRoutes.post('/login', authRateLimiter({ maxAttempts: 10, windowMs: 15 * 60 *
     }
   }
 
-  // Verify password from database with automatic upgrade to 600,000 iterations
+  // Verify password from database with automatic upgrade to 100,000 iterations
   if (admin.password_hash) {
     const { valid: isPasswordValid, needsUpgrade } = await verifyPasswordAndCheckUpgrade(
       input.password,
@@ -134,7 +134,7 @@ authRoutes.post('/login', authRateLimiter({ maxAttempts: 10, windowMs: 15 * 60 *
       );
     }
 
-    // Transparently upgrade legacy iteration hashes to 600,000 PBKDF2 iterations
+    // Transparently upgrade legacy iteration hashes to 100,000 PBKDF2 iterations
     if (needsUpgrade) {
       const upgradedHash = await hashPassword(input.password);
       await adminRepo.update(admin.id, { password_hash: upgradedHash });

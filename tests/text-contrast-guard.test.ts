@@ -3,11 +3,12 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   findDeadClasses,
+  findUnusedLocalCss,
   tailwindSelectorsFor,
   localCssClasses,
   scanSource,
 } from './lib/dead-utility-classes';
-import { scanFile } from './lib/contrast-grounds';
+import { scanFile, findDarkGroundInkText } from './lib/contrast-grounds';
 
 const CLIENT = join(process.cwd(), 'src/client');
 
@@ -158,6 +159,14 @@ describe('text contrast guard', () => {
         .join('\n')}`
     ).toEqual([]);
   });
+  it('detects ink text on dark grounds including bg-ink (ownGround regression check)', () => {
+    const syntheticOffenders = findDarkGroundInkText(
+      'synthetic.tsx',
+      '<div className="bg-ink"><p className="text-ink-2">x</p></div>'
+    );
+    expect(syntheticOffenders.length).toBe(1);
+    expect(syntheticOffenders[0].text).toContain('text-ink-2');
+  });
 
   it('uses no undefined utility class', async () => {
     // A class name no stylesheet defines renders as no CSS at all — the element
@@ -248,6 +257,101 @@ describe('text contrast guard', () => {
     expect(
       scanSource(labelMap).map(([text]) => text),
       'a string-valued label map was read as classes'
+    ).toEqual([]);
+  });
+  it('defines no unused CSS classes in index.css (bidirectional check)', () => {
+    const unused = findUnusedLocalCss();
+    expect(
+      unused.map((u) => `index.css:${u.line} .${u.className}`),
+      `CSS classes defined in index.css with no usage in client:\n${unused
+        .map((u) => `index.css:${u.line} .${u.className}`)
+        .join('\n')}`
+    ).toEqual([]);
+  });
+
+  it('grounds viewport height on dvh and rejects raw screen viewport utilities', () => {
+    const violations: string[] = [];
+    const VIEWPORT_SCREEN_RE = /\b(?:min-h-screen|(?<!\w)h-screen|min-w-screen|(?<!\w)w-screen)\b/;
+
+    for (const file of files) {
+      const rel = file.slice(CLIENT.length + 1);
+      const raw = readFileSync(file, 'utf8');
+      const noComments = raw
+        .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+        .replace(/\/\/.*/g, '');
+      const lines = noComments.split('\n');
+      lines.forEach((line, idx) => {
+        if (VIEWPORT_SCREEN_RE.test(line)) {
+          violations.push(`${rel}:${idx + 1}  ${line.trim()}`);
+        }
+      });
+    }
+
+    const indexHtml = readFileSync(join(process.cwd(), 'index.html'), 'utf8').split('\n');
+    indexHtml.forEach((line, idx) => {
+      const codeOnly = line.replace(/<!--.*?-->/, '');
+      if (VIEWPORT_SCREEN_RE.test(codeOnly)) {
+        violations.push(`index.html:${idx + 1}  ${line.trim()}`);
+      }
+    });
+
+    expect(
+      violations,
+      `Raw screen viewport utilities violate DESIGN.md dvh basis:\n${violations.join('\n')}`
+    ).toEqual([]);
+  });
+
+  it('ensures exactly one scroll container per table without parent overflow-x', () => {
+    const violations: string[] = [];
+    for (const file of files) {
+      if (file.endsWith('Table.tsx')) continue;
+      const src = readFileSync(file, 'utf8');
+      if (!src.includes('<Table')) continue;
+
+      const rel = file.slice(CLIENT.length + 1);
+      const clean = src.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+      const tagRe = /<(\/?[a-zA-Z0-9]+)([^>]*)>/g;
+      const stack: { tag: string; hasOverflowX: boolean }[] = [];
+      let match: RegExpExecArray | null;
+
+      while ((match = tagRe.exec(clean)) !== null) {
+        const isClosing = match[1].startsWith('/');
+        const tagName = isClosing ? match[1].slice(1) : match[1];
+        const attrs = match[2];
+        const isSelfClosing = attrs.endsWith('/') || ['img', 'input', 'br', 'hr'].includes(tagName);
+
+        if (isClosing) {
+          let idx = -1;
+          for (let i = stack.length - 1; i >= 0; i--) {
+            if (stack[i].tag === tagName) {
+              idx = i;
+              break;
+            }
+          }
+          if (idx !== -1) stack.splice(idx);
+        } else {
+          const hasOverflowX =
+            /className=["'][^"']*\boverflow-x-(?:auto|scroll)\b/.test(attrs) ||
+            /className=\{[^}]*\boverflow-x-(?:auto|scroll)\b/.test(attrs);
+
+          if (tagName === 'Table') {
+            const badAncestor = stack.find((item) => item.hasOverflowX);
+            if (badAncestor) {
+              const line = clean.slice(0, match.index).split('\n').length;
+              violations.push(`${rel}:${line} <Table> wrapped in ancestor <${badAncestor.tag}> with overflow-x`);
+            }
+          }
+
+          if (!isSelfClosing) {
+            stack.push({ tag: tagName, hasOverflowX });
+          }
+        }
+      }
+    }
+
+    expect(
+      violations,
+      `Table already owns the scroll container; outer overflow-x is redundant:\n${violations.join('\n')}`
     ).toEqual([]);
   });
 });

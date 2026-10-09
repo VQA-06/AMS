@@ -22,6 +22,9 @@ import { AlertModal } from '../../components/ui/AlertModal';
 import { Field } from '../../components/ui/Field';
 import { ModalPortal } from '../../components/ui/ModalPortal';
 import { Table, THead, TBody, TRow, TCell } from '../../components/ui/Table';
+import { RowActions, type RowActionItem } from '../../components/ui/RowActions';
+import { RowList, type RowListItem } from '../../components/ui/RowList';
+import { cn } from '../../lib/cn';
 
 interface TeamTabProps {
   currentAdmin: Admin | null;
@@ -41,8 +44,17 @@ interface TeamTabProps {
 const adminMark = (status: Admin['status']): MarkTone =>
   status === 'active' ? 'seal' : 'danger';
 
-const iconButtonClass =
-  'flex h-9 w-9 items-center justify-center rounded-chip border border-rule-strong bg-paper-raised text-ink transition-colors duration-120 hover:border-rule-strong hover:text-paper-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+/** The one focus quartet on every hand-rolled control in this file. */
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+
+const iconButtonClass = (tone: 'neutral' | 'danger') =>
+  cn(
+    'flex min-h-[44px] min-w-[44px] items-center justify-center rounded-chip transition-colors duration-120 ease-out-expo',
+    focusRing,
+    tone === 'neutral' && 'text-ink-2 hover:bg-paper-sunk hover:text-ink',
+    tone === 'danger' && 'text-ink-2 hover:bg-pending-50 hover:text-pending-700'
+  );
 
 type AccessLevel = 'full' | 'readonly' | 'none';
 interface RbacRow {
@@ -299,6 +311,8 @@ export const TeamTab: React.FC<TeamTabProps> = ({
     (a) => a.id !== currentAdmin?.id && !(a.role === 'owner' && a.member_id === null)
   );
 
+  const isOwner = currentAdmin?.role === 'owner';
+
   const handleToggleSelectAdmin = (id: string) => {
     setSelectedAdminIds((prev) => {
       const next = new Set(prev);
@@ -375,7 +389,11 @@ export const TeamTab: React.FC<TeamTabProps> = ({
     }
   };
 
-  const adminBulkActions: BulkActionItem[] = currentAdmin?.role === 'owner'
+  /** Rows that may carry a checkbox. `RowList` needs this as an id set; the
+   *  same array still drives `handleToggleSelectAllAdmins`. */
+  const selectableAdminIdSet = new Set(selectableAdmins.map((a) => a.id));
+
+  const adminBulkActions: BulkActionItem[] = isOwner
     ? [
         {
           label: 'Hapus',
@@ -385,6 +403,77 @@ export const TeamTab: React.FC<TeamTabProps> = ({
         },
       ]
     : [];
+
+  const adminItems: RowListItem[] = admins.map((adm) => {
+    const roleInfo = getRoleInfo(adm.role);
+    const meta = [
+      roleInfo.label,
+      adm.email,
+      adm.member_id ? 'Terkait Anggota' : 'Default Master',
+      adm.member_division ? `Divisi: ${adm.member_division}` : null,
+    ]
+      .filter(Boolean)
+      .join('  ·  ');
+
+    const canDelete = adm.id !== 'adm_owner_default' && adm.id !== currentAdmin?.id;
+
+    const menuItems: RowActionItem[] = [
+      {
+        label: `Edit ${adm.name}`,
+        icon: <PencilSimple className="h-4 w-4" />,
+        onSelect: () => handleOpenEditModal(adm),
+      },
+      ...(canDelete
+        ? [
+            {
+              label: `Hapus ${adm.name}`,
+              icon: <Trash className="h-4 w-4" />,
+              onSelect: () => handleDeleteAdmin(adm),
+              tone: 'danger' as const,
+            },
+          ]
+        : []),
+    ];
+
+    return {
+      id: adm.id,
+      title: adm.name,
+      meta: meta || undefined,
+      status: {
+        label: adm.status === 'active' ? 'Aktif' : 'Nonaktif',
+        tone: adminMark(adm.status),
+      },
+      action: isOwner ? (
+        <span className="flex items-center gap-1">
+          {/* Desktop keeps the inline cluster; below `sm` the same actions live
+              in the kebab, because two 44px targets do not fit a 344px row. */}
+          <span className="hidden items-center gap-1 sm:flex">
+            <button
+              type="button"
+              onClick={() => handleOpenEditModal(adm)}
+              title="Edit Akun Panitia"
+              aria-label={`Edit akun ${adm.name}`}
+              className={iconButtonClass('neutral')}
+            >
+              <PencilSimple className="h-4 w-4" />
+            </button>
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => handleDeleteAdmin(adm)}
+                title="Hapus Akun Panitia"
+                aria-label={`Hapus akun ${adm.name}`}
+                className={iconButtonClass('danger')}
+              >
+                <Trash className="h-4 w-4" />
+              </button>
+            )}
+          </span>
+          <RowActions className="sm:hidden" label={`Menu aksi ${adm.name}`} items={menuItems} />
+        </span>
+      ) : undefined,
+    };
+  });
 
   return (
     <div className="space-y-5 lg:space-y-6">
@@ -401,7 +490,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
             </p>
           </div>
 
-          {currentAdmin?.role === 'owner' && (
+          {isOwner && (
             <Button
               variant="primary"
               size="sm"
@@ -419,114 +508,20 @@ export const TeamTab: React.FC<TeamTabProps> = ({
           )}
         </div>
 
-        <Table className="rounded-panel border border-rule">
-          <THead>
-            <tr>
-              {currentAdmin?.role === 'owner' && (
-                <TCell header className="w-10 text-center">
-                  <input
-                    type="checkbox"
-                    aria-label="Pilih semua akun panitia"
-                    checked={selectableAdmins.length > 0 && selectedAdminIds.size === selectableAdmins.length}
-                    onChange={handleToggleSelectAllAdmins}
-                    className="h-4 w-4 cursor-pointer rounded border-rule-strong bg-ink accent-pen-500"
-                    title={selectedAdminIds.size === selectableAdmins.length ? 'Batalkan pilih semua' : 'Pilih semua'}
-                  />
-                </TCell>
-              )}
-              <TCell header>Nama &amp; Identitas</TCell>
-              <TCell header>Role / Peran</TCell>
-              <TCell header>Tipe Akun</TCell>
-              <TCell header>Status</TCell>
-              {currentAdmin?.role === 'owner' && <TCell header className="text-right">Aksi</TCell>}
-            </tr>
-          </THead>
-          <TBody>
-            {admins.map((adm) => {
-              const isSelectable = adm.id !== currentAdmin?.id && !(adm.role === 'owner' && adm.member_id === null);
-              const isSelected = selectedAdminIds.has(adm.id);
-              const roleInfo = getRoleInfo(adm.role);
-              return (
-                <TRow key={adm.id} selected={isSelected} mark={adminMark(adm.status)}>
-                  {currentAdmin?.role === 'owner' && (
-                    <TCell className="w-10 text-center">
-                      {isSelectable ? (
-                        <input
-                          type="checkbox"
-                          aria-label={`Pilih akun ${adm.name}`}
-                          checked={isSelected}
-                          onChange={() => handleToggleSelectAdmin(adm.id)}
-                          className="h-4 w-4 cursor-pointer rounded border-rule-strong bg-ink accent-pen-500"
-                        />
-                      ) : (
-                        <span className="text-xs text-ink-3">-</span>
-                      )}
-                    </TCell>
-                  )}
-                  <TCell>
-                    <div className="max-w-[16rem] truncate font-semibold text-ink">{adm.name}</div>
-                    <div className="max-w-[16rem] truncate font-oxanium text-[11px] text-ink-2">
-                      {adm.email}
-                    </div>
-                    {adm.member_division && (
-                      <span className="mt-0.5 inline-block max-w-[16rem] truncate rounded-chip border border-pen-200 bg-pen-50/70 px-1.5 py-0.5 text-[10px] text-ink-2">
-                        Divisi: {adm.member_division}
-                      </span>
-                    )}
-                  </TCell>
-                  <TCell>
-                    <Badge variant={roleInfo.variant} size="xs">
-                      {roleInfo.label}
-                    </Badge>
-                  </TCell>
-                  <TCell className="text-[11px] text-ink-2">
-                    {adm.member_id ? 'Terkait Anggota' : 'Default Master'}
-                  </TCell>
-                  <TCell>
-                    <Badge variant={adm.status === 'active' ? 'seal' : 'danger'} size="xs" dot>
-                      {adm.status === 'active' ? 'Aktif' : 'Nonaktif'}
-                    </Badge>
-                  </TCell>
-                  {currentAdmin?.role === 'owner' && (
-                    <TCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditModal(adm)}
-                          aria-label={`Edit akun ${adm.name}`}
-                          className={iconButtonClass}
-                          title="Edit Akun Panitia"
-                        >
-                          <PencilSimple className="h-3.5 w-3.5" />
-                        </button>
-                        {adm.id !== 'adm_owner_default' && adm.id !== currentAdmin.id && (
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteAdmin(adm)}
-                            aria-label={`Hapus akun ${adm.name}`}
-                            className={`${iconButtonClass} hover:border-pen-600 hover:text-pen-deep`}
-                            title="Hapus Akun Panitia"
-                          >
-                            <Trash className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </TCell>
-                  )}
-                </TRow>
-              );
-            })}
-          </TBody>
-        </Table>
+        <RowList
+          items={adminItems}
+          selectable={isOwner}
+          selectableIds={isOwner ? selectableAdminIdSet : undefined}
+          selectedIds={selectedAdminIds}
+          onToggle={handleToggleSelectAdmin}
+          onToggleAll={handleToggleSelectAllAdmins}
+          itemLabel="akun panitia"
+        />
 
         {/* Contextual Floating Bulk Action Bar for Team Tab */}
         <BulkActionBar
           selectedCount={selectedAdminIds.size}
-          totalCount={selectableAdmins.length}
-          itemLabel="Akun"
           onClearSelection={handleClearAdminSelection}
-          onSelectAll={handleToggleSelectAllAdmins}
-          isAllSelected={selectableAdmins.length > 0 && selectedAdminIds.size === selectableAdmins.length}
           actions={adminBulkActions}
         />
       </Card>
@@ -596,7 +591,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                   type="button"
                   onClick={() => setIsAddAdminOpen(false)}
                   aria-label="Tutup"
-                  className={iconButtonClass}
+                  className={iconButtonClass('neutral')}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -706,7 +701,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                   type="button"
                   onClick={() => setEditingAdmin(null)}
                   aria-label="Tutup"
-                  className={iconButtonClass}
+                  className={iconButtonClass('neutral')}
                 >
                   <X className="h-4 w-4" />
                 </button>

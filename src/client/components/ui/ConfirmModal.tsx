@@ -58,7 +58,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         <div
           role="dialog"
           aria-modal="true"
-          className="surface bezel relative my-auto flex w-full max-w-md flex-col gap-3.5 p-4 text-ink sm:gap-5 sm:p-6"
+          className="surface bezel relative my-auto flex max-h-[86dvh] w-full max-w-md flex-col gap-3.5 overflow-y-auto p-4 text-ink sm:max-h-[85vh] sm:gap-5 sm:p-6"
         >
           <span aria-hidden="true" className={cn('rail absolute bottom-6 left-0 top-6', panel.rail)} />
           <button
@@ -67,7 +67,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             onClick={onClose}
             aria-label="Tutup dialog"
             className={cn(
-              'absolute right-3 top-3 flex min-h-[40px] min-w-[40px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:text-ink disabled:opacity-50',
+              'absolute right-3 top-3 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-chip text-ink-2 transition-colors hover:text-ink disabled:opacity-50',
               focusRing
             )}
           >

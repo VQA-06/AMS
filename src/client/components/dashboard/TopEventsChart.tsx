@@ -72,7 +72,7 @@ const PERIOD_OPTIONS: Array<{ value: PeriodFilter; label: string }> = [
 ];
 
 const SELECT_CLASS =
-  'min-h-[36px] cursor-pointer rounded-panel border border-rule-strong bg-paper-raised px-2.5 py-1.5 text-xs font-medium text-ink transition-colors hover:border-pen-200 focus-visible:border-pen-500';
+  'min-h-[44px] cursor-pointer rounded-panel border border-rule-strong bg-paper-raised px-2.5 py-1.5 text-xs font-medium text-ink transition-colors hover:border-pen-200 focus-visible:border-pen-500';
 
 interface PieDatum {
   id: string;
@@ -108,7 +108,7 @@ const CustomPieTooltip: React.FC<CustomPieTooltipProps> = ({ active, payload, to
   const totalPct = totalAttendees > 0 ? Math.round((item.attendance_count / totalAttendees) * 100) : 0;
 
   return (
-    <div className="z-toast pointer-events-none max-w-[260px] space-y-2 rounded-panel border border-rule-strong bg-paper-raised px-3 py-2 text-xs backdrop-blur-md">
+    <div className="z-reveal pointer-events-none max-w-[260px] space-y-2 rounded-panel border border-rule-strong bg-paper-raised px-3 py-2 text-xs backdrop-blur-md">
       <div>
         <div className="flex items-center gap-1.5">
           <span
@@ -259,7 +259,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
                   onClick={() => setPeriodFilter(opt.value)}
                   aria-pressed={on}
                   className={cn(
-                    'flex min-h-[32px] items-center rounded-chip px-2.5 py-1 font-semibold transition-colors',
+                    'flex items-center rounded-chip px-2.5 py-1 font-semibold transition-colors',
                     focusRing,
                     on ? 'bg-pen-500 font-bold text-paper' : 'text-ink-2 hover:bg-paper-raised/70 hover:text-ink'
                   )}
@@ -343,10 +343,14 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
               {filteredEvents.slice(0, 3).map((ev, idx) => {
                 const chip = readinessChip(ev.status);
                 return (
-                  <div
+                  <button
                     key={ev.id}
+                    type="button"
                     onClick={() => onSelectEvent?.(ev.id)}
-                    className="flex cursor-pointer items-center justify-between gap-2 rounded-panel border border-rule bg-paper-raised/40 transition-colors hover:border-pen-200"
+                    className={cn(
+                      'flex w-full cursor-pointer items-center justify-between gap-2 rounded-panel border border-rule bg-paper-raised/40 text-left transition-colors hover:border-pen-200',
+                      focusRing
+                    )}
                   >
                     <div className="flex min-w-0 items-stretch">
                       <span
@@ -378,7 +382,7 @@ export const TopEventsChart: React.FC<TopEventsChartProps> = ({
                       </Badge>
                       <CaretRight size={14} className="text-ink-3" aria-hidden="true" />
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

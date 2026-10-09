@@ -153,10 +153,7 @@ describe('Session-type colour keeps the warning hue reserved for problems', () =
     member_division: 'Engineering',
   });
 
-  const renderRoster = (
-    sessionType: Attendance['session_type'],
-    mobileViewMode: 'table' | 'card' = 'table'
-  ) =>
+  const renderRoster = (sessionType: Attendance['session_type']) =>
     renderToString(
       <AttendanceRosterTable
         attendances={[makeAttendance(sessionType)]}
@@ -170,8 +167,6 @@ describe('Session-type colour keeps the warning hue reserved for problems', () =
         selectedDivision=""
         onDivisionChange={() => {}}
         divisions={[]}
-        mobileViewMode={mobileViewMode}
-        onToggleMobileViewMode={() => {}}
         selectedAttendanceIds={new Set()}
         onToggleSelectAttendance={() => {}}
         onSelectAllAttendances={() => {}}
@@ -188,7 +183,6 @@ describe('Session-type colour keeps the warning hue reserved for problems', () =
     // The mark replaces the per-row badge here, so this is the only place the
     // session hue can appear. If it regresses to idle, the roster reads uniform.
     expect(markHueFor(renderRoster(sessionType), 'MEM-001')).toBe(expectedMark);
-    expect(markHueFor(renderRoster(sessionType, 'card'), 'MEM-001')).toBe(expectedMark);
   });
 
   it.each(['BREAK_OUT', 'BREAK_IN'] as const)('never paints %s in the warning hue', (sessionType) => {
@@ -199,18 +193,15 @@ describe('Session-type colour keeps the warning hue reserved for problems', () =
     expect(hue).not.toBe('pending');
   });
 
-  it.each(['table', 'card'] as const)(
-    'renders a break-out row and a break-in row in distinct hues in %s view',
-    (view) => {
-      // A break-out and a break-in are both interruptions, but the operator
-      // still needs to tell them apart at a glance without reading the text.
-      const breakOut = markHueFor(renderRoster('BREAK_OUT', view), 'MEM-001');
-      const breakIn = markHueFor(renderRoster('BREAK_IN', view), 'MEM-001');
-      expect(breakOut).toBeDefined();
-      expect(breakIn).toBeDefined();
-      expect(breakOut).not.toBe(breakIn);
-    }
-  );
+  it('renders a break-out row and a break-in row in distinct hues', () => {
+    // A break-out and a break-in are both interruptions, but the operator
+    // still needs to tell them apart at a glance without reading the text.
+    const breakOut = markHueFor(renderRoster('BREAK_OUT'), 'MEM-001');
+    const breakIn = markHueFor(renderRoster('BREAK_IN'), 'MEM-001');
+    expect(breakOut).toBeDefined();
+    expect(breakIn).toBeDefined();
+    expect(breakOut).not.toBe(breakIn);
+  });
 
   it('keeps check-in and check-out on their state hues with no warning hue present', () => {
     const hues = [

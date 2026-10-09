@@ -347,7 +347,7 @@ export class DefaultAttendanceEngine implements AttendanceEngine {
       };
     }
 
-    if (member.status !== 'active') {
+    if (member.status !== 'active' && member.status !== 'candidate') {
       await this.auditRepo.recordFailedScan({
         eventId: cmd.eventId,
         tokenJti: decrypted.jti,
@@ -361,7 +361,7 @@ export class DefaultAttendanceEngine implements AttendanceEngine {
         status: 'rejected',
         error: {
           code: ErrorCode.MEMBER_INACTIVE,
-          message: 'Status anggota nonaktif.',
+          message: 'Status anggota nonaktif atau telah diarsipkan.',
           status_code: 400,
         },
       };
@@ -389,7 +389,15 @@ export class DefaultAttendanceEngine implements AttendanceEngine {
     }
 
     if (decrypted.scope === 'event' && decrypted.eventId !== cmd.eventId) {
-      const isAuthorized = await this.eventGuestRepo.isGuestAuthorizedForEvent(cmd.eventId, decrypted.memberId);
+      // Converted candidates / official active members are permitted across events when universal attendance is allowed
+      const isMemberCrossEventAllowed =
+        !isGuestMember(member) &&
+        (member.status === 'candidate' || member.status === 'active') &&
+        event.qr_policy !== 'event_only';
+      const isAuthorized =
+        isMemberCrossEventAllowed ||
+        (await this.eventGuestRepo.isGuestAuthorizedForEvent(cmd.eventId, decrypted.memberId));
+
       if (!isAuthorized) {
         await this.auditRepo.recordFailedScan({
           eventId: cmd.eventId,
@@ -573,13 +581,13 @@ export class DefaultAttendanceEngine implements AttendanceEngine {
       };
     }
 
-    if (member.status !== 'active') {
+    if (member.status !== 'active' && member.status !== 'candidate') {
       return {
         success: false,
         status: 'rejected',
         error: {
           code: ErrorCode.MEMBER_INACTIVE,
-          message: 'Status anggota nonaktif.',
+          message: 'Status anggota nonaktif atau telah diarsipkan.',
           status_code: 400,
         },
       };

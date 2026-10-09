@@ -8,7 +8,8 @@ import { ShieldCheck } from '@phosphor-icons/react/ShieldCheck';
 import { ShieldWarning } from '@phosphor-icons/react/ShieldWarning';
 import { Trash } from '@phosphor-icons/react/Trash';
 import { UserCheck } from '@phosphor-icons/react/UserCheck';
-import { Warning } from '@phosphor-icons/react/Warning';
+import { UserPlus } from '@phosphor-icons/react/UserPlus';
+import { PartialBanner } from '../components/ui/PartialBanner';
 import { X } from '@phosphor-icons/react/X';
 import { Event, Attendance, QrToken, Member, SessionType } from '@/shared/types';
 import { fetchApi } from '../lib/api-client';
@@ -20,6 +21,7 @@ import { PrintBadgeSheet, PrintableToken } from '../components/qr/PrintBadgeShee
 import { filterPrintableTokens } from '../lib/qr-tokens';
 import { GuestPassModal } from '../components/events/GuestPassModal';
 import { DigitalPassCard } from '../components/qr/DigitalPassCard';
+import { ConvertGuestModal, ConvertGuestItem } from '../components/members/ConvertGuestModal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { AlertModal } from '../components/ui/AlertModal';
 import { ModalPortal } from '../components/ui/ModalPortal';
@@ -59,7 +61,6 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
   const [event, setEvent] = useState<Event | null>(initialEvent || null);
   const [activeTab, setActiveTab] = useState<'attendance' | 'qr' | 'overview'>('attendance');
-  const [mobileViewMode, setMobileViewMode] = useState<'card' | 'table'>('card');
   const [sessionFilter, setSessionFilter] = useState<'ALL' | SessionType>('ALL');
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [qrTokens, setQrTokens] = useState<QrToken[]>([]);
@@ -83,16 +84,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
   const [selectedPrintTokens, setSelectedPrintTokens] = useState<PrintableToken[] | null>(null);
   const [selectedTokenForCard, setSelectedTokenForCard] = useState<QrToken | null>(null);
 
-  // Promote Guest Modal state
-  const [promotingGuest, setPromotingGuest] = useState<{
-    memberId: string;
-    memberName: string;
-    externalId: string;
-    isBulk?: boolean;
-    bulkCount?: number;
-  } | null>(null);
-  const [promoteDivision, setPromoteDivision] = useState<string>('');
-  const [promoteLoading, setPromoteLoading] = useState<boolean>(false);
+  const [convertCandidateGuests, setConvertCandidateGuests] = useState<ConvertGuestItem[] | null>(null);
+
 
   const [isManualModalOpen, setIsManualModalOpen] = useState<boolean>(false);
   const [manualMemberId, setManualMemberId] = useState<string>('');
@@ -486,96 +479,43 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     });
   };
 
-  const handleOpenPromoteSingle = (tok: QrToken) => {
-    setPromoteDivision(tok.member_division || '');
-    setPromotingGuest({
-      memberId: tok.member_id,
-      memberName: tok.member_name || 'Peserta',
-      externalId: tok.member_external_id || '',
-      isBulk: false,
-    });
+  const handleOpenConvertCandidateSingle = (tok: QrToken) => {
+    setConvertCandidateGuests([
+      {
+        id: tok.member_id,
+        name: tok.member_name || 'Peserta Tamu',
+        external_id: tok.member_external_id || undefined,
+        division: tok.member_division || undefined,
+      },
+    ]);
   };
 
-  const handleOpenPromoteBulk = () => {
+  const handleOpenConvertCandidateBulk = () => {
     const selectedTokens = qrTokens.filter(
-      (t) => selectedTokenIds.has(t.id) && t.member_external_id?.startsWith('GUEST-')
+      (t) =>
+        selectedTokenIds.has(t.id) &&
+        (t.member_external_id?.startsWith('GUEST-') ||
+          (t.note && t.note.toLowerCase().includes('guest')) ||
+          (t.note && t.note.toLowerCase().includes('tamu')) ||
+          t.scope === 'event')
     );
     if (selectedTokens.length === 0) {
       setAlertModal({
         isOpen: true,
         title: 'Tidak Ada Tamu Terpilih',
-        message: 'Pilih minimal satu tiket peserta tamu (GUEST) untuk diangkat menjadi anggota resmi.',
+        message: 'Pilih minimal satu tiket peserta tamu untuk dimigrasikan ke calon anggota.',
         type: 'warning',
       });
       return;
     }
-
-    setPromoteDivision('');
-    setPromotingGuest({
-      memberId: 'bulk',
-      memberName: `${selectedTokens.length} Peserta Tamu`,
-      externalId: '',
-      isBulk: true,
-      bulkCount: selectedTokens.length,
-    });
-  };
-
-  const handleConfirmPromote = async () => {
-    if (!promotingGuest) return;
-    setPromoteLoading(true);
-
-    try {
-      if (promotingGuest.isBulk) {
-        const selectedGuestMemberIds = qrTokens
-          .filter((t) => selectedTokenIds.has(t.id) && t.member_external_id?.startsWith('GUEST-'))
-          .map((t) => t.member_id);
-
-        await fetchApi('/api/members/bulk-promote-guests', {
-          method: 'POST',
-          body: JSON.stringify({
-            ids: selectedGuestMemberIds,
-            division: promoteDivision || undefined,
-          }),
-        });
-
-        setPromotingGuest(null);
-        setSelectedTokenIds(new Set());
-        await loadData();
-        onRefresh?.();
-        setAlertModal({
-          isOpen: true,
-          title: 'Pengangkatan Anggota Berhasil',
-          message: `${selectedGuestMemberIds.length} peserta tamu berhasil diangkat menjadi anggota resmi organisasi! Riwayat absensi di kegiatan ini tetap tercatat utuh.`,
-          type: 'success',
-        });
-      } else {
-        await fetchApi(`/api/members/${promotingGuest.memberId}/promote-guest`, {
-          method: 'POST',
-          body: JSON.stringify({
-            division: promoteDivision || undefined,
-          }),
-        });
-
-        setPromotingGuest(null);
-        await loadData();
-        onRefresh?.();
-        setAlertModal({
-          isOpen: true,
-          title: 'Pengangkatan Anggota Berhasil',
-          message: `Peserta "${promotingGuest.memberName}" berhasil diangkat menjadi anggota resmi organisasi! Riwayat absensi di kegiatan ini tetap tercatat utuh.`,
-          type: 'success',
-        });
-      }
-    } catch (err) {
-      setAlertModal({
-        isOpen: true,
-        title: 'Gagal Mengangkat Anggota',
-        message: err instanceof Error ? err.message : 'Terjadi kesalahan saat memproses pengangkatan anggota.',
-        type: 'error',
-      });
-    } finally {
-      setPromoteLoading(false);
-    }
+    setConvertCandidateGuests(
+      selectedTokens.map((t) => ({
+        id: t.member_id,
+        name: t.member_name || 'Peserta Tamu',
+        external_id: t.member_external_id || undefined,
+        division: t.member_division || undefined,
+      }))
+    );
   };
 
   const attendanceBulkActions: BulkActionItem[] = isManager
@@ -624,10 +564,10 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     ...(isManager && selectedGuestCount > 0
       ? [
           {
-            label: 'Jadikan Anggota',
-            icon: <UserCheck className="w-3.5 h-3.5" />,
+            label: 'Jadikan Calon Anggota',
+            icon: <UserPlus className="w-3.5 h-3.5" />,
             variant: 'primary' as const,
-            onClick: handleOpenPromoteBulk,
+            onClick: handleOpenConvertCandidateBulk,
           },
         ]
       : []),
@@ -703,21 +643,9 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       : attendances.filter((a) => a.session_type === sessionFilter);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-8">
 
-      {partialErrors.length > 0 && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-start gap-2.5 rounded-panel border border-pending-200 bg-pending-50/70 px-4 py-3 text-xs text-pending-800"
-        >
-          <Warning size={16} className="mt-0.5 shrink-0 text-pending-600" />
-          <span>
-            Sebagian data gagal dimuat: {partialErrors.join(', ')}. Angka di bawah
-            mungkin tidak lengkap, bukan nol.
-          </span>
-        </div>
-      )}
+      <PartialBanner sections={partialErrors} />
       {/* Header: title, status, and every event-level action live in one place. */}
       <EventHeaderSummary
         event={event}
@@ -738,9 +666,9 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
       <Tabs
         items={[
-          { id: 'attendance', label: 'Daftar Hadir', badge: totalScanned },
-          { id: 'qr', label: 'Tiket QR Event', badge: qrTokens.length },
-          { id: 'overview', label: 'Ringkasan & Kebijakan' },
+          { id: 'attendance', label: 'Daftar Hadir' },
+          { id: 'qr', label: 'Tiket QR Event' },
+          { id: 'overview', label: 'Kebijakan' },
         ]}
         active={activeTab}
         onChange={(id: string) => setActiveTab(id as 'attendance' | 'qr' | 'overview')}
@@ -767,8 +695,6 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
           selectedDivision={selectedDivision}
           onDivisionChange={setSelectedDivision}
           divisions={divisions}
-          mobileViewMode={mobileViewMode}
-          onToggleMobileViewMode={setMobileViewMode}
           selectedAttendanceIds={selectedAttendanceIds}
           onToggleSelectAttendance={handleToggleSelectAttendance}
           onSelectAllAttendances={() => handleToggleSelectAllAttendances(displayedAttendances)}
@@ -805,8 +731,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             setIsPrintSheetOpen(true);
           }}
           onSelectTokenForCard={setSelectedTokenForCard}
-          onOpenPromoteSingle={handleOpenPromoteSingle}
-          onOpenPromoteBulk={handleOpenPromoteBulk}
+          onOpenConvertCandidateSingle={handleOpenConvertCandidateSingle}
+          onOpenConvertCandidateBulk={handleOpenConvertCandidateBulk}
           onRevokeToken={handleRevokeToken}
           onRevokeTokenBatch={handleBulkRevokeSelectedTokens}
           onDeleteToken={handleDeleteToken}
@@ -820,7 +746,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="surface space-y-4 rounded-panel p-6">
-            <h3 className="font-heading text-base font-bold text-ink">Kebijakan Keamanan QR</h3>
+            <h2 className="font-heading text-base font-bold text-ink">Kebijakan Keamanan QR</h2>
             <div className="space-y-3 text-xs text-ink">
               <div className="rounded-panel border border-rule bg-paper-raised p-4">
                 <p className="mb-1 flex items-center gap-1.5 font-bold text-ink-2">
@@ -853,7 +779,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
           </div>
 
           <div className="surface space-y-4 rounded-panel p-6">
-            <h3 className="font-heading text-base font-bold text-ink">Statistik Kehadiran</h3>
+            <h2 className="font-heading text-base font-bold text-ink">Statistik Kehadiran</h2>
             <div className="grid grid-cols-2 gap-3">
               <div className="surface rounded-panel p-4">
                 <span className="text-[10px] text-ink-2 uppercase font-semibold">Total Hadir</span>
@@ -997,89 +923,19 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
         </ModalPortal>
       )}
 
-      {/* Promote Guest Modal */}
-      {promotingGuest && (
-        <ModalPortal onClose={() => setPromotingGuest(null)}>
-          <div className="modal-backdrop-full">
-            <div className="surface bezel my-auto max-h-[86dvh] w-full max-w-md space-y-3 sm:space-y-4 overflow-y-auto p-3.5 sm:p-6">
-              <div className="flex items-center justify-between border-b border-rule pb-2.5 sm:pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip bg-seal-50/60 text-seal-800">
-                    <UserCheck size={16} />
-                  </div>
-                  <div>
-                    <h3 className="font-heading text-base font-bold text-ink">
-                      Angkat Menjadi Anggota Resmi
-                    </h3>
-                    <p className="text-[11px] text-ink-2">
-                      {promotingGuest.isBulk
-                        ? `Memproses ${promotingGuest.bulkCount} peserta tamu`
-                        : promotingGuest.memberName}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPromotingGuest(null)}
-                  aria-label="Tutup dialog angkat anggota"
-                  className="touch-target rounded-chip p-1 text-ink-2 transition-colors hover:text-ink"
-                >
-                  <X size={16} />
-                </button>
-              </div>
 
-              <div className="space-y-1 rounded-panel border border-seal-200 bg-seal-50/70 p-3.5 text-xs text-seal-800">
-                <p className="font-bold flex items-center gap-1.5">
-                  <CheckCircle size={16} className="shrink-0 text-seal-600" />
-                  <span>Riwayat Presensi Tetap Tersimpan Utuh</span>
-                </p>
-                <p className="text-ink text-[11px] leading-relaxed">
-                  Peserta akan diberikan <strong>ID Anggota resmi baru</strong> dan <strong>QR Universal permanen</strong>. Presensi pada kegiatan penerimaan ini otomatis diakui dan terhitung di Pelacak Keaktifan.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Field
-                  id="event-detail-page-field-4"
-                  label="Pilih Divisi (Opsional)"
-                  control="select"
-                  value={promoteDivision}
-                  onChange={setPromoteDivision}
-                  controlClassName="border-0 bg-transparent px-0 text-xs focus-visible:ring-0"
-                  leadingIcon={<Buildings className="h-4 w-4" />}
-                  options={[
-                    { value: '', label: '-- Tanpa Divisi / Pilih Nanti --' },
-                    ...divisions.map((div) => ({ value: div, label: div })),
-                  ]}
-                />
-                <p className="text-[10px] text-ink-2">
-                  Email dan nomor HP dapat dilengkapi atau diedit manual kapan saja di menu Master Anggota.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 border-t border-rule pt-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPromotingGuest(null)}
-                  disabled={promoteLoading}
-                >
-                  Batal
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleConfirmPromote}
-                  loading={promoteLoading}
-                  icon={<UserCheck size={14} />}
-                >
-                  Ya, Angkat Jadi Anggota
-                </Button>
-              </div>
-            </div>
-          </div>
-        </ModalPortal>
-      )}
+      {/* Convert Guest to Candidate Modal */}
+      <ConvertGuestModal
+        isOpen={Boolean(convertCandidateGuests)}
+        onClose={() => setConvertCandidateGuests(null)}
+        selectedGuests={convertCandidateGuests || []}
+        divisionList={divisions}
+        onSuccess={() => {
+          handleClearTokenSelection();
+          loadData();
+          onRefresh?.();
+        }}
+      />
 
       {/* Confirmation Modal */}
       <ConfirmModal
@@ -1104,7 +960,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
       {/* Contextual Floating Action Button for Mobile Viewport */}
       {event.status === 'active' && onScanEvent && (
-        <div className="fixed bottom-24 right-4 z-bar md:hidden">
+        <div className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-4 z-fab md:hidden">
           <button
             type="button"
             onClick={() => onScanEvent(event)}

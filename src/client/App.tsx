@@ -7,7 +7,7 @@ import { fetchApi } from './lib/api-client';
 import { fetchCached } from './lib/swr-client';
 import { Member, Event } from '@/shared/types';
 import { ErrorPage } from './pages/ErrorPage';
-import { WarningCircle } from '@phosphor-icons/react/WarningCircle';
+import { PartialBanner } from './components/ui/PartialBanner';
 import { Skeleton } from './components/ui/Skeleton';
 import { useResource, type ResourceLoader } from './lib/useResource';
 
@@ -200,11 +200,11 @@ export const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-ink text-paper">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-ink text-paper">
         <div className="surface-raised mb-4 flex h-16 w-16 items-center justify-center rounded-panel p-2 shadow-lift">
           <img src="/logo.webp" alt="AMS Logo" className="h-full w-full object-contain" />
         </div>
-        <p className="text-sm font-semibold text-ink-2">
+        <p className="text-sm font-semibold text-paper/70">
           Memuat AMS (Attendance Management System)…
         </p>
       </div>
@@ -215,7 +215,7 @@ export const App: React.FC = () => {
     return (
       <>
         <PwaInstallBanner />
-        <Suspense fallback={<div className="min-h-screen bg-paper-sunk" />}>
+        <Suspense fallback={<div className="min-h-[100dvh] bg-paper-sunk" />}>
           <LoginPage onLoginSuccess={() => navigate('/dashboard')} />
         </Suspense>
       </>
@@ -249,19 +249,7 @@ export const App: React.FC = () => {
   return (
     <MobileShell currentTab={currentRoute.tab} onTabChange={handleTabChange}>
       <OfflineBanner />
-      {failedSections.length > 0 && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="mb-4 flex items-start gap-2.5 rounded-panel border border-pending-200 bg-pending-50/70 px-4 py-3 text-xs text-pending-800"
-        >
-          <WarningCircle size={16} weight="fill" className="mt-px shrink-0 text-pending-600" />
-          <p className="min-w-0 break-words">
-            Sebagian data gagal dimuat: {failedSections.join(', ')}. Angka di bawah mungkin tidak
-            lengkap, bukan nol.
-          </p>
-        </div>
-      )}
+      <PartialBanner sections={failedSections} className="mb-4" />
 
       <Suspense fallback={<RouteLoadingFallback />}>
         {currentRoute.tab === 'dashboard' && (
@@ -319,7 +307,12 @@ export const App: React.FC = () => {
           )
         )}
 
-        {currentRoute.tab === 'tracker' && <MemberTrackerPage />}
+        {currentRoute.tab === 'tracker' && (
+          <MemberTrackerPage
+            onNavigate={handleTabChange}
+            onNavigateToCandidates={() => handleTabChange('members')}
+          />
+        )}
 
         {currentRoute.tab === 'scanner' && (
           <ScannerPage

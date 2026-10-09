@@ -12,11 +12,14 @@ import { TeamTab } from './settings/TeamTab';
 
 type SettingsTab = 'profile' | 'team' | 'audit' | 'system';
 
+// Short labels: at 344px the four long forms totalled 566px in a 312px strip, so
+// the first tab was unreachable. The word each one carries is the noun the tab
+// is actually about; the rest is restated by the tab's own content.
 const TABS: { id: SettingsTab; label: string }[] = [
-  { id: 'profile', label: 'Profil & Keamanan Saya' },
-  { id: 'team', label: 'Tim Panitia & Akses' },
-  { id: 'audit', label: 'Audit Log Sistem' },
-  { id: 'system', label: 'Info Sistem Cloudflare' },
+  { id: 'profile', label: 'Profil' },
+  { id: 'team', label: 'Tim Panitia' },
+  { id: 'audit', label: 'Audit Log' },
+  { id: 'system', label: 'Info Sistem' },
 ];
 
 /**
@@ -36,32 +39,37 @@ export const SettingsPage: React.FC = () => {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [partialErrors, setPartialErrors] = useState<string[]>([]);
+  const [logsLoaded, setLogsLoaded] = useState(false);
 
   const loadData = async () => {
-    const settled = await Promise.allSettled([
-      fetchApi<{ admins: Admin[] }>('/api/auth/admins'),
-      fetchApi<{ logs: AuditLog[] }>('/api/audit/logs'),
-      fetchApi<{ members: Member[] }>('/api/members?status=active&limit=500'),
-    ]);
+    try {
+      const settled = await Promise.allSettled([
+        fetchApi<{ admins: Admin[] }>('/api/auth/admins'),
+        fetchApi<{ logs: AuditLog[] }>('/api/audit/logs'),
+        fetchApi<{ members: Member[] }>('/api/members?status=active&limit=500'),
+      ]);
 
-    // Falling back to empty arrays made a failed request look like "no data
-    // exists", so the admin roster and audit log silently appeared empty.
-    const failed = ['Daftar Panitia', 'Log Audit', 'Daftar Anggota'];
-    setPartialErrors(
-      settled.flatMap((r, i) => (r.status === 'rejected' ? [failed[i]] : []))
-    );
+      // Falling back to empty arrays made a failed request look like "no data
+      // exists", so the admin roster and audit log silently appeared empty.
+      const failed = ['Daftar Panitia', 'Log Audit', 'Daftar Anggota'];
+      setPartialErrors(
+        settled.flatMap((r, i) => (r.status === 'rejected' ? [failed[i]] : []))
+      );
 
-    const [admRes, logRes, memRes] = settled.map((r) =>
-      r.status === 'fulfilled' ? r.value : null
-    ) as [
-      { admins: Admin[] } | null,
-      { logs: AuditLog[] } | null,
-      { members: Member[] } | null,
-    ];
+      const [admRes, logRes, memRes] = settled.map((r) =>
+        r.status === 'fulfilled' ? r.value : null
+      ) as [
+        { admins: Admin[] } | null,
+        { logs: AuditLog[] } | null,
+        { members: Member[] } | null,
+      ];
 
-    setAdmins(admRes?.admins || []);
-    setAuditLogs(logRes?.logs || []);
-    setActiveMembers(memRes?.members || []);
+      setAdmins(admRes?.admins || []);
+      setAuditLogs(logRes?.logs || []);
+      setActiveMembers(memRes?.members || []);
+    } finally {
+      setLogsLoaded(true);
+    }
   };
 
   useEffect(() => {
@@ -111,7 +119,7 @@ export const SettingsPage: React.FC = () => {
         />
       )}
 
-      {activeTab === 'audit' && <AuditTab logs={auditLogs} />}
+      {activeTab === 'audit' && <AuditTab logs={auditLogs} loading={!logsLoaded} />}
 
       {activeTab === 'system' && <SystemTab />}
     </div>

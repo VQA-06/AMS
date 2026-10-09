@@ -28,7 +28,7 @@ export interface FloatingSurfaceProps {
  * safe-area padding, and the scrim decision, so no component can escape the
  * stacking order or slide under the dock.
  *
- * `bottom-bar` and `top-bar` sit above the dock (`z-bar`) but below modals and
+ * `bottom-bar` and `top-bar` sit above the dock (`z-toast`) but below modals and
  * paint **no** backdrop: they are bars over a live page, and dimming that page
  * reads as a modal. `bottom-sheet` covers the page, so it alone owns the scrim;
  * it also clears `pb-safe` and is an opaque rule-bordered bar on paper, never a
@@ -55,7 +55,7 @@ export const FloatingSurface: React.FC<FloatingSurfaceProps> = ({
       <div
         aria-hidden="true"
         className={cn(
-          'pointer-events-none fixed inset-0 z-bar bg-ink/40',
+          'pointer-events-none fixed inset-0 z-toast bg-ink/40',
           placement !== 'bottom-sheet' && 'hidden'
         )}
       />
@@ -63,7 +63,7 @@ export const FloatingSurface: React.FC<FloatingSurfaceProps> = ({
         role="status"
         aria-live="polite"
         className={cn(
-          'pointer-events-auto fixed inset-x-0 z-bar',
+          'pointer-events-auto fixed inset-x-0 z-toast',
           placement === 'top-bar' && 'top-0',
           placement !== 'top-bar' && 'bottom-0',
           placement === 'bottom-sheet' && 'pb-safe',

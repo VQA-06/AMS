@@ -273,7 +273,7 @@ describe('Multi-Event Guest Import & QR Reusability', () => {
     expect(importedTokens[0].source_event_id).toBe('evt_intermediate');
     expect(importedTokens[0].token_event_id).toBe('evt_origin');
     expect(executedSql).toContain('FROM event_guests eg');
-    expect(executedSql).toContain("JOIN qr_tokens t ON t.member_id = m.id AND t.scope = 'event' AND t.revoked_at IS NULL");
+    expect(executedSql).toContain('JOIN qr_tokens t ON t.member_id = m.id AND t.revoked_at IS NULL');
     expect(executedParams[0]).toBe('evt_target');
   });
 

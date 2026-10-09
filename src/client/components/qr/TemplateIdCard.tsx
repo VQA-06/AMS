@@ -264,9 +264,9 @@ export const TemplateIdCard: React.FC<TemplateIdCardProps> = ({
             title="Salin token QR"
           >
             {copied ? (
-              <Check className="w-3.5 h-3.5 text-seal-600 shrink-0" />
+              <Check className="w-3.5 h-3.5 text-seal-400 shrink-0" />
             ) : (
-              <Copy className="w-3.5 h-3.5 text-ink-2 shrink-0" />
+              <Copy className="w-3.5 h-3.5 text-paper/70 shrink-0" />
             )}
             <span className="truncate">{copied ? 'Tersalin' : 'Salin'}</span>
           </button>

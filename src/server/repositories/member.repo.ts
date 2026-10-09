@@ -1,4 +1,4 @@
-import { Member, Status } from '@/shared/types';
+import { CandidateInductionResult, Member, MemberStatsSummary, Status } from '@/shared/types';
 import { chunkArray } from '../lib/d1-utils';
 import { escapeLikePattern } from '../lib/sql-utils';
 
@@ -176,24 +176,28 @@ export class MemberRepository {
     return (res.results ?? []).map((r) => r.group_name);
   }
 
-  async getMemberStatsSummary(): Promise<{ total: number; active: number; inactive: number }> {
+  async getMemberStatsSummary(): Promise<MemberStatsSummary> {
     const res = await this.db
       .prepare(`
-        SELECT 
+        SELECT
           COUNT(*) as total,
           COUNT(CASE WHEN status = 'active' THEN 1 END) as active,
-          COUNT(CASE WHEN status = 'inactive' THEN 1 END) as inactive
+          COUNT(CASE WHEN status = 'inactive' THEN 1 END) as inactive,
+          COUNT(CASE WHEN status = 'candidate' THEN 1 END) as candidate,
+          COUNT(CASE WHEN status = 'archived' THEN 1 END) as archived
         FROM members
         WHERE (group_name NOT LIKE 'Tamu:%' OR group_name IS NULL)
           AND external_id NOT LIKE 'GUEST-%'
           AND (metadata NOT LIKE '%"temporary":true%' AND metadata NOT LIKE '%"temporary": true%' OR metadata IS NULL)
       `)
-      .first<{ total: number; active: number; inactive: number }>();
+      .first<MemberStatsSummary>();
 
     return {
       total: res?.total ?? 0,
       active: res?.active ?? 0,
       inactive: res?.inactive ?? 0,
+      candidate: res?.candidate ?? 0,
+      archived: res?.archived ?? 0,
     };
   }
 
@@ -502,6 +506,96 @@ export class MemberRepository {
     const updated = await this.findByIds(ids);
     return { count: updated.length, promoted: updated };
   }
+  /**
+   * Converts temporary event guest members into official candidate members (status = 'candidate').
+   * Preserves historical attendance records and keeps QR code tokens perpetually valid with uncapped uses.
+   */
+  async convertGuestsToCandidates(
+    ids: string[],
+    options?: { targetGroup?: string; division?: string }
+  ): Promise<{ converted_count: number; converted_ids: string[] }> {
+    if (!ids || ids.length === 0) {
+      return { converted_count: 0, converted_ids: [] };
+    }
+
+    const members = await this.findByIds(ids);
+    if (members.length === 0) {
+      return { converted_count: 0, converted_ids: [] };
+    }
+
+    const convertedIds: string[] = [];
+    const statements: D1PreparedStatement[] = [];
+    const nowIso = new Date().toISOString();
+
+    for (const member of members) {
+      let newExternalId = member.external_id;
+      if (!newExternalId || newExternalId.startsWith('GUEST-')) {
+        newExternalId = `CAD-${Math.floor(100000 + Math.random() * 900000)}`;
+      }
+
+      let meta: Record<string, unknown> = {};
+      try {
+        meta = typeof member.metadata === 'string' ? JSON.parse(member.metadata) : member.metadata || {};
+      } catch {
+        meta = {};
+      }
+      delete meta.temporary;
+      delete meta.event_id;
+      meta.converted_from_guest = true;
+      meta.converted_at = nowIso;
+      meta.previous_external_id = member.external_id;
+
+      const groupName =
+        options?.targetGroup?.trim() ||
+        (member.group_name && member.group_name.startsWith('Tamu:') ? 'Calon Anggota' : member.group_name || 'Calon Anggota');
+
+      const division =
+        options?.division !== undefined && options.division.trim() !== ''
+          ? options.division.trim()
+          : member.division;
+
+      statements.push(
+        this.db
+          .prepare(`
+            UPDATE members
+            SET external_id = ?,
+                group_name = ?,
+                division = ?,
+                status = 'candidate',
+                metadata = ?,
+                updated_at = datetime('now')
+            WHERE id = ?
+          `)
+          .bind(newExternalId, groupName, division, JSON.stringify(meta), member.id)
+      );
+
+      // Uncap QR tokens and extend expiration to 2099 so existing physical/digital QR codes work perpetually
+      statements.push(
+        this.db
+          .prepare(`
+            UPDATE qr_tokens
+            SET max_uses = NULL,
+                expires_at = '2099-12-31T23:59:59.999Z'
+            WHERE member_id = ? AND revoked_at IS NULL
+          `)
+          .bind(member.id)
+      );
+
+      convertedIds.push(member.id);
+    }
+
+    const chunks = chunkArray(statements, 50);
+    for (const chunk of chunks) {
+      if (chunk.length > 0) {
+        await this.db.batch(chunk);
+      }
+    }
+
+    return {
+      converted_count: convertedIds.length,
+      converted_ids: convertedIds,
+    };
+  }
 
   /**
    * Aggregates member counts grouped by registration year and status for yearly growth charts.
@@ -533,5 +627,263 @@ export class MemberRepository {
     }>();
 
     return res.results ?? [];
+  }
+
+  /**
+   * Inducts candidate members to active status and optionally sweeps remaining candidates to archived status.
+   */
+  async inductCandidates(options: {
+    memberIds: string[];
+    archiveRemaining?: boolean;
+    batchGroup?: string;
+    division?: string;
+  }): Promise<CandidateInductionResult> {
+    const { memberIds, archiveRemaining, batchGroup, division } = options;
+    if (!memberIds || memberIds.length === 0) {
+      return { promoted_count: 0, promoted_ids: [], archived_count: 0, archived_ids: [] };
+    }
+
+    const members = await this.findByIds(memberIds);
+    const targetMembers = members.filter((m) => m.status === 'candidate' || m.status === 'archived');
+    const promotedIds: string[] = [];
+    const statements: D1PreparedStatement[] = [];
+    const nowIso = new Date().toISOString();
+
+    for (const member of targetMembers) {
+      let meta: Record<string, unknown> = {};
+      try {
+        meta = typeof member.metadata === 'string' ? JSON.parse(member.metadata) : member.metadata || {};
+      } catch {
+        meta = {};
+      }
+      meta.promoted_at = nowIso;
+      meta.promoted_from = member.status;
+
+      const targetDivision = division !== undefined && division.trim() !== '' ? division.trim() : member.division;
+
+      statements.push(
+        this.db
+          .prepare(`
+            UPDATE members
+            SET status = 'active',
+                division = ?,
+                metadata = ?,
+                updated_at = datetime('now')
+            WHERE id = ?
+          `)
+          .bind(targetDivision, JSON.stringify(meta), member.id)
+      );
+      promotedIds.push(member.id);
+    }
+
+    const archivedIds: string[] = [];
+    if (archiveRemaining) {
+      const conditions: string[] = [
+        "status = 'candidate'",
+        ...this.getGuestExclusionConditions(),
+      ];
+      const params: string[] = [];
+
+      if (batchGroup && batchGroup.trim() !== '') {
+        conditions.push('group_name = ?');
+        params.push(batchGroup.trim());
+      }
+
+      const query = `SELECT * FROM members WHERE ${conditions.join(' AND ')}`;
+      const res = await this.db.prepare(query).bind(...params).all<Member>();
+      const remainingCandidates = (res.results || []).filter((m) => !promotedIds.includes(m.id));
+
+      for (const member of remainingCandidates) {
+        let meta: Record<string, unknown> = {};
+        try {
+          meta = typeof member.metadata === 'string' ? JSON.parse(member.metadata) : member.metadata || {};
+        } catch {
+          meta = {};
+        }
+        meta.archived_at = nowIso;
+        meta.archived_from = 'candidate';
+
+        statements.push(
+          this.db
+            .prepare(`
+              UPDATE members
+              SET status = 'archived',
+                  metadata = ?,
+                  updated_at = datetime('now')
+              WHERE id = ?
+            `)
+            .bind(JSON.stringify(meta), member.id)
+        );
+        archivedIds.push(member.id);
+      }
+    }
+
+    const chunks = chunkArray(statements, 50);
+    for (const chunk of chunks) {
+      if (chunk.length > 0) {
+        await this.db.batch(chunk);
+      }
+    }
+
+    return {
+      promoted_count: promotedIds.length,
+      promoted_ids: promotedIds,
+      archived_count: archivedIds.length,
+      archived_ids: archivedIds,
+    };
+  }
+
+  /**
+   * Archives selected candidates or active members.
+   */
+  async archiveCandidates(
+    memberIds: string[],
+    batchGroup?: string
+  ): Promise<{ count: number; archived_ids: string[] }> {
+    if (!memberIds || memberIds.length === 0) {
+      return { count: 0, archived_ids: [] };
+    }
+
+    const members = await this.findByIds(memberIds);
+    let targetMembers = members.filter((m) => m.status === 'candidate' || m.status === 'active');
+    if (batchGroup && batchGroup.trim() !== '') {
+      targetMembers = targetMembers.filter((m) => m.group_name === batchGroup.trim());
+    }
+
+    const archivedIds: string[] = [];
+    const statements: D1PreparedStatement[] = [];
+    const nowIso = new Date().toISOString();
+
+    for (const member of targetMembers) {
+      let meta: Record<string, unknown> = {};
+      try {
+        meta = typeof member.metadata === 'string' ? JSON.parse(member.metadata) : member.metadata || {};
+      } catch {
+        meta = {};
+      }
+      meta.archived_at = nowIso;
+      meta.archived_from = member.status;
+
+      statements.push(
+        this.db
+          .prepare(`
+            UPDATE members
+            SET status = 'archived',
+                metadata = ?,
+                updated_at = datetime('now')
+            WHERE id = ?
+          `)
+          .bind(JSON.stringify(meta), member.id)
+      );
+      archivedIds.push(member.id);
+    }
+
+    const chunks = chunkArray(statements, 50);
+    for (const chunk of chunks) {
+      if (chunk.length > 0) {
+        await this.db.batch(chunk);
+      }
+    }
+
+    return {
+      count: archivedIds.length,
+      archived_ids: archivedIds,
+    };
+  }
+
+  /**
+   * Restores archived members back to candidate status.
+   */
+  async restoreArchived(
+    memberIds: string[],
+    batchGroup?: string
+  ): Promise<{ count: number; restored_ids: string[] }> {
+    if (!memberIds || memberIds.length === 0) {
+      return { count: 0, restored_ids: [] };
+    }
+
+    const members = await this.findByIds(memberIds);
+    let targetMembers = members.filter((m) => m.status === 'archived');
+    if (batchGroup && batchGroup.trim() !== '') {
+      targetMembers = targetMembers.filter((m) => m.group_name === batchGroup.trim());
+    }
+
+    const restoredIds: string[] = [];
+    const statements: D1PreparedStatement[] = [];
+    const nowIso = new Date().toISOString();
+
+    for (const member of targetMembers) {
+      let meta: Record<string, unknown> = {};
+      try {
+        meta = typeof member.metadata === 'string' ? JSON.parse(member.metadata) : member.metadata || {};
+      } catch {
+        meta = {};
+      }
+      meta.restored_at = nowIso;
+
+      statements.push(
+        this.db
+          .prepare(`
+            UPDATE members
+            SET status = 'candidate',
+                metadata = ?,
+                updated_at = datetime('now')
+            WHERE id = ?
+          `)
+          .bind(JSON.stringify(meta), member.id)
+      );
+      restoredIds.push(member.id);
+    }
+
+    const chunks = chunkArray(statements, 50);
+    for (const chunk of chunks) {
+      if (chunk.length > 0) {
+        await this.db.batch(chunk);
+      }
+    }
+
+    return {
+      count: restoredIds.length,
+      restored_ids: restoredIds,
+    };
+  }
+
+  /**
+   * Permanently deletes archived members and cascades to associated data.
+   */
+  async purgeArchived(memberIds?: string[]): Promise<{ count: number; purged_ids: string[] }> {
+    let idsToPurge: string[] = [];
+
+    if (memberIds && memberIds.length > 0) {
+      const members = await this.findByIds(memberIds);
+      idsToPurge = members.filter((m) => m.status === 'archived').map((m) => m.id);
+    } else {
+      const res = await this.db
+        .prepare("SELECT id FROM members WHERE status = 'archived'")
+        .all<{ id: string }>();
+      idsToPurge = (res.results || []).map((r) => r.id);
+    }
+
+    if (idsToPurge.length === 0) {
+      return { count: 0, purged_ids: [] };
+    }
+
+    const chunks = chunkArray(idsToPurge, 50);
+    for (const slice of chunks) {
+      const placeholders = slice.map(() => '?').join(',');
+      await this.db.batch([
+        this.db.prepare(`UPDATE admins SET member_id = NULL WHERE member_id IN (${placeholders})`).bind(...slice),
+        this.db.prepare(`DELETE FROM event_guests WHERE member_id IN (${placeholders})`).bind(...slice),
+        this.db.prepare(`DELETE FROM attendances WHERE member_id IN (${placeholders})`).bind(...slice),
+        this.db.prepare(`DELETE FROM scan_attempts WHERE member_id IN (${placeholders})`).bind(...slice),
+        this.db.prepare(`DELETE FROM qr_tokens WHERE member_id IN (${placeholders})`).bind(...slice),
+        this.db.prepare(`DELETE FROM members WHERE id IN (${placeholders})`).bind(...slice),
+      ]);
+    }
+
+    return {
+      count: idsToPurge.length,
+      purged_ids: idsToPurge,
+    };
   }
 }

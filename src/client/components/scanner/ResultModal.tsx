@@ -110,7 +110,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           aria-label={
             accepted ? 'Hasil absensi berhasil' : 'Hasil absensi ditolak'
           }
-          className="surface my-auto w-full max-w-md overflow-hidden rounded-bezel"
+          className="surface my-auto max-h-[86dvh] w-full max-w-md overflow-y-auto rounded-bezel"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex gap-0 overflow-hidden rounded-bezel">

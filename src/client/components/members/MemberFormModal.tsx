@@ -16,7 +16,9 @@ const focusRing =
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Aktif' },
+  { value: 'candidate', label: 'Calon Anggota' },
   { value: 'inactive', label: 'Nonaktif' },
+  { value: 'archived', label: 'Arsip' },
 ];
 
 interface MemberFormModalProps {
@@ -24,15 +26,16 @@ interface MemberFormModalProps {
   onClose: () => void;
   onSave: (data: MemberInput) => Promise<void>;
   member?: Member | null;
+  defaultStatus?: 'active' | 'inactive' | 'candidate' | 'archived';
   divisionList?: string[];
   groupList?: string[];
 }
-
 export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   isOpen,
   onClose,
   onSave,
   member,
+  defaultStatus = 'active',
   divisionList = [],
   groupList = [],
 }) => {
@@ -84,12 +87,12 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
         group_name: '',
         email: '',
         phone: '',
-        status: 'active',
+        status: defaultStatus,
         metadata: {},
       });
     }
     setError(null);
-  }, [member, isOpen]);
+  }, [member, isOpen, defaultStatus]);
 
   if (!isOpen) return null;
 
@@ -131,10 +134,14 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
               </div>
               <div className="min-w-0">
                 <h2 className="truncate font-heading text-base font-bold text-ink sm:text-lg">
-                  {member ? 'Edit Data Anggota' : 'Tambah Anggota Baru'}
+                  {member
+                    ? (member.status === 'candidate' || member.status === 'archived' ? 'Edit Data Calon Anggota' : 'Edit Data Anggota')
+                    : (formData.status === 'candidate' || defaultStatus === 'candidate' ? 'Tambah Calon Anggota Baru' : 'Tambah Anggota Baru')}
                 </h2>
                 <p className="truncate text-[11px] text-ink-2 sm:text-xs">
-                  ID dibuat otomatis, divisi & grup opsional
+                  {member
+                    ? 'Perbarui profil anggota'
+                    : (formData.status === 'candidate' || defaultStatus === 'candidate' ? 'Daftarkan calon anggota untuk pelacakan kegiatan' : 'ID dibuat otomatis, divisi & grup opsional')}
                 </p>
               </div>
             </div>
@@ -252,7 +259,13 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                 control="select"
                 value={formData.status}
                 onChange={(v) =>
-                  setFormData({ ...formData, status: v as 'active' | 'inactive' })
+                  setFormData({
+                    ...formData,
+                    status:
+                      v === 'active' || v === 'candidate' || v === 'inactive' || v === 'archived'
+                        ? v
+                        : 'active',
+                  })
                 }
                 options={STATUS_OPTIONS}
                 controlClassName="cursor-pointer"

@@ -13,6 +13,10 @@ import { Event } from '@/shared/types';
 import { fetchApi } from '../../lib/api-client';
 import { ModalPortal } from '../ui/ModalPortal';
 import { Button } from '../ui/Button';
+import { Field } from '../ui/Field';
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
 interface GuestPassModalProps {
   isOpen: boolean;
@@ -340,95 +344,91 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
           <div className="no-scrollbar flex-1 space-y-3 overflow-y-auto overscroll-contain py-3 pr-1 sm:space-y-4 sm:py-4">
             {mode === 'names' ? (
               <>
-                <div>
-                  <label htmlFor="components-events-guestpassmodal-field-1" className="block text-xs font-semibold text-ink mb-1">
-                    Ketik Daftar Nama (1 Baris = 1 Peserta):
-                  </label>
-                  <textarea id="components-events-guestpassmodal-field-1"
-                    rows={4}
-                    required
-                    value={nameListText}
-                    onChange={(e) => setNameListText(e.target.value)}
-                    placeholder="Contoh:&#10;Dr. Hendra Wijaya, VIP&#10;Siti Aminah, Konsumsi&#10;Ahmad Fauzan"
-                    className="w-full px-3.5 py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs leading-relaxed text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
-                  />
-                  <p className="text-[10px] sm:text-[11px] text-ink-2 mt-1">
-                    Format: <code className="font-oxanium text-ink-2">Nama, Divisi (opsional)</code>
-                  </p>
-                </div>
+                <Field
+                  id="components-events-guestpassmodal-field-1"
+                  label="Ketik Daftar Nama (1 Baris = 1 Peserta):"
+                  control="textarea"
+                  rows={4}
+                  required
+                  value={nameListText}
+                  onChange={setNameListText}
+                  placeholder="Contoh:&#10;Dr. Hendra Wijaya, VIP&#10;Siti Aminah, Konsumsi&#10;Ahmad Fauzan"
+                  hint="Format: Nama, Divisi (opsional)"
+                />
 
-                <div>
-                  <label htmlFor="components-events-guestpassmodal-field-2" className="block text-xs font-semibold text-ink mb-1">
-                    Divisi / Kategori Default:
-                  </label>
-                  <input id="components-events-guestpassmodal-field-2"
-                    type="text"
-                    value={defaultDivision}
-                    onChange={(e) => setDefaultDivision(e.target.value)}
-                    placeholder="misal: Tamu / Undangan"
-                    className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-ink transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
-                  />
-                </div>
+                <Field
+                  id="components-events-guestpassmodal-field-2"
+                  label="Divisi / Kategori Default:"
+                  control="text"
+                  value={defaultDivision}
+                  onChange={setDefaultDivision}
+                  placeholder="misal: Tamu / Undangan"
+                />
               </>
             ) : mode === 'batch' ? (
               <>
                 <div className="space-y-3">
-                  <div>
-                    <label htmlFor="components-events-guestpassmodal-field-3" className="block text-xs font-semibold text-ink mb-1">
-                      Prefix / Nama Label Tiket:
-                    </label>
-                    <input id="components-events-guestpassmodal-field-3"
-                      type="text"
-                      required
-                      value={batchPrefix}
-                      onChange={(e) => setBatchPrefix(e.target.value)}
-                      placeholder="misal: Tamu VIP"
-                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-ink transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
-                    />
-                  </div>
+                  <Field
+                    id="components-events-guestpassmodal-field-3"
+                    label="Prefix / Nama Label Tiket:"
+                    control="text"
+                    required
+                    value={batchPrefix}
+                    onChange={setBatchPrefix}
+                    placeholder="misal: Tamu VIP"
+                  />
 
                   <div>
-                    <label className="block text-xs font-semibold text-ink mb-1">
+                    <label
+                      htmlFor="components-events-guestpassmodal-field-4"
+                      className="block text-xs font-semibold text-ink mb-1"
+                    >
                       Jumlah Tiket Tamu:
                     </label>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
                         onClick={() => setBatchCount(Math.max(1, batchCount - 5))}
-                        className="px-3 py-1.5 sm:py-2 rounded-chip bg-rule-strong text-ink font-bold hover:bg-ink-3 active:scale-95 text-xs"
+                        className={cn(
+                          'px-3 py-1.5 sm:py-2 rounded-chip border border-rule-strong bg-paper-sunk text-ink font-bold hover:bg-rule/40 hover:border-rule-strong active:scale-95 text-xs',
+                          focusRing
+                        )}
                       >
                         -5
                       </button>
                       <input
+                        id="components-events-guestpassmodal-field-4"
                         type="number"
                         min="1"
                         max="100"
                         value={batchCount}
                         onChange={(e) => setBatchCount(parseInt(e.target.value, 10) || 1)}
-                        className="w-24 rounded-chip border border-rule-strong bg-paper-raised text-center font-oxanium text-sm font-bold tabular-nums text-ink-2 transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper px-3 py-1.5 sm:py-2"
+                        className={cn(
+                          'w-24 rounded-chip border border-rule-strong bg-paper-raised text-center font-oxanium text-sm font-bold tabular-nums text-ink-2 transition-colors duration-120 px-3 py-1.5 sm:py-2',
+                          focusRing
+                        )}
                       />
                       <button
                         type="button"
                         onClick={() => setBatchCount(Math.min(100, batchCount + 5))}
-                        className="px-3 py-1.5 sm:py-2 rounded-chip bg-rule-strong text-ink font-bold hover:bg-ink-3 active:scale-95 text-xs"
+                        className={cn(
+                          'px-3 py-1.5 sm:py-2 rounded-chip border border-rule-strong bg-paper-sunk text-ink font-bold hover:bg-rule/40 hover:border-rule-strong active:scale-95 text-xs',
+                          focusRing
+                        )}
                       >
                         +5
                       </button>
                     </div>
                   </div>
 
-                  <div>
-                    <label htmlFor="components-events-guestpassmodal-field-4" className="block text-xs font-semibold text-ink mb-1">
-                      Divisi / Kategori Default:
-                    </label>
-                    <input id="components-events-guestpassmodal-field-4"
-                      type="text"
-                      value={defaultDivision}
-                      onChange={(e) => setDefaultDivision(e.target.value)}
-                      placeholder="misal: Tamu / Undangan"
-                      className="w-full px-3.5 py-2 sm:py-2.5 rounded-chip border border-rule-strong bg-paper-raised text-xs text-ink transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm"
-                    />
-                  </div>
+                  <Field
+                    id="components-events-guestpassmodal-field-5"
+                    label="Divisi / Kategori Default:"
+                    control="text"
+                    value={defaultDivision}
+                    onChange={setDefaultDivision}
+                    placeholder="misal: Tamu / Undangan"
+                  />
                 </div>
               </>
             ) : (
@@ -528,7 +528,10 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                         type="button"
                         onClick={handleToggleSelectAll}
                         disabled={unimportedFiltered.length === 0}
-                        className="px-2.5 py-1.5 rounded-chip bg-rule-strong hover:bg-ink-3 text-ink text-[11px] font-semibold whitespace-nowrap disabled:opacity-40 transition-colors"
+                        className={cn(
+                          'px-2.5 py-1.5 rounded-chip border border-rule-strong bg-paper-sunk hover:bg-rule/40 hover:border-rule-strong text-ink text-[11px] font-semibold whitespace-nowrap disabled:opacity-40 transition-colors',
+                          focusRing
+                        )}
                       >
                         {isAllSelected ? 'Batal Semua' : 'Pilih Semua'}
                       </button>
@@ -606,7 +609,7 @@ export const GuestPassModal: React.FC<GuestPassModalProps> = ({
                                     Sudah Ada
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-seal-50 text-seal-800 border border-seal-200">
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-chip bg-seal-50 text-seal-800 border border-seal-200">
                                     Siap Impor
                                   </span>
                                 )}

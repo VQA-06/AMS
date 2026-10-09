@@ -44,7 +44,7 @@ export const DigitalPassCard: React.FC<DigitalPassCardProps> = ({
           aria-label="Tutup dialog"
           title="Tutup"
           className={cn(
-            'absolute right-3 top-3 z-10 rounded-chip bg-paper-raised p-2 text-ink-2 transition-colors hover:text-ink',
+            'absolute right-3 top-3 z-10 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-chip bg-paper-raised text-ink-2 transition-colors hover:text-ink',
             focusRing
           )}
         >

@@ -15,7 +15,6 @@ export type BadgeSize = 'xs' | 'sm' | 'md';
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
   size?: BadgeSize;
-  pulse?: boolean;
   dot?: boolean;
   icon?: React.ReactNode;
   children: React.ReactNode;
@@ -78,8 +77,7 @@ const sizeStyles: Record<BadgeSize, string> = {
 
 export const Badge: React.FC<BadgeProps> = ({
   variant = 'neutral',
-  size = 'md',
-  pulse = false,
+  size = 'xs',
   dot = false,
   icon,
   children,
@@ -99,16 +97,8 @@ export const Badge: React.FC<BadgeProps> = ({
       data-variant={variant}
       {...props}
     >
-      {(pulse || dot) && (
+      {dot && (
         <span className="relative flex h-2 w-2 shrink-0">
-          {pulse && (
-            <span
-              className={cn(
-                'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
-                current.dot
-              )}
-            />
-          )}
           <span className={cn('relative inline-flex rounded-full h-2 w-2', current.dot)} />
         </span>
       )}

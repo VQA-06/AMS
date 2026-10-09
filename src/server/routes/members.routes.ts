@@ -5,15 +5,25 @@ import { MemberRepository } from '../repositories/member.repo';
 import { AdminRepository } from '../repositories/admin.repo';
 import { QrTokenRepository } from '../repositories/qr.repo';
 import { AuditRepository } from '../repositories/audit.repo';
+import { AttendanceRepository } from '../repositories/attendance.repo';
 import { authMiddleware, requireRole, invalidateAdminCache } from '../middleware/auth';
 import { edgeCache } from '../middleware/edge-cache';
 import { invalidateEdgeCache } from '../lib/edge-cache';
-import { memberSchema, memberUpdateSchema, memberImportRowSchema } from '@/shared/schemas/member.schema';
+import {
+  memberSchema,
+  memberUpdateSchema,
+  memberImportRowSchema,
+  candidateInductionSchema,
+  candidateBatchActionSchema,
+  candidatePurgeSchema,
+  convertGuestsToCandidatesSchema,
+} from '@/shared/schemas/member.schema';
 import { generateQrToken } from '../crypto/qr-crypto';
-import { ApiResponse, Member, QrToken } from '@/shared/types';
+import { ApiResponse, CandidateInductionResult, Member, QrToken, Status, AttendedEventEntry, ConvertGuestsResult } from '@/shared/types';
 import { ErrorCode } from '@/shared/constants/error-codes';
 import { sanitizeCsvRow } from '../lib/csv-sanitizer';
 import { MutationCoordinator } from '../lib/mutation-coordinator';
+import { chunkArray, D1_MAX_SAFE_PARAM_CHUNK } from '../lib/d1-utils';
 const membersRoutes = new Hono<{ Bindings: Env }>();
 
 // GET /api/members - List members (excludes temporary guest members by default)
@@ -25,7 +35,10 @@ membersRoutes.get('/', authMiddleware, async (c) => {
     search: query.search,
     group_name: query.group_name,
     division: query.division,
-    status: (query.status as any) || 'all',
+    status:
+      query.status === 'active' || query.status === 'inactive' || query.status === 'candidate' || query.status === 'archived' || query.status === 'all'
+        ? query.status
+        : 'all',
     exclude_temporary: query.include_temporary !== 'true',
     page: query.page ? parseInt(query.page, 10) : 1,
     limit: query.limit ? parseInt(query.limit, 10) : 50,
@@ -275,6 +288,40 @@ membersRoutes.get('/:id/universal-qr', authMiddleware, async (c) => {
         expires_at: expiresAt,
       },
     },
+  });
+});
+
+// GET /api/members/:id/attended-events - List attended events for a specific member
+membersRoutes.get('/:id/attended-events', authMiddleware, async (c) => {
+  const memberId = c.req.param('id');
+  if (!memberId) {
+    return c.json<ApiResponse>(
+      { ok: false, error: { code: ErrorCode.VALIDATION_ERROR, message: 'ID anggota wajib diisi.' } },
+      400
+    );
+  }
+
+  const memberRepo = new MemberRepository(c.env.DB);
+  const member = await memberRepo.findById(memberId);
+  if (!member) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.MEMBER_NOT_FOUND,
+          message: 'Anggota tidak ditemukan.',
+        },
+      },
+      404
+    );
+  }
+
+  const attendanceRepo = new AttendanceRepository(c.env.DB);
+  const events = await attendanceRepo.listMemberAttendedEvents(memberId);
+
+  return c.json<ApiResponse<AttendedEventEntry[]>>({
+    ok: true,
+    data: events,
   });
 });
 
@@ -812,16 +859,22 @@ membersRoutes.post('/bulk-deactivate', authMiddleware, requireRole(['owner', 'ad
 
   const admin = c.get('admin');
   const coordinator = new MutationCoordinator(c.env.DB, c);
-  const placeholders = ids.map(() => '?').join(',');
-  const updateStmt = c.env.DB
-    .prepare(`UPDATE members SET status = 'inactive', updated_at = datetime('now') WHERE id IN (${placeholders})`)
-    .bind(...ids);
-  const deactivateAdminsStmt = c.env.DB
-    .prepare(`UPDATE admins SET status = 'inactive', updated_at = datetime('now') WHERE member_id IN (${placeholders})`)
-    .bind(...ids);
+  const idChunks = chunkArray(ids, D1_MAX_SAFE_PARAM_CHUNK);
+  const statements: D1PreparedStatement[] = [];
+  for (const chunk of idChunks) {
+    const placeholders = chunk.map(() => '?').join(',');
+    statements.push(
+      c.env.DB
+        .prepare(`UPDATE members SET status = 'inactive', updated_at = datetime('now') WHERE id IN (${placeholders})`)
+        .bind(...chunk),
+      c.env.DB
+        .prepare(`UPDATE admins SET status = 'inactive', updated_at = datetime('now') WHERE member_id IN (${placeholders})`)
+        .bind(...chunk)
+    );
+  }
   invalidateAdminCache();
   await coordinator.execute({
-    statements: [updateStmt, deactivateAdminsStmt],
+    statements,
     cacheTags: ['members', 'attendance', 'agenda'],
     audit: {
       adminId: admin?.id || null,
@@ -830,7 +883,6 @@ membersRoutes.post('/bulk-deactivate', authMiddleware, requireRole(['owner', 'ad
       meta: { count: ids.length, ids },
     },
   });
-
   return c.json<ApiResponse>({
     ok: true,
     data: { count: ids.length, message: `Berhasil menonaktifkan ${ids.length} anggota.` },
@@ -850,16 +902,19 @@ membersRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'admin'
 
   const admin = c.get('admin');
   const coordinator = new MutationCoordinator(c.env.DB, c);
-  const placeholders = ids.map(() => '?').join(',');
-
-  const statements = [
-    c.env.DB.prepare(`DELETE FROM event_guests WHERE member_id IN (${placeholders})`).bind(...ids),
-    c.env.DB.prepare(`DELETE FROM attendances WHERE member_id IN (${placeholders})`).bind(...ids),
-    c.env.DB.prepare(`DELETE FROM scan_attempts WHERE member_id IN (${placeholders})`).bind(...ids),
-    c.env.DB.prepare(`DELETE FROM qr_tokens WHERE member_id IN (${placeholders})`).bind(...ids),
-    c.env.DB.prepare(`DELETE FROM admins WHERE member_id IN (${placeholders})`).bind(...ids),
-    c.env.DB.prepare(`DELETE FROM members WHERE id IN (${placeholders})`).bind(...ids),
-  ];
+  const idChunks = chunkArray(ids, D1_MAX_SAFE_PARAM_CHUNK);
+  const statements: D1PreparedStatement[] = [];
+  for (const chunk of idChunks) {
+    const placeholders = chunk.map(() => '?').join(',');
+    statements.push(
+      c.env.DB.prepare(`UPDATE admins SET member_id = NULL WHERE member_id IN (${placeholders})`).bind(...chunk),
+      c.env.DB.prepare(`DELETE FROM event_guests WHERE member_id IN (${placeholders})`).bind(...chunk),
+      c.env.DB.prepare(`DELETE FROM attendances WHERE member_id IN (${placeholders})`).bind(...chunk),
+      c.env.DB.prepare(`DELETE FROM scan_attempts WHERE member_id IN (${placeholders})`).bind(...chunk),
+      c.env.DB.prepare(`DELETE FROM qr_tokens WHERE member_id IN (${placeholders})`).bind(...chunk),
+      c.env.DB.prepare(`DELETE FROM members WHERE id IN (${placeholders})`).bind(...chunk)
+    );
+  }
   invalidateAdminCache();
 
   await coordinator.execute({
@@ -876,6 +931,244 @@ membersRoutes.post('/bulk-delete', authMiddleware, requireRole(['owner', 'admin'
   return c.json<ApiResponse>({
     ok: true,
     data: { count: ids.length, message: `Berhasil menghapus permanen ${ids.length} anggota.` },
+  });
+});
+
+// POST /api/members/candidates/convert-from-guests - Batch convert guest attendees into official candidate members
+membersRoutes.post('/candidates/convert-from-guests', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
+  if (c.env.ENABLE_GUEST_CONVERSION === 'false') {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.FORBIDDEN,
+          message: 'Fitur migrasi tamu ke calon anggota dinonaktifkan oleh konfigurasi server.',
+        },
+      },
+      403
+    );
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const parseResult = convertGuestsToCandidatesSchema.safeParse(body);
+  if (!parseResult.success) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: parseResult.error.errors[0]?.message || 'Data konversi tamu tidak valid.',
+          details: parseResult.error.flatten(),
+        },
+      },
+      400
+    );
+  }
+
+  const { guest_member_ids, target_group, target_division } = parseResult.data;
+  const repo = new MemberRepository(c.env.DB);
+  const auditRepo = new AuditRepository(c.env.DB);
+  const admin = c.get('admin');
+
+  const result = await repo.convertGuestsToCandidates(guest_member_ids, {
+    targetGroup: target_group,
+    division: target_division,
+  });
+
+  await auditRepo.logAction({
+    admin_id: admin?.id,
+    action: 'CONVERT_GUESTS_TO_CANDIDATES',
+    entity_type: 'member',
+    entity_id: 'batch',
+    meta: {
+      converted_count: result.converted_count,
+      converted_ids: result.converted_ids,
+      target_group,
+      target_division,
+    },
+  });
+
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], c);
+
+  return c.json<ApiResponse<ConvertGuestsResult>>({
+    ok: true,
+    data: result,
+  });
+});
+
+// POST /api/members/candidates/induct - Induct candidate members to active status and optionally sweep remaining to archived
+membersRoutes.post('/candidates/induct', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const parseResult = candidateInductionSchema.safeParse(body);
+  if (!parseResult.success) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: parseResult.error.errors[0]?.message || 'Data pelantikan tidak valid.',
+          details: parseResult.error.flatten(),
+        },
+      },
+      400
+    );
+  }
+
+  const { member_ids, archive_remaining, batch_group, division } = parseResult.data;
+  const repo = new MemberRepository(c.env.DB);
+  const auditRepo = new AuditRepository(c.env.DB);
+  const admin = c.get('admin');
+
+  const result = await repo.inductCandidates({
+    memberIds: member_ids,
+    archiveRemaining: archive_remaining,
+    batchGroup: batch_group,
+    division,
+  });
+
+  await auditRepo.logAction({
+    admin_id: admin?.id,
+    action: 'INDUCT_CANDIDATES',
+    entity_type: 'member',
+    entity_id: 'batch',
+    meta: {
+      promoted_count: result.promoted_count,
+      promoted_ids: result.promoted_ids,
+      archived_count: result.archived_count,
+      archived_ids: result.archived_ids,
+      batch_group,
+      division,
+    },
+  });
+
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], c);
+
+  return c.json<ApiResponse<CandidateInductionResult>>({
+    ok: true,
+    data: result,
+  });
+});
+
+// POST /api/members/candidates/archive - Archive candidate members
+membersRoutes.post('/candidates/archive', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const parseResult = candidateBatchActionSchema.safeParse(body);
+  if (!parseResult.success) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: parseResult.error.errors[0]?.message || 'Data pengarsipan tidak valid.',
+          details: parseResult.error.flatten(),
+        },
+      },
+      400
+    );
+  }
+
+  const { member_ids, batch_group } = parseResult.data;
+  const repo = new MemberRepository(c.env.DB);
+  const auditRepo = new AuditRepository(c.env.DB);
+  const admin = c.get('admin');
+
+  const result = await repo.archiveCandidates(member_ids, batch_group);
+
+  await auditRepo.logAction({
+    admin_id: admin?.id,
+    action: 'ARCHIVE_CANDIDATES',
+    entity_type: 'member',
+    entity_id: 'batch',
+    meta: { count: result.count, archived_ids: result.archived_ids, batch_group },
+  });
+
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], c);
+
+  return c.json<ApiResponse>({
+    ok: true,
+    data: result,
+  });
+});
+
+// POST /api/members/candidates/restore - Restore archived members back to candidate status
+membersRoutes.post('/candidates/restore', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const parseResult = candidateBatchActionSchema.safeParse(body);
+  if (!parseResult.success) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: parseResult.error.errors[0]?.message || 'Data pemulihan tidak valid.',
+          details: parseResult.error.flatten(),
+        },
+      },
+      400
+    );
+  }
+
+  const { member_ids, batch_group } = parseResult.data;
+  const repo = new MemberRepository(c.env.DB);
+  const auditRepo = new AuditRepository(c.env.DB);
+  const admin = c.get('admin');
+
+  const result = await repo.restoreArchived(member_ids, batch_group);
+
+  await auditRepo.logAction({
+    admin_id: admin?.id,
+    action: 'RESTORE_CANDIDATES',
+    entity_type: 'member',
+    entity_id: 'batch',
+    meta: { count: result.count, restored_ids: result.restored_ids, batch_group },
+  });
+
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], c);
+
+  return c.json<ApiResponse>({
+    ok: true,
+    data: result,
+  });
+});
+
+// POST /api/members/candidates/purge - Permanently delete archived members
+membersRoutes.post('/candidates/purge', authMiddleware, requireRole(['owner', 'admin']), async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const parseResult = candidatePurgeSchema.safeParse(body);
+  if (!parseResult.success) {
+    return c.json<ApiResponse>(
+      {
+        ok: false,
+        error: {
+          code: ErrorCode.VALIDATION_ERROR,
+          message: parseResult.error.errors[0]?.message || 'Data pembersihan arsip tidak valid.',
+          details: parseResult.error.flatten(),
+        },
+      },
+      400
+    );
+  }
+
+  const { member_ids, all_archived } = parseResult.data;
+  const repo = new MemberRepository(c.env.DB);
+  const auditRepo = new AuditRepository(c.env.DB);
+  const admin = c.get('admin');
+
+  const result = await repo.purgeArchived(all_archived ? undefined : member_ids);
+
+  await auditRepo.logAction({
+    admin_id: admin?.id,
+    action: 'PURGE_ARCHIVED',
+    entity_type: 'member',
+    entity_id: 'batch',
+    meta: { count: result.count, purged_ids: result.purged_ids, all_archived },
+  });
+
+  await invalidateEdgeCache(['members', 'attendance', 'agenda'], c);
+
+  return c.json<ApiResponse>({
+    ok: true,
+    data: result,
   });
 });
 

@@ -5,9 +5,9 @@ import { ChartLineUp } from '@phosphor-icons/react/ChartLineUp';
 import { Plus } from '@phosphor-icons/react/Plus';
 import { QrCode } from '@phosphor-icons/react/QrCode';
 import { Users } from '@phosphor-icons/react/Users';
-import { Warning } from '@phosphor-icons/react/Warning';
+import { PartialBanner } from '../components/ui/PartialBanner';
 import { fetchCached } from '../lib/swr-client';
-import { Event, MemberActivitySummary } from '@/shared/types';
+import { Event, MemberActivitySummary, MemberStatsSummary } from '@/shared/types';
 import { TabKey } from '../components/layout/MobileShell';
 import { TopEventsChart, TopEventStatItem } from '../components/dashboard/TopEventsChart';
 import { MembersYearlyChart, YearlyMemberStat } from '../components/dashboard/MembersYearlyChart';
@@ -35,10 +35,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onOpenAddMember,
   onOpenCreateEvent,
 }) => {
-  const [memberStats, setMemberStats] = useState<{ total: number; active: number; inactive: number }>({
+  const [memberStats, setMemberStats] = useState<MemberStatsSummary>({
     total: 0,
     active: 0,
     inactive: 0,
+    candidate: 0,
+    archived: 0,
   });
   const [divisions, setDivisions] = useState<string[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -52,7 +54,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const loadData = useCallback(async (force = false) => {
     try {
       const settled = await Promise.allSettled([
-        fetchCached<{ total: number; active: number; inactive: number }>('/api/members/stats/summary', {
+        fetchCached<MemberStatsSummary>('/api/members/stats/summary', {
           forceRefresh: force,
           ttlMs: 15_000,
         }),
@@ -86,7 +88,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       const [mSummary, dRes, eRes, tRes, topEvRes, yrRes] = settled.map((r) =>
         r.status === 'fulfilled' ? r.value : null
       ) as [
-        { total: number; active: number; inactive: number } | null,
+        MemberStatsSummary | null,
         { divisions: string[] } | null,
         { events: Event[] } | null,
         { summary: MemberActivitySummary } | null,
@@ -182,19 +184,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className="space-y-5 pb-4 md:space-y-8">
-      {partialErrors.length > 0 && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-start gap-2.5 rounded-panel border border-pending-200 bg-pending-50/70 px-4 py-3 text-xs text-pending-800"
-        >
-          <Warning className="mt-0.5 h-4 w-4 shrink-0 text-pending-600" weight="bold" />
-          <span>
-            Sebagian data gagal dimuat: {partialErrors.join(', ')}. Angka di bawah
-            mungkin tidak lengkap, bukan nol.
-          </span>
-        </div>
-      )}
+      <PartialBanner sections={partialErrors} />
 
       <PageHeader
         title="Ringkasan Operasional & Kehadiran"
@@ -240,7 +230,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <Stat
           label="Total Anggota"
           value={statValue('Statistik Anggota', memberStats.total)}
-          hint={failed('Statistik Anggota') ? 'Gagal dimuat' : `${memberStats.active} aktif`}
+          hint={
+            failed('Statistik Anggota')
+              ? 'Gagal dimuat'
+              : memberStats.candidate > 0
+              ? `${memberStats.active} aktif · ${memberStats.candidate} calon`
+              : `${memberStats.active} aktif`
+          }
           icon={<Users />}
         />
         <Stat
@@ -301,7 +297,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               type="button"
               onClick={() => onNavigate('events')}
               className={cn(
-                'flex shrink-0 items-center gap-1 rounded-chip text-xs font-semibold text-ink-2 transition-colors hover:text-ink-2',
+                'flex min-h-[44px] shrink-0 items-center gap-1 rounded-chip text-xs font-semibold text-ink-2 transition-colors hover:text-ink-2',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
               )}
             >
@@ -329,7 +325,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       the "Aktif" badge already carries the state. */}
                   <Card className="group h-full p-4 transition-colors hover:border-pen-200">
                     <div className="flex items-center justify-between gap-2">
-                      <Badge variant="seal" size="sm" pulse>
+                      <Badge variant="seal" size="sm" dot>
                         Aktif
                       </Badge>
                       <span className="truncate font-oxanium text-[10px] text-ink-2">{ev.qr_policy}</span>
@@ -380,72 +376,83 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           )}
         </section>
 
-        <Card className="min-w-0 space-y-3.5 p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="flex min-w-0 items-center gap-2 font-display text-base font-semibold text-ink">
-              <ChartLineUp className="h-4 w-4 shrink-0 text-seal-600" weight="bold" />
-              <span className="truncate">Keaktifan Anggota</span>
-            </h2>
-            <button
+        <Card className="flex h-full min-w-0 flex-col justify-between p-4 sm:p-5">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="flex min-w-0 items-center gap-2 font-display text-base font-semibold text-ink">
+                <ChartLineUp className="h-4 w-4 shrink-0 text-seal-600" weight="bold" />
+                <span className="truncate">Keaktifan Anggota</span>
+              </h2>
+              <button
+                type="button"
+                onClick={() => onNavigate('tracker')}
+                className={cn(
+                  'flex min-h-[44px] shrink-0 items-center gap-1 rounded-chip px-2 text-xs font-semibold text-ink-2 transition-colors hover:text-ink',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
+                )}
+              >
+                <span>Detail</span>
+                <ArrowUpRight className="h-3 w-3" weight="bold" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate text-xs text-ink-3">Rata-Rata Kehadiran</span>
+                <span className="font-oxanium text-xl font-bold tabular-nums text-seal-600">
+                  {trackerSummary?.average_attendance_rate ?? 0}%
+                </span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-paper-sunk">
+                <div
+                  className="h-full rounded-full bg-seal-500 transition-[width] duration-300"
+                  style={{ width: `${Math.min(100, Math.max(0, trackerSummary?.average_attendance_rate ?? 0))}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="surface-raised space-y-0.5 rounded-chip p-2.5">
+                <span className="block text-[10px] font-bold uppercase leading-tight tracking-wider text-seal-600">
+                  Sangat Aktif
+                </span>
+                <span className="font-oxanium text-lg font-bold tabular-nums text-ink">
+                  {trackerSummary?.highly_active_count ?? 0}
+                </span>
+              </div>
+
+              <div className="surface-raised space-y-0.5 rounded-chip p-2.5">
+                <span className="block text-[10px] font-bold uppercase leading-tight tracking-wider text-pending-600">
+                  Cukup Aktif
+                </span>
+                <span className="font-oxanium text-lg font-bold tabular-nums text-ink">
+                  {trackerSummary?.active_count ?? 0}
+                </span>
+              </div>
+
+              <div className="surface-raised space-y-0.5 rounded-chip p-2.5">
+                <span className="block text-[10px] font-bold uppercase leading-tight tracking-wider text-ink-2">
+                  Belum Aktif
+                </span>
+                <span className="font-oxanium text-lg font-bold tabular-nums text-ink">
+                  {trackerSummary?.inactive_count ?? 0}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-auto pt-3">
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => onNavigate('tracker')}
-              className={cn(
-                'flex shrink-0 items-center gap-1 rounded-chip text-xs font-semibold text-ink-2 transition-colors hover:text-ink-2',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
-              )}
+              className="w-full justify-center"
             >
-              <span>Detail</span>
-              <ArrowUpRight className="h-3 w-3" weight="bold" />
-            </button>
+              <ChartLineUp className="mr-1.5 h-3.5 w-3.5 text-ink-2" weight="bold" />
+              <span>Buka Pelacakan Keaktifan Lengkap</span>
+            </Button>
           </div>
-
-          <div className="flex items-baseline justify-between gap-2 pt-1">
-            <span className="min-w-0 truncate text-xs text-ink-2">Rata-Rata Kehadiran</span>
-            <span className="font-oxanium text-xl font-bold tabular-nums text-ink-2">
-              {trackerSummary?.average_attendance_rate ?? 0}%
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="surface-raised space-y-0.5 rounded-chip p-2.5">
-              <span className="block text-[9px] font-bold uppercase tracking-wider text-seal-600">
-                Sangat Aktif
-              </span>
-              <span className="font-oxanium text-lg font-bold tabular-nums text-ink">
-                {trackerSummary?.highly_active_count ?? 0}
-              </span>
-            </div>
-
-            <div className="surface-raised space-y-0.5 rounded-chip p-2.5">
-              <span className="block text-[9px] font-bold uppercase tracking-wider text-pending-600">
-                Cukup Aktif
-              </span>
-              <span className="font-oxanium text-lg font-bold tabular-nums text-ink">
-                {trackerSummary?.active_count ?? 0}
-              </span>
-            </div>
-
-            <div className="surface-raised space-y-0.5 rounded-chip p-2.5">
-              <span className="block text-[9px] font-bold uppercase tracking-wider text-ink-2">
-                Belum Aktif
-              </span>
-              <span className="font-oxanium text-lg font-bold tabular-nums text-ink">
-                {trackerSummary?.inactive_count ?? 0}
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onNavigate('tracker')}
-            className={cn(
-              'flex w-full items-center justify-center gap-1.5 rounded-chip py-2 text-xs font-semibold text-ink transition-colors hover:bg-paper-raised hover:text-ink',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
-            )}
-          >
-            <ChartLineUp className="h-3.5 w-3.5 text-ink-2" weight="bold" />
-            <span>Buka Pelacakan Keaktifan Lengkap</span>
-          </button>
         </Card>
       </div>
     </div>

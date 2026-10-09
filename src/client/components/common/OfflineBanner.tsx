@@ -65,7 +65,7 @@ export const OfflineBanner: React.FC = () => {
         type="button"
         onClick={() => window.location.reload()}
         aria-label="Muat ulang halaman"
-        className="ml-auto inline-flex items-center gap-1.5 rounded-chip bg-ink/30 px-2.5 py-1 text-xs font-bold text-pending-800 transition-colors duration-120 hover:bg-ink/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+        className="ml-auto inline-flex min-h-[44px] items-center gap-1.5 rounded-chip bg-ink/30 px-2.5 py-1 text-xs font-bold text-pending-800 transition-colors duration-120 hover:bg-ink/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
       >
         <ArrowClockwise className="h-3 w-3" />
         <span>Coba Muat Ulang</span>

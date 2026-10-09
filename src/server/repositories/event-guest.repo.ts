@@ -109,9 +109,9 @@ export class EventGuestRepository {
           SELECT member_id FROM qr_tokens WHERE event_id = ? AND scope = 'event' AND revoked_at IS NULL
         ) src_guests
         JOIN members m ON src_guests.member_id = m.id
-        JOIN qr_tokens t ON t.member_id = m.id AND t.scope = 'event' AND t.revoked_at IS NULL
+        JOIN qr_tokens t ON t.member_id = m.id AND t.revoked_at IS NULL
         LEFT JOIN event_guests eg_target ON eg_target.event_id = ? AND eg_target.member_id = m.id
-        WHERE m.status = 'active'
+        WHERE m.status IN ('active', 'candidate')
         GROUP BY m.id
         ORDER BY m.name ASC
       `)
@@ -236,7 +236,7 @@ export class EventGuestRepository {
         FROM event_guests eg
         JOIN members m ON eg.member_id = m.id
         LEFT JOIN events se ON eg.source_event_id = se.id
-        JOIN qr_tokens t ON t.member_id = m.id AND t.scope = 'event' AND t.revoked_at IS NULL
+        JOIN qr_tokens t ON t.member_id = m.id AND t.revoked_at IS NULL
         WHERE eg.event_id = ?
         GROUP BY m.id
         ORDER BY eg.created_at ASC

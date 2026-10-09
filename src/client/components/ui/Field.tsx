@@ -69,7 +69,7 @@ export interface FieldProps {
 
 /** One control surface for the whole app. Never stack a background or border override. */
 const controlClass =
-  'w-full rounded-chip border border-rule-strong bg-paper px-3 py-2 text-xs sm:py-2.5 sm:text-sm text-ink ' +
+  'w-full min-h-[44px] rounded-chip border border-rule-strong bg-paper px-3 py-2 text-xs sm:py-2.5 sm:text-sm text-ink ' +
   'placeholder:text-ink-3 focus-visible:outline-none focus-visible:ring-2 ' +
   'focus-visible:ring-pen-500 focus-visible:ring-offset-2 focus-visible:ring-offset-paper ' +
   'transition-colors disabled:opacity-60';
@@ -243,7 +243,7 @@ export const Field: React.FC<FieldProps> = ({
         aria-pressed={revealed}
         onClick={() => setRevealed((v) => !v)}
         className={cn(
-          'absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-chip text-ink-3',
+          'absolute right-1 top-1/2 -translate-y-1/2 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-chip text-ink-3',
           'hover:bg-paper-sunk hover:text-ink transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-500',
           'focus-visible:ring-offset-2 focus-visible:ring-offset-paper'

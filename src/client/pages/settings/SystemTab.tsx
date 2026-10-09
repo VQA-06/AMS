@@ -90,9 +90,15 @@ export const SystemTab: React.FC = () => {
               <DeviceMobile className="h-4 w-4 text-seal-600" />
               <span>Progressive Web App (PWA) &amp; Offline Shell</span>
             </h2>
-            <Badge variant="seal" size="xs">
-              Terpasang sebagai PWA
-            </Badge>
+            {isStandalone ? (
+              <Badge variant="seal" size="xs">
+                Terpasang sebagai PWA
+              </Badge>
+            ) : (
+              <Badge variant="neutral" size="xs">
+                Mode Browser
+              </Badge>
+            )}
           </div>
 
           <p className="text-xs text-ink">

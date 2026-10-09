@@ -1,5 +1,5 @@
 export type Role = 'owner' | 'admin' | 'operator' | 'auditor';
-export type Status = 'active' | 'inactive';
+export type Status = 'active' | 'inactive' | 'candidate' | 'archived';
 export type EventStatus = 'draft' | 'active' | 'closed' | 'archived';
 export type QrPolicy = 'event_only' | 'universal_allowed';
 export type QrScope = 'universal' | 'event';
@@ -32,6 +32,21 @@ export interface Member {
   metadata: Record<string, unknown> | string;
   created_at: string;
   updated_at: string;
+}
+
+export interface MemberStatsSummary {
+  total: number;
+  active: number;
+  inactive: number;
+  candidate: number;
+  archived: number;
+}
+
+export interface CandidateInductionResult {
+  promoted_count: number;
+  promoted_ids: string[];
+  archived_count: number;
+  archived_ids: string[];
 }
 
 export interface Event {
@@ -161,6 +176,22 @@ export interface MemberActivitySummary {
   active_count: number;
   inactive_count: number;
   average_attendance_rate: number;
+}
+
+export interface AttendedEventEntry {
+  event_id: string;
+  event_name: string;
+  event_location: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  attended_at: string;
+  session_type: SessionType | string;
+  method: string;
+}
+
+export interface ConvertGuestsResult {
+  converted_count: number;
+  converted_ids: string[];
 }
 
 export interface ApiResponse<T = unknown> {

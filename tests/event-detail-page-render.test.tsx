@@ -135,8 +135,6 @@ describe('EventDetailPage Subcomponents & Primitives Render Verification', () =>
         selectedDivision=""
         onDivisionChange={() => {}}
         divisions={[]}
-        mobileViewMode="table"
-        onToggleMobileViewMode={() => {}}
         selectedAttendanceIds={new Set()}
         onToggleSelectAttendance={() => {}}
         onSelectAllAttendances={() => {}}
@@ -177,8 +175,6 @@ describe('EventDetailPage Subcomponents & Primitives Render Verification', () =>
         selectedDivision=""
         onDivisionChange={() => {}}
         divisions={['Engineering']}
-        mobileViewMode="table"
-        onToggleMobileViewMode={() => {}}
         selectedAttendanceIds={new Set(['att-1'])}
         onToggleSelectAttendance={() => {}}
         onSelectAllAttendances={() => {}}
@@ -188,6 +184,57 @@ describe('EventDetailPage Subcomponents & Primitives Render Verification', () =>
       />
     );
     expect(filledHtml).toContain('Budi Santoso');
+  });
+
+  it('should render the roster as one index-card grammar, never a table', () => {
+    const sessionCounts = { checkin: 1, checkout: 0, breakOut: 0, breakIn: 0 };
+    const mockAttendance: Attendance = {
+      id: 'att-1',
+      event_id: 'event-1',
+      member_id: 'mem-1',
+      session_type: 'CHECKIN',
+      qr_token_id: 'tok-1',
+      scanned_at: '2025-06-01T09:05:00.000Z',
+      station_id: null,
+      operator_id: 'scanner-1',
+      is_manual: 0,
+      meta: '{}',
+      member_name: 'Budi Santoso',
+      member_external_id: 'MEM-001',
+      member_division: 'Engineering',
+    };
+
+    const html = renderToString(
+      <AttendanceRosterTable
+        attendances={[mockAttendance]}
+        displayedAttendances={[mockAttendance]}
+        totalScanned={1}
+        sessionCounts={sessionCounts}
+        sessionFilter="ALL"
+        onSelectSessionFilter={() => {}}
+        search=""
+        onSearchChange={() => {}}
+        selectedDivision=""
+        onDivisionChange={() => {}}
+        divisions={['Engineering']}
+        selectedAttendanceIds={new Set(['att-1'])}
+        onToggleSelectAttendance={() => {}}
+        onSelectAllAttendances={() => {}}
+        onDeleteAttendanceBatch={() => {}}
+        onOpenManualAttendance={() => {}}
+        isManager={true}
+      />
+    );
+
+    // A card/list toggle was the only reason a column table shipped here, and
+    // a toggle that exists means two grammars for one list.
+    expect(html).not.toContain('<table');
+    expect(html).not.toContain('Tampilan Kartu');
+    expect(html).not.toContain('Tampilan Tabel');
+    // The columns became the row's two lines — nothing was dropped.
+    expect(html).toContain('Budi Santoso');
+    expect(html).toContain('MEM-001');
+    expect(html).toContain('data-mark="seal"');
   });
 
   it('should render GuestPassWorkspace (empty and populated) with valid EmptyState and Buttons', () => {
@@ -219,8 +266,8 @@ describe('EventDetailPage Subcomponents & Primitives Render Verification', () =>
         onOpenQrModal={() => {}}
         onOpenPrintSheet={() => {}}
         onSelectTokenForCard={() => {}}
-        onOpenPromoteSingle={() => {}}
-        onOpenPromoteBulk={() => {}}
+        onOpenConvertCandidateSingle={() => {}}
+        onOpenConvertCandidateBulk={() => {}}
         onRevokeToken={() => {}}
         onRevokeTokenBatch={() => {}}
         onDeleteToken={() => {}}
@@ -264,8 +311,8 @@ describe('EventDetailPage Subcomponents & Primitives Render Verification', () =>
         onOpenQrModal={() => {}}
         onOpenPrintSheet={() => {}}
         onSelectTokenForCard={() => {}}
-        onOpenPromoteSingle={() => {}}
-        onOpenPromoteBulk={() => {}}
+        onOpenConvertCandidateSingle={() => {}}
+        onOpenConvertCandidateBulk={() => {}}
         onRevokeToken={() => {}}
         onRevokeTokenBatch={() => {}}
         onDeleteToken={() => {}}

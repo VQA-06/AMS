@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '../../lib/cn';
 import { markTextClass, markToneClass, type MarkTone } from './Table';
-
+import { Pagination } from './Pagination';
 export type { MarkTone } from './Table';
 
 export interface RowListItem {
@@ -23,11 +23,26 @@ export interface RowListProps {
   onSelect?: (id: string) => void;
   selectable?: boolean;
   selectedIds?: Set<string>;
+  /**
+   * Subset of `items` that may be selected. Present when some rows are locked
+   * (the signed-in account, the default master owner): a locked row renders the
+   * muted `-` fragment instead of a checkbox, so the selection guard stays
+   * visible rather than becoming an inert control.
+   */
+  selectableIds?: Set<string>;
   onToggle?: (id: string) => void;
   onToggleAll?: () => void;
   emptyState?: React.ReactNode;
   className?: string;
   itemLabel?: string;
+  /** Number of items per page. Defaults to 25. */
+  pageSize?: number;
+  /** Whether pagination is enabled. Defaults to true. */
+  paginated?: boolean;
+  /** Controlled page index (1-based). Optional. */
+  page?: number;
+  /** Callback on page change. Optional. */
+  onPageChange?: (page: number) => void;
 }
 
 const focusRing =
@@ -54,12 +69,28 @@ export const RowList: React.FC<RowListProps> = ({
   onSelect,
   selectable = false,
   selectedIds,
+  selectableIds,
   onToggle,
   onToggleAll,
   emptyState,
   className,
   itemLabel = 'baris',
+  pageSize = 25,
+  paginated = true,
+  page,
+  onPageChange,
 }) => {
+  const [internalPage, setInternalPage] = useState(1);
+  const effectivePageSize = pageSize;
+  const totalPages = Math.max(1, Math.ceil(items.length / effectivePageSize));
+  const activePage = Math.max(1, Math.min(page ?? internalPage, totalPages));
+  const handlePageChange = onPageChange ?? setInternalPage;
+
+  useEffect(() => {
+    if (internalPage > totalPages) {
+      setInternalPage(totalPages);
+    }
+  }, [internalPage, totalPages]);
   const tones = new Set(items.map((item) => item.status?.tone).filter(Boolean) as MarkTone[]);
   const mixedTones = tones.size > 1;
 
@@ -67,7 +98,11 @@ export const RowList: React.FC<RowListProps> = ({
     return <div className={className}>{emptyState}</div>;
   }
 
-  const allSelected = selectable && selectedIds ? selectedIds.size === items.length : false;
+  const selectableCount = selectableIds
+    ? items.filter((item) => selectableIds.has(item.id)).length
+    : items.length;
+  const allSelected =
+    selectable && selectedIds ? selectedIds.size === selectableCount && selectableCount > 0 : false;
 
   return (
     <div className={cn('rounded-panel border border-rule bg-paper-raised', className)}>
@@ -80,27 +115,35 @@ export const RowList: React.FC<RowListProps> = ({
             className="h-4 w-4 shrink-0 accent-pen-500"
           />
           <span>
-            Pilih semua ({items.length} {itemLabel})
+            {`Pilih semua (${selectableCount} ${itemLabel})`}
           </span>
         </label>
       )}
       <ul>
-        {items.map((item) => {
+        {(paginated && items.length > effectivePageSize
+          ? items.slice((activePage - 1) * effectivePageSize, activePage * effectivePageSize)
+          : items
+        ).map((item) => {
           const tone = item.status?.tone;
           const showMark = mixedTones && tone !== undefined && tone !== 'idle';
           const selected = selectedIds?.has(item.id) ?? false;
+          const rowSelectable = selectable && (!selectableIds || selectableIds.has(item.id));
 
           const content = (
             <>
               {selectable ? (
-                <input
-                  type="checkbox"
-                  checked={selected}
-                  onChange={() => onToggle?.(item.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label={`Pilih ${item.title}`}
-                  className="h-4 w-4 shrink-0 accent-pen-500"
-                />
+                rowSelectable ? (
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => onToggle?.(item.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Pilih ${item.title}`}
+                    className="h-4 w-4 shrink-0 accent-pen-500"
+                  />
+                ) : (
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center text-xs text-ink-3">-</span>
+                )
               ) : (
                 item.leading && (
                   <span className="w-6 shrink-0 font-oxanium text-[11px] tabular-nums text-ink-3">
@@ -112,12 +155,26 @@ export const RowList: React.FC<RowListProps> = ({
                 <span className="block truncate font-display text-[15px] leading-tight text-ink">
                   {item.title}
                 </span>
-                {item.meta && <span className="mt-0.5 block truncate text-[11px] text-ink-3">{item.meta}</span>}
+                {(item.meta || item.status) && (
+                  <span className="mt-0.5 flex items-center gap-1.5 text-[11px]">
+                    {item.meta && <span className="min-w-0 flex-1 truncate text-ink-3">{item.meta}</span>}
+                    {item.status && (
+                      <span
+                        className={cn(
+                          'shrink-0 whitespace-nowrap font-display uppercase tracking-[0.1em] sm:hidden',
+                          markTextClass[item.status.tone]
+                        )}
+                      >
+                        {item.status.label}
+                      </span>
+                    )}
+                  </span>
+                )}
               </span>
               {item.status && (
                 <span
                   className={cn(
-                    'shrink-0 whitespace-nowrap font-display text-[11px] uppercase tracking-[0.1em]',
+                    'hidden shrink-0 whitespace-nowrap font-display text-[11px] uppercase tracking-[0.1em] sm:flex',
                     markTextClass[item.status.tone]
                   )}
                 >
@@ -133,7 +190,7 @@ export const RowList: React.FC<RowListProps> = ({
           );
 
           const rowClass = cn(
-            'flex min-h-[56px] w-full items-center gap-4 px-4 py-3 text-left transition-colors duration-120 ease-out-expo',
+            'flex min-h-[56px] w-full items-center gap-2 px-3 py-3 text-left transition-colors duration-120 ease-out-expo sm:gap-4 sm:px-4',
             showMark && `border-l-2 ${markToneClass[tone as MarkTone]}`,
             selected && 'bg-paper-sunk',
             !selected && onSelect && 'hover:bg-paper-sunk/60'
@@ -155,6 +212,15 @@ export const RowList: React.FC<RowListProps> = ({
           );
         })}
       </ul>
+      {paginated && (
+        <Pagination
+          currentPage={activePage}
+          totalItems={items.length}
+          pageSize={effectivePageSize}
+          onPageChange={handlePageChange}
+          itemLabel={itemLabel}
+        />
+      )}
     </div>
   );
 };

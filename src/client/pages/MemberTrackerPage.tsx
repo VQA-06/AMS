@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowClockwise } from '@phosphor-icons/react/ArrowClockwise';
 import { Buildings } from '@phosphor-icons/react/Buildings';
+import { CalendarCheck } from '@phosphor-icons/react/CalendarCheck';
 import { ChartLineUp } from '@phosphor-icons/react/ChartLineUp';
 import { Check } from '@phosphor-icons/react/Check';
 import { Clock } from '@phosphor-icons/react/Clock';
@@ -12,24 +13,27 @@ import { TrendUp } from '@phosphor-icons/react/TrendUp';
 import { UserCheck } from '@phosphor-icons/react/UserCheck';
 import { UserMinus } from '@phosphor-icons/react/UserMinus';
 import { Users } from '@phosphor-icons/react/Users';
-import { WarningCircle } from '@phosphor-icons/react/WarningCircle';
+import { PartialBanner } from '../components/ui/PartialBanner';
 import { X } from '@phosphor-icons/react/X';
 import {
   MemberActivityEntry,
   MemberActivitySummary,
   ActivityTier,
+  AttendedEventEntry,
+  ApiResponse,
 } from '@/shared/types';
 import { fetchApi } from '../lib/api-client';
 import { cn } from '../lib/cn';
+import { TabKey } from '../components/layout/MobileShell';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Tabs } from '../components/ui/Tabs';
 import { DigitalPassCard } from '../components/qr/DigitalPassCard';
 import { ModalPortal } from '../components/ui/ModalPortal';
 import { RowList, type RowListItem } from '../components/ui/RowList';
 import { type MarkTone } from '../components/ui/Table';
-
 const focusRing =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
@@ -51,8 +55,16 @@ const tierLabel: Record<ActivityTier, string> = {
   inactive: 'Belum Aktif',
 };
 
+interface MemberTrackerPageProps {
+  onNavigate?: (tab: TabKey) => void;
+  onNavigateToCandidates?: () => void;
+}
 
-export const MemberTrackerPage: React.FC = () => {
+export const MemberTrackerPage: React.FC<MemberTrackerPageProps> = ({
+  onNavigate,
+  onNavigateToCandidates,
+}) => {
+  const [mainTab, setMainTab] = useState<'official' | 'candidate'>('official');
   const [entries, setEntries] = useState<MemberActivityEntry[]>([]);
   const [summary, setSummary] = useState<MemberActivitySummary | null>(null);
   const [divisions, setDivisions] = useState<string[]>([]);
@@ -84,6 +96,9 @@ export const MemberTrackerPage: React.FC = () => {
     memberDivision?: string | null;
     expiresAt: string;
   } | null>(null);
+  const [attendedEvents, setAttendedEvents] = useState<AttendedEventEntry[]>([]);
+  const [loadingAttendedEvents, setLoadingAttendedEvents] = useState<boolean>(false);
+
   const [loadingPass, setLoadingPass] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<boolean>(false);
 
@@ -91,6 +106,7 @@ export const MemberTrackerPage: React.FC = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
+      params.set('status', mainTab === 'candidate' ? 'candidate' : 'active');
       if (selectedDivision && selectedDivision !== 'all') {
         params.set('division', selectedDivision);
       }
@@ -129,8 +145,7 @@ export const MemberTrackerPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedDivision, debouncedSearch, selectedTier]);
-
+  }, [mainTab, selectedDivision, debouncedSearch, selectedTier]);
   useEffect(() => {
     loadData();
 
@@ -161,8 +176,21 @@ export const MemberTrackerPage: React.FC = () => {
     setInspectingMember(member);
     setPassData(null);
     setCopiedId(false);
+    setAttendedEvents([]);
+    setLoadingAttendedEvents(true);
+    fetchApi<ApiResponse<AttendedEventEntry[]>>(`/api/members/${member.member_id}/attended-events`)
+      .then((res) => {
+        if (res.ok && res.data) {
+          setAttendedEvents(res.data);
+        }
+      })
+      .catch((err: unknown) => {
+        console.error('Failed to load attended events:', err);
+      })
+      .finally(() => {
+        setLoadingAttendedEvents(false);
+      });
   };
-
   const handleCloseInspect = () => {
     setInspectingMember(null);
     setPassData(null);
@@ -256,38 +284,74 @@ export const MemberTrackerPage: React.FC = () => {
     <div className="space-y-5 pb-12 md:space-y-8">
       <PageHeader
         title="Pelacakan Keaktifan Anggota"
-        subtitle="Pantau tingkat partisipasi dan riwayat presensi anggota pada seluruh kegiatan Computer Community"
+        subtitle={
+          mainTab === 'candidate'
+            ? 'Pantau kehadiran calon anggota dalam seluruh kegiatan sebelum dilakukan pelantikan resmi'
+            : 'Pantau tingkat partisipasi dan riwayat presensi anggota pada seluruh kegiatan Computer Community'
+        }
         actions={
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={loadData}
-            aria-label="Segarkan Data"
-            icon={
-              <ArrowClockwise
-                className={cn('h-4 w-4', loading && 'animate-spin')}
-              />
-            }
-          >
-            Segarkan
-          </Button>
+          <div className="flex items-center gap-2">
+            {mainTab === 'candidate' && (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                icon={<UserCheck className="h-4 w-4" />}
+                onClick={() => {
+                  if (onNavigateToCandidates) {
+                    onNavigateToCandidates();
+                  } else if (onNavigate) {
+                    onNavigate('members');
+                  } else {
+                    window.location.href = '/members';
+                  }
+                }}
+              >
+                Buka Pelantikan Calon
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={loadData}
+              aria-label="Segarkan Data"
+              icon={
+                <ArrowClockwise
+                  className={cn('h-4 w-4', loading && 'animate-spin')}
+                />
+              }
+            >
+              Segarkan
+            </Button>
+          </div>
         }
       />
 
-      {divisionsFailed && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-start gap-2 rounded-panel border border-pending-200/70 bg-pending-500/10 p-3 text-xs text-pending-800"
-        >
-          <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-pending-600" />
-          <span>
-            Daftar divisi gagal dimuat, filter divisi mungkin tidak lengkap.
-            Data keaktifan di bawah tetap valid.
-          </span>
-        </div>
-      )}
+      {/* Top-Level View Switcher: Anggota Resmi vs Calon Anggota */}
+      <div className="flex items-center justify-start border-b border-rule pb-2">
+        <Tabs
+          items={[
+            { id: 'official', label: 'Anggota Resmi' },
+            { id: 'candidate', label: 'Calon Anggota' },
+          ]}
+          active={mainTab}
+          onChange={(id) => {
+            setMainTab(id as 'official' | 'candidate');
+            setSelectedTier('all');
+            setSelectedDivision('');
+            setSearch('');
+          }}
+          className="w-full sm:w-auto"
+        />
+      </div>
+      <PartialBanner
+        message={
+          divisionsFailed
+            ? 'Daftar divisi gagal dimuat, filter divisi mungkin tidak lengkap. Data keaktifan di bawah tetap valid.'
+            : undefined
+        }
+      />
 
       {/* Enterprise Compact Telemetry Strip (Replaces 4 Giant Slop Cards) */}
       <div className="surface flex flex-col justify-between gap-4 rounded-panel p-3.5 sm:p-4 lg:flex-row lg:items-center">
@@ -349,7 +413,7 @@ export const MemberTrackerPage: React.FC = () => {
                 selectedTier === 'highly_active' ? 'all' : 'highly_active',
               )
             }
-            className={`px-3 py-1.5 rounded-panel border text-xs font-semibold flex items-center gap-2 transition-colors ${
+            className={`min-h-[44px] px-3 py-1.5 rounded-panel border text-xs font-semibold flex items-center gap-2 transition-colors ${
               selectedTier === 'highly_active'
                 ? 'bg-seal-50 text-seal-800 border-seal-200 shadow-sm'
                 : 'bg-paper-sunk/60 text-ink border-rule-strong hover:border-seal-200/70 hover:text-ink'
@@ -367,7 +431,7 @@ export const MemberTrackerPage: React.FC = () => {
             onClick={() =>
               setSelectedTier(selectedTier === 'active' ? 'all' : 'active')
             }
-            className={`px-3 py-1.5 rounded-panel border text-xs font-semibold flex items-center gap-2 transition-colors ${
+            className={`min-h-[44px] px-3 py-1.5 rounded-panel border text-xs font-semibold flex items-center gap-2 transition-colors ${
               selectedTier === 'active'
                 ? 'bg-pending-50 text-pending-800 border-pending-200 shadow-sm'
                 : 'bg-paper-sunk/60 text-ink border-rule-strong hover:border-pending-200/70 hover:text-ink'
@@ -385,7 +449,7 @@ export const MemberTrackerPage: React.FC = () => {
             onClick={() =>
               setSelectedTier(selectedTier === 'inactive' ? 'all' : 'inactive')
             }
-            className={`px-3 py-1.5 rounded-panel border text-xs font-semibold flex items-center gap-2 transition-colors ${
+            className={`min-h-[44px] px-3 py-1.5 rounded-panel border text-xs font-semibold flex items-center gap-2 transition-colors ${
               selectedTier === 'inactive'
                 ? 'bg-rule-strong text-ink border-rule-strong shadow-sm'
                 : 'bg-paper-sunk/60 text-ink-2 border-rule-strong hover:border-rule-strong hover:text-ink'
@@ -590,7 +654,10 @@ export const MemberTrackerPage: React.FC = () => {
                     type="button"
                     onClick={handleCloseInspect}
                     aria-label="Tutup panel inspeksi"
-                    className="w-8 h-8 rounded-chip bg-paper-sunk border border-rule-strong text-ink-2 hover:text-ink flex items-center justify-center transition-colors"
+                    className={cn(
+                      'min-h-[44px] min-w-[44px] rounded-chip bg-paper-sunk border border-rule-strong text-ink-2 hover:text-ink flex items-center justify-center transition-colors',
+                      focusRing
+                    )}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -668,6 +735,60 @@ export const MemberTrackerPage: React.FC = () => {
                         : 'Belum pernah mengikuti presensi kegiatan'}
                     </p>
                   </div>
+                </div>
+
+                {/* Attended Events History Section */}
+                <div className="space-y-3 pt-2 border-t border-rule">
+                  <div className="flex items-center justify-between">
+                    <h3 className="flex items-center gap-1.5 font-heading text-xs font-bold uppercase tracking-wider text-ink">
+                      <CalendarCheck className="h-3.5 w-3.5 text-pen-deep" />
+                      <span>Daftar Kegiatan yang Diikuti</span>
+                    </h3>
+                    <Badge variant="neutral" size="xs">
+                      {attendedEvents.length} Presensi
+                    </Badge>
+                  </div>
+
+                  {loadingAttendedEvents ? (
+                    <div className="flex items-center justify-center py-4 text-xs text-ink-2">
+                      <ArrowClockwise className="mr-2 h-3.5 w-3.5 animate-spin text-pen-deep" />
+                      Memuat riwayat kegiatan...
+                    </div>
+                  ) : attendedEvents.length === 0 ? (
+                    <div className="rounded-panel border border-dashed border-rule bg-paper-sunk/30 py-3 text-center text-xs text-ink-2">
+                      Belum ada riwayat kegiatan tercatat.
+                    </div>
+                  ) : (
+                    <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                      {attendedEvents.map((evt, idx) => (
+                        <div
+                          key={`${evt.event_id}-${evt.attended_at}-${idx}`}
+                          className="rounded-panel border border-rule bg-paper-raised p-2.5 space-y-1 text-xs text-ink"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-semibold text-ink line-clamp-1">{evt.event_name}</p>
+                            <Badge variant="pen" size="xs">
+                              {evt.session_type}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-ink-3">
+                            <span>
+                              {new Date(evt.attended_at).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                            {evt.event_location && (
+                              <span className="truncate max-w-[120px]">{evt.event_location}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Universal QR Pass Section inside Drawer */}

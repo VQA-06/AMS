@@ -10,6 +10,7 @@ import { cn } from '../../lib/cn';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
 import { Table, THead, TBody, TRow, TCell } from '../ui/Table';
+import { Pagination } from '../ui/Pagination';
 
 /** One focus quartet. Never `focus:outline-none` alone. */
 const focusRing =
@@ -21,11 +22,14 @@ const FILE_INPUT_ID = 'import-wizard-field-1';
 interface ImportWizardProps {
   onSuccess: () => void;
   onCancel: () => void;
+  defaultStatus?: 'active' | 'inactive' | 'candidate' | 'archived';
 }
 
-export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel }) => {
+export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel, defaultStatus }) => {
   const [step, setStep] = useState<'upload' | 'preview' | 'result'>('upload');
   const [mode, setMode] = useState<'upsert' | 'create' | 'update'>('upsert');
+  const [previewPage, setPreviewPage] = useState(1);
+  const previewPageSize = 25;
   const [parsedRows, setParsedRows] = useState<Array<Record<string, unknown>>>([]);
   const [previewReport, setPreviewReport] = useState<{
     total: number;
@@ -69,11 +73,14 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
       reader.onload = (event) => {
         try {
           const content = JSON.parse(event.target?.result as string);
-          const rows = Array.isArray(content) ? content : content.members || [];
-          if (!Array.isArray(rows) || rows.length === 0) {
+          const rawRows = Array.isArray(content) ? content : content.members || [];
+          if (!Array.isArray(rawRows) || rawRows.length === 0) {
             setError('File JSON tidak memuat data anggota yang valid.');
             return;
           }
+          const rows = defaultStatus
+            ? rawRows.map((r: Record<string, unknown>) => ({ ...r, status: r.status || defaultStatus }))
+            : rawRows;
           setParsedRows(rows);
           runPreview(rows);
         } catch {
@@ -91,8 +98,11 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
             setError('File CSV kosong atau tidak memiliki baris data.');
             return;
           }
-          setParsedRows(results.data);
-          runPreview(results.data);
+          const rows = defaultStatus
+            ? results.data.map((r) => ({ ...r, status: r.status || defaultStatus }))
+            : results.data;
+          setParsedRows(rows);
+          runPreview(rows);
         },
         error: () => {
           setError('Gagal memproses file CSV.');
@@ -283,7 +293,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
                 </tr>
               </THead>
               <TBody className="font-oxanium">
-                {previewReport.results.map((res) => (
+                {previewReport.results.slice((previewPage - 1) * previewPageSize, previewPage * previewPageSize).map((res) => (
                   <TRow
                     key={res.row}
                     className={cn(
@@ -332,6 +342,14 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onSuccess, onCancel 
               </TBody>
             </Table>
           </div>
+          <Pagination
+            currentPage={previewPage}
+            totalItems={previewReport.results.length}
+            pageSize={previewPageSize}
+            onPageChange={setPreviewPage}
+            itemLabel="baris"
+            className="mt-2"
+          />
 
           <div className="flex items-center justify-between border-t border-rule pt-4">
             <Button

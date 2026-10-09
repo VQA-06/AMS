@@ -22,7 +22,7 @@ source and a production build.
 
 ```bash
 npx tsc --noEmit -p tsconfig.json   # types must stay at zero errors
-npx vitest run                       # 238 tests
+npx vitest run                       # 41 test files, 333 tests
 npm run build
 ```
 
@@ -82,7 +82,9 @@ These encode fixes already applied to this codebase. Do not reintroduce them.
 - Never choose a text token without checking the ground that actually paints
   it. The ground is frequently an *ancestor*: the shell root, the dark sidebar,
   or the dark header. A `text-ink-2` that looks right in isolation is 2.27:1
-  on `bg-ink`.
+  on `bg-ink`, and `text-seal-600` on `bg-ink` is 2.38:1. State-ramp tokens
+  (`text-seal-400`, `text-pending-400`, …) are the correct step on a dark
+  ground, not their `-600` counterparts (`text-seal-400` on `ink` is 5.74:1).
 - The app has two grounds. Paper content uses `text-ink*`. Dark chrome (shell
   root, sidebar, header, dock, full-bleed overlays) uses `text-paper*`. On a
   dark ground there is no "muted" ink token — use `text-paper/70`.

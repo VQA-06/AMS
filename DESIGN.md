@@ -80,14 +80,23 @@ animates.
 
 | Class | Does | Use for |
 |---|---|---|
-| `.surface` | `#faf8f3` fill + `1px solid #d8d3c7` | resting panel (49 uses, 25 files) |
-| `.surface-raised` | same + `0 1px 2px rgba(26,24,21,.06)` | one level up the stack (17) |
-| `.shadow-lift` | `0 4px 12px -2px rgba(26,24,21,.18)` | edge lift on a raised panel (4) |
-| `.bezel` | `border-radius: 0.75rem` | outer rounding shorthand (8) |
-| `.bezel-core` | `border-radius: 0.5rem` | inner rounding (3) |
-| `.rail` | `2px` wide, `9999px` radius | active sidebar/dock accent |
-| `.rail-pulse` | `.rail` + one-shot 600ms fade | settle-in on active item (2) |
-| `.pop-once` | one-shot emphasis | single events, not loops (3) |
+| `.surface` | `#faf8f3` fill + `1px solid #d8d3c7` | resting panel (43 uses, 26 files) |
+| `.surface-raised` | same + `0 1px 2px rgba(26,24,21,.06)` | one level up the stack (17 uses, 10 files) |
+| `.shadow-lift` | `0 4px 12px -2px rgba(26,24,21,.18)` | edge lift on a raised panel (5 uses, 5 files) |
+| `.bezel` | `border-radius: 0.75rem` | outer rounding shorthand (7 uses, 7 files) |
+| `.bezel-core` | `border-radius: 0.5rem` | inner rounding (5 uses, 5 files) |
+| `.rail` | `2px` wide, `9999px` radius | active sidebar/dock/row accent (5 uses, 5 files) |
+| `.rail-pulse` | `.rail` + one-shot 600ms fade | settle-in on active item (2 uses, 1 file) |
+| `.pop-once` | one-shot emphasis | single events, not loops (3 uses, 3 files) |
+| `.ledger-row` | `border-bottom: 1px solid #d8d3c7` | row hairline with closing rule (1 use, 1 file) |
+| `.no-scrollbar` | hide scrollbar | horizontal chip/sheet strips (10 uses, 8 files) |
+| `.touch-target` | `44px` min hit area | thumb targets (9 uses, 8 files) |
+| `.toast-progress` | toast bar 3.5s linear animation | scan toast progress (1 use, 1 file) |
+| `.pb-safe` | `safe-area-inset-bottom` padding | bottom dock and sheet clearance (2 uses, 2 files) |
+| `.skeleton-shimmer` | paper-toned shimmer | loading state placeholders (2 uses, 2 files) |
+| `.font-oxanium` | tabular-nums font family | machine readouts, tokens, IDs (78 uses, 25 files) |
+| `.font-heading` | serif heading font family | section and card titles (44 uses, 29 files) |
+| `.font-display` | serif display font family | display numbers (6 uses, 4 files) |
 
 `.rail` sets **width only**. Height/stretch and colour live at the call site, so
 one primitive serves the sidebar rail, the scan outcome row, and the modal
@@ -107,8 +116,8 @@ accent edge without a variant prop.
   offline banner).
 - `prefers-reduced-motion` is handled globally in `index.css`. **Any new
   custom animation must be registered** in that block — the list is
-  `.pop-once, .rail-pulse, .reveal-up, .toast-progress,
-  .skeleton-shimmer, .animate-pulse, .animate-spin`.
+  `.pop-once, .rail-pulse, .toast-progress, .skeleton-shimmer,
+  .animate-pulse, .animate-spin`.
 
 ## Overlays and backdrops
 
@@ -143,6 +152,9 @@ Do not re-implement them per modal.
   basis sizes against a stale viewport. The shell roots on
   `h-[100dvh]` (`MobileShell.tsx:129`); pages subtract the chrome, e.g.
   `min-h-[calc(100dvh-8rem)]` (`ScannerPage.tsx:157`).
+- `index.html` viewport meta uses `width=device-width, initial-scale=1.0, viewport-fit=cover`.
+  `viewport-fit=cover` stays for safe-area plumbing (`.pb-safe`), but `user-scalable=no` /
+  `maximum-scale` does not — blocking pinch-zoom fails WCAG 1.4.4 / 1.4.10.
 - **Never `overflow-hidden` on a page root.** It clips content with no way to
   reach it. `LoginPage` uses `min-h-[100dvh] … overflow-y-auto overflow-x-hidden`.
 - The shell scroll container is `overflow-x-auto`, not `hidden`
@@ -164,12 +176,105 @@ moving DOM and duplicating markup. `ScannerPage` is the reference: camera
 it), control card `order-2 md:order-1` (desktop reads controls first). Restore
 both at `md` so a wide viewport gets the desktop arrangement back.
 
-`Tabs` fills its width with `flex-1` on each item and `justify-center` on the
-tablist, so a two-label login switcher splits the card evenly instead of packing
-left. `shrink-0` + `overflow-x-auto` stay on the tablist so a four-label
-settings bar still scrolls rather than squashing. Consumers needing
-content-width tabs pass `variant="pill"` or a `className` override — there is no
-`fill` prop.
+`Tabs` fills its width with `flex-1` on each item, so a two-label login switcher
+splits the card evenly instead of packing left. Consumers needing content-width
+tabs pass `variant="pill"` or a `className` override — there is no `fill` prop.
+
+Alignment is `justify-start sm:justify-center`, and the tablist keeps
+`overflow-x-auto` with `scroll-snap-type: x_proximity` plus `snap-start` on each
+button. Centring an *overflowing* scroll container pushes content off **both**
+ends: the four settings labels totalled 566px in a 312px box, so the first tab
+rendered at x = −117px and could not be scrolled to. The tablist deliberately does
+**not** use `.no-scrollbar` — a strip that scrolls and looks like it does not is
+the actual complaint, so the 5px pencil-grey thumb is the affordance. Both
+variants hold a 44px target (`min-h-[44px]`); the underline variant measured
+34px before that was added.
+
+## Row actions on mobile
+
+A `RowList` row has room for its title, its meta line, and the state word — and
+nothing else below `sm`. Five 44px buttons in a 344px row leave the title
+**0px wide** and push the last button past the viewport edge.
+
+The grammar is two layouts from one markup tree, switched by breakpoint:
+
+- Below `sm`: `gap-2 px-3`, the state word moves into the meta line as a
+  `shrink-0` fragment beside a `min-w-0 flex-1 truncate` text span, and the row's
+  actions collapse into `RowActions` (a kebab, `sm:hidden`).
+- At `sm` and up: `gap-4 px-4`, the dedicated status column returns, and the
+  inline button cluster returns (`hidden sm:flex`).
+
+This is CSS visibility, never `window.matchMedia` — no hydration split and one
+render path for the data. The status word is **moved, not deleted**: it is
+load-bearing for grayscale printing (`RowList.tsx` doc, `color-semantics` tests)
+and it is what the mark hue is read against. The two renderings are mutually
+exclusive at any one breakpoint, so it is never on screen twice.
+
+`RowActions` is the mobile owner of whatever a row can do. It has no focus trap
+and no scroll lock — it is a menu bound to a row, not a modal. `FloatingSurface`
+is not a substitute: its placements are fixed bars and sheets, none of which
+anchor to a row. The panel is `absolute` beside the row's own `<button>` (never
+inside it — nested interactives are banned), opens upward when the row sits in
+the lower third of the viewport, and dismisses on Escape or an outside
+`pointerdown`.
+
+## Horizontal overflow inside a surface
+
+An overflow that a parent clips is not an overflow the user can undo. Two traps,
+both fixed by removing a class rather than adding one:
+
+- A scroll container must not have a `min-w-*` of its own. `Table` applies
+  `className` to its **scroll wrapper**, so `<Table className="min-w-[640px]">`
+  sizes the scroller to 640px; a parent `overflow-hidden` then clips the excess
+  and the scroll cannot be reached. The audit tab lost 506px this way.
+- A bar whose children are `shrink-0` needs its own `overflow-x-auto`. The
+  selection bar's four actions are wider than 344px, so `Hapus` sat at x = 436 —
+  off-screen and untappable. It now scrolls with `snap-x` and `no-scrollbar`.
+
+Corollary: `SelectionBar` carries no counter. "Select all" already exists as the
+row-list checkbox header, so the count chip, the "N dipilih" line and the bar's
+own select-all button were a duplicate of the same state — and the widest part
+of it.
+
+### Horizontal overflow of a control strip
+
+A strip that scrolls gets `no-scrollbar`. The pencil-grey 5px webkit
+track/thumb paints a permanent band under the labels, which reads as a defect
+rather than an affordance — the settings switcher was the worst offender
+because it is the control users tap most. The cue is `scroll-snap` plus a
+clipped trailing tab. Alignment stays `start` below `sm` and `center` above:
+centring an overflowing container pushes content off *both* ends, which once
+left the first of four settings tabs unscrollable.
+
+### One grammar per surface class
+
+A list of same-shaped records with per-row actions is a `RowList`, never a
+`<Table>`. `MemberList`, `EventList` and the guest QR pass list are one
+surface class and share one grammar: an index-card row with a leading ordinal,
+a meta line, a right-aligned state word, and actions that are an inline cluster
+at `sm` and up and a `RowActions` kebab below it. Do not keep a `<Table>` and
+hide columns at small widths — that is two grammars for one list, which is the
+defect, not the fix.
+
+`Table` stays for surfaces whose columns are genuinely compared in parallel:
+the RBAC capability matrix in Settings → Tim Panitia, the audit log, and the
+import preview. The roster and the team account list are record lists and are
+`RowList`s at every width — there is no card/list toggle, because a toggle is
+only ever a way to ship two grammars for one list.
+
+A `RowListItem` carries no badge slot, so a per-row marker that used to be a
+tinted chip (`TAMU`) becomes the leading fragment of the `meta` string. The
+mark hue is the row's only colour carrier in this grammar; a second coloured
+element competes with the state it is supposed to sit beside.
+
+### Pagination on lists and tables
+
+All record lists (`RowList`) and table surfaces (`AuditTab`, `ImportWizard`) paginate by default:
+- **Default page size**: 25 items per page (`pageSize = 25`).
+- **Single-page hiding**: When `totalItems <= pageSize`, pagination controls hide completely (`hideOnSinglePage={true}` default) to eliminate zero-utility clutter on short lists.
+- **Touch target requirement**: Navigation and page buttons meet the `min-h-[44px] min-w-[44px]` touch floor with `rounded-chip`.
+- **Contrast & State**: Active page number is highlighted with `bg-pen-500 text-paper border-pen-500 font-bold` (`aria-current="page"`). Inactive buttons use `border-rule bg-paper-raised text-ink-2`.
+- **Summary text**: "Menampilkan **X–Y** dari **Z** [itemLabel]" anchored on the left on desktop, wrapping cleanly on mobile.
 
 ## Anti-slop
 

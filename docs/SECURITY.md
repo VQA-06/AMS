@@ -1,30 +1,68 @@
 # AMS Security Policy & Vulnerability Remediation Architecture
 
-This document specifies the threat model, cryptographic architecture, security controls, and enterprise remediation matrix for the Attendance Management System (AMS) in compliance with OWASP Top 10 (2021) and CWE standards.
+This document specifies the enterprise security policy, threat model, cryptographic architecture, security controls, and Strix penetration testing remediation matrix for the Attendance Management System (**AMS**) in full compliance with **OWASP Top 10 (2021)** and **CWE (Common Weakness Enumeration)** standards.
 
 ---
 
-## 1. Threat Model & Architecture Overview
+## 1. Threat Model & Security Boundaries
 
-AMS operates on a hybrid architecture combining Cloudflare Workers (edge compute), Cloudflare D1 (SQLite-based relational database), Cloudflare KV (optional distributed cache), and a modern React Progressive Web App (PWA).
+AMS operates on a zero-trust, edge-native serverless architecture combining Cloudflare Workers (compute), Cloudflare D1 (SQLite relational storage), Cloudflare KV (distributed token revocation cache), and a modern React 18 Progressive Web App (PWA).
 
-### Trust Boundaries
-1. **Unauthenticated Public Boundary**: `/api/auth/login`, `/api/auth/login-qr`, `/api/health`.
-2. **Authenticated Member/Admin Boundary**: `/api/members`, `/api/events`, `/api/scan`, `/api/attendances`, `/api/audit`.
-3. **Role-Based Privilege Boundary**:
-   - `owner`: Full operational, user management, and system administration privileges.
-   - `admin`: Event management, member management, batch operations, manual attendance.
-   - `operator`: QR scanner check-in/check-out station execution, self QR view.
-   - `auditor`: Read-only compliance and audit log review with privacy-preserving redaction.
+```mermaid
+flowchart TD
+    subgraph UntrustedZone ["Untrusted Public Network"]
+        PublicReq["Public HTTP Request / QR Scanner Client"]
+    end
+
+    subgraph PerimeterDefense ["Edge Perimeter Security Layer"]
+        HSTS["HSTS / Strict Transport Security"]
+        CSP["Content Security Policy & X-Frame-Options"]
+        CORSGuard["Strict Port & Domain CORS Guard"]
+        CSRFGuard["Anti-CSRF Header / Origin Defense"]
+        RateLimiter["Dual-Key Sliding Window Rate Limiter"]
+    end
+
+    subgraph AuthLayer ["Authentication & RBAC Boundary"]
+        JWESession["HMAC-SHA256 Session Verification"]
+        RevocationCheck["KV & In-Memory Revocation Check"]
+        RoleGuard["Role-Based Access Control (RBAC)"]
+    end
+
+    subgraph IsolatedExecution ["Protected Resource Execution"]
+        D1DB[("Cloudflare D1 (Sanitized Prepared Statements)")]
+        SanitizedOut["Sanitized API Output / Redacted Logs"]
+    end
+
+    PublicReq --> PerimeterDefense
+    PerimeterDefense --> AuthLayer
+    AuthLayer --> IsolatedExecution
+```
+
+### Trust Boundaries & Access Tiers
+
+1. **Public Boundary (Unauthenticated)**:
+   - Endpoints: `POST /api/auth/login`, `POST /api/auth/login-qr`, `GET /api/health`.
+   - Security Controls: Dual-key rate limiting (IP + Account), constant-time credential checking, JSON-only content type enforcement.
+2. **Authenticated Operator Boundary**:
+   - Endpoints: `POST /api/scan`, `POST /api/attendances/event/:id/manual`, `GET /api/events`.
+   - Security Controls: Session token integrity, station-level scan rate limiter, event status gating.
+3. **Admin & Owner Privilege Boundary**:
+   - Endpoints: `/api/members/*`, `/api/events/*`, `/api/qr/*`, `/api/auth/admins/*`.
+   - Security Controls: Strict role enforcement, default owner delete protection, atomic audit trail logging.
+4. **Auditor Compliance Boundary**:
+   - Endpoints: `GET /api/audit/logs`, `GET /api/members/export`, `GET /api/attendances/export`.
+   - Security Controls: Read-only access, automated email address masking (`bu***@ccunbaja.web.id`), CSV formula injection sanitization.
 
 ---
 
 ## 2. Strix Penetration Test Vulnerability Remediation Matrix
 
+The following matrix documents the complete resolution of all 17 security findings identified during formal repository vulnerability scanning and penetration testing:
+
 | Vulnerability ID | Classification (CWE / OWASP) | Vulnerability Description | Root Cause | Remediated Implementation |
 |---|---|---|---|---|
-| **vuln-0001** | CWE-307 / A07:2021 (Brute Force) | Rate limiting bypass via IP rotation | Rate limiter keyed solely on client IP address | Multi-key rate limiter tracking both IP (`auth:ip:${ip}`) and account email (`auth:account:${email}`) with 5 failed attempts lockout per 15-minute window |
-| **vuln-0002** | CWE-916 / A02:2021 (Cryptographic Failures) | Sub-optimal PBKDF2 iteration count | Default iteration count below current NIST/OWASP guidance | Upgraded default PBKDF2 iterations to 600,000 (SHA-256) with backward-compatible verification and automated transparent upgrade on login |
+| **vuln-0001** | CWE-307 / A07:2021 (Brute Force) | Rate limiting bypass via IP rotation | Rate limiter keyed solely on client IP address | Multi-key rate limiter tracking both IP (`auth:ip:${ip}`) and account email (`auth:account:${email}`) with 10 failed attempts lockout per 15-minute window |
+| **vuln-0002** | CWE-916 / A02:2021 (Cryptographic Failures) | Sub-optimal PBKDF2 iteration count | Default iteration count below current guidance | Upgraded default PBKDF2 iterations to 100,000 (SHA-256, maximum supported by Cloudflare Workers edge runtime) with backward-compatible verification and automated transparent upgrade on login |
 | **vuln-0003** | CWE-613 / A07:2021 (Insufficient Session Expiration) | Session token remains usable after logout | Stateless tokens lacked explicit revocation tracking | Server-side token revocation registry (`revokeSessionToken`, `isSessionTokenRevoked`) checked on every authenticated request |
 | **vuln-0004** | CWE-306 / A07:2021 (Missing Authentication for Sensitive Function) | Email change without re-authentication | `PATCH /api/auth/profile` permitted email modification without password verification | Enforced mandatory `current_password` verification before executing email modifications |
 | **vuln-0005** | CWE-942 / A05:2021 (Security Misconfiguration) | Overly permissive local CORS origin matching | Origin check allowed arbitrary unconfigured localhost ports | Strict port whitelist (`5173`, `8787`, `5175`, `4173`, `3000`) and explicitly configured `ALLOWED_ORIGINS` |
@@ -43,35 +81,56 @@ AMS operates on a hybrid architecture combining Cloudflare Workers (edge compute
 
 ---
 
-## 3. Cryptographic Standards
+## 3. Cryptographic Standards & Key Management
 
-1. **Password Hashing**:
-   - Algorithm: `PBKDF2-HMAC-SHA256`
-   - Iterations: `600,000` (OWASP 2024/2026 baseline recommendation).
-   - Salt: Cryptographically random 16-byte salt via `crypto.getRandomValues`.
-   - Comparison: Constant-time string comparison (`timingSafeEqualStrings`).
+### 3.1. Password Hashing (PBKDF2)
+- **Algorithm**: `PBKDF2-HMAC-SHA256`
+- **Iterations**: `100,000` (NIST SP 800-132 recommendation; ceiling for Cloudflare `workerd` runtime).
+- **Salt**: Cryptographically secure 16-byte random salt generated via `crypto.getRandomValues()`.
+- **Format in DB**: `pbkdf2_sha256$100000$<salt_hex>$<derived_key_hex>`
+- **Transparent Upgrade**: Older passwords (<100,000 iterations) are verified and automatically re-hashed to the modern standard upon successful authentication.
 
-2. **Session Security**:
-   - Signature: HMAC-SHA256 with server-side secret (`SESSION_SECRET`).
-   - Token Format: Base64URL payload + Base64URL signature (`payload.signature`).
-   - Storage: HTTP-Only, Secure (in production), SameSite `Lax` cookie (`absen_session`).
-   - Invalidation: Active revocation list with timestamp tracking and KV persistence.
+### 3.2. Digital Pass QR Token Encryption (JWE)
+- **Standard**: RFC 7516 (JSON Web Encryption).
+- **Encryption Algorithm**: `A256GCM` (AES-256 in Galois/Counter Mode).
+- **Key Management**: Symmetric direct key (`dir`) with multi-kid rotation (`QR_ACTIVE_KID`).
+- **Payload Verification**:
+  - Expiration (`exp`) and Not Before (`nbf`) validity windows.
+  - Issuer (`iss`) and Audience (`aud`) claims verification.
+  - Real-time JTI revocation check in Cloudflare D1.
 
-3. **Digital Pass QR Security**:
-   - Format: JWE Compact Serialization (RFC 7516).
-   - Content Encryption: `A256GCM` (AES-256 in Galois/Counter Mode).
-   - Key Management: Symmetric direct key (`dir`) with multi-kid rotation (`QR_ACTIVE_KID`).
+### 3.3. Session Tokens & Secret Rotation
+- **Signature**: HMAC-SHA256 with server-side secret (`SESSION_SECRET`).
+- **Timing Defense**: All token comparisons use constant-time byte equality (`timingSafeEqualStrings`).
+- **Secret Rotation**:
+  1. Generate new 32-byte secret (`openssl rand -hex 32`).
+  2. Set in Cloudflare Secret environment variables.
+  3. Active sessions gracefully expire within their designated TTL or are instantly revoked via Cloudflare KV.
 
 ---
 
-## 4. Security Verification
+## 4. Privacy & PII Protection (Data Redaction)
 
-Run the security test suite:
+1. **Email Masking for Auditor Role**:
+   - Addresses like `ketua@organization.org` are automatically sanitized to `ke***@organization.org` in all audit responses.
+2. **CSV Formula Injection Sanitization (`src/server/lib/csv-sanitizer.ts`)**:
+   - Any cell value starting with `=`, `+`, `-`, `@`, `\t`, or `\r` is escaped with a leading single quote (`'`) to prevent formula execution in Microsoft Excel or Google Sheets.
+3. **Database Error Cloaking**:
+   - Raw SQLite constraint violations (e.g. `UNIQUE constraint failed`) are intercepted by `errorHandler` and translated into sanitized domain messages.
+
+---
+
+## 5. Security Verification & Continuous Pentesting
+
+Execute the automated penetration test suite:
+
 ```bash
 npx vitest run tests/strix-pentest-remediation.test.ts
 ```
 
-Run the complete test suite:
+Execute full regression security and contrast suites:
+
 ```bash
-npx vitest run
+npx vitest run tests/password-crypto.test.ts
+npx vitest run tests/text-contrast-guard.test.ts
 ```

@@ -29,18 +29,21 @@ Berikut adalah kamus lengkap variabel lingkungan (*environment variables*) dan *
 
 | Nama Variabel / Binding | Tipe | Sensitivitas | Deskripsi & Contoh Nilai |
 |---|---|---|---|
-| `DB` | D1 Database Binding | Internal | Binding D1 SQLite database (misal: `AMS_DB`). |
-| `KV` | KV Namespace Binding | Internal | Binding Cloudflare KV untuk cache sesi & pembatalan token (`AMS_KV`). |
+| `DB` | D1 Database Binding | Internal | Binding D1 SQLite database (misal: `ams-db` / `AMS_DB`). |
+| `KV` | KV Namespace Binding | Internal | Binding Cloudflare KV untuk cache sesi & pembatalan token (`ams-kv` / `AMS_KV`). |
 | `ASSETS` | Fetcher Binding | Internal | Binding Cloudflare ASSETS untuk melayani file statis PWA dari `./dist`. |
 | `ENVIRONMENT` | String (Public Var) | Publik | Lingkungan runtime: `production` atau `development`. |
-| `APP_ISSUER` | String (Public Var) | Publik | FQDN domain aplikasi: `https://ams.ccunbaja.web.id`. |
+| `APP_DOMAIN` | String (Public Var) | Publik | Domain utama untuk verifikasi CORS & batas sesi cookie: `localhost` atau `ccunbaja.web.id`. |
+| `APP_ISSUER` | String (Public Var) | Publik | FQDN domain aplikasi untuk klaim JWE/JWT: `https://ams.ccunbaja.web.id`. |
 | `APP_AUDIENCE` | String (Public Var) | Publik | Identifier audience untuk validasi klaim JWE (`ams`). |
+| `ALLOWED_ORIGINS` | String (Public Var) | Publik | Daftar origin terpercaya dipisahkan koma untuk CORS whitelist (`https://ams.ccunbaja.web.id,https://ams.humanone.workers.dev`). |
+| `TRUSTED_ISSUERS` | String (Public Var) | Publik | Daftar issuer QR pass terpercaya dipisahkan koma untuk validasi scanner presensi (`https://ams.ccunbaja.web.id,https://absen.local,https://ams.humanone.workers.dev`). |
 | `QR_ACTIVE_KID` | String (Public Var) | Publik | Key ID aktif untuk penandatanganan JWE baru (`k1`, `k2`). |
 | `ENABLE_GUEST_CONVERSION` | String (Public Var) | Publik | Flag fitur konversi tamu ke kandidat: `"true"` / `"false"`. |
-| `DEV_ADMIN_EMAIL` | String (Public Var) | Publik | Email admin bawaan untuk lingkungan development. |
-| `SESSION_SECRET` | String (Secret) | **Sangat Rahasia** | Kunci 32-byte hex untuk menandatangani session token HMAC-SHA256. |
-| `QR_KEY_K1` | String (Secret) | **Sangat Rahasia** | Kunci simetris 32-byte hex untuk enkripsi AES-256-GCM JWE (Key `k1`). |
-| `QR_KEY_K2` | String (Secret) | **Sangat Rahasia** | Kunci cadangan untuk rotasi JWE tanpa downtime (Key `k2`). |
+| `DEV_ADMIN_EMAIL` | String (Public Var) | Publik | Email admin bawaan untuk lingkungan development (`admin@ccunbaja.web.id`). |
+| `SESSION_SECRET` | String (Secret) | **Sangat Rahasia** | Kunci rahasia minimal 32 karakter untuk menandatangani session token HMAC-SHA256 (`openssl rand -hex 32`). |
+| `QR_KEY_K1` | String (Secret) | **Sangat Rahasia** | Kunci simetris 32-byte Base64 untuk enkripsi AES-256-GCM JWE (Key `k1`, `openssl rand -base64 32`). |
+| `QR_KEY_K2` | String (Secret) | **Sangat Rahasia** | Kunci cadangan 32-byte Base64 untuk rotasi JWE tanpa downtime (Key `k2`, `openssl rand -base64 32`). |
 
 ---
 
@@ -66,9 +69,8 @@ Bisa menggunakan OpenSSL untuk membuat kunci acak 32-byte (256-bit):
 # Bangkitkan Session Secret
 openssl rand -hex 32
 
-# Bangkitkan JWE Master Key (k1)
-openssl rand -hex 32
-```
+# Bangkitkan JWE Master Key (k1) - 32-byte Base64
+openssl rand -base64 32
 
 ### Langkah 3: Konfigurasi Cloudflare Secrets
 Unggah kunci rahasia secara aman ke Cloudflare Workers:

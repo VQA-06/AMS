@@ -5,6 +5,9 @@ All notable changes to the Attendance Management System (AMS) are documented in 
 
 ## [Unreleased]
 
+
+## [1.4.0] - 2026-04-10
+
 ### Added
 - **Enterprise Documentation Suite**: Added comprehensive modular documentation manuals in `docs/`: `ARCHITECTURE.md` (edge serverless architecture, request lifecycle, cryptographic subsystems), `API.md` (complete REST API reference across all 7 route modules with Zod schemas and RBAC matrix), `DATABASE.md` (entity schemas, composite index optimization, and migration history 0001-0009), `OPERATIONS.md` (DevOps provisioning, environment matrix, secret rotation, and incident response runbooks), and updated `SECURITY.md` (threat model and Strix penetration test remediation matrix).
 - **Root Documentation Overhaul**: Completely updated `README.md` with accurate architectural diagrams, badges (333 tests passing), migration table, and documentation index.

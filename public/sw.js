@@ -3,7 +3,7 @@
  * Mobile-First Offline Shell & Smart Caching Engine
  */
 
-const CACHE_NAME = 'ams-pwa-v1.1.2';
+const CACHE_NAME = 'ams-pwa-v1.4.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

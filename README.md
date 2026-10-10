@@ -119,7 +119,7 @@ cp .dev.vars.example .dev.vars
 
 ### 3. Terapkan Migrasi Database Lokal
 ```bash
-npx wrangler d1 migrations apply AMS_DB --local
+npm run db:migrate:local
 ```
 
 ### 4. Jalankan Server Pengembangan

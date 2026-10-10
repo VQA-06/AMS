@@ -1,19 +1,49 @@
 # ==============================================================================
-# AMS (Attendance Management System) - Local Environment Variables (.dev.vars)
-# Duplicate this file as '.dev.vars' for local development with wrangler dev
+# AMS (Attendance Management System) - Local Development Environment Variables
+# Duplicate this file as '.dev.vars' in the project root for local development.
+# wrangler dev automatically loads variables from '.dev.vars' into c.env.
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# 1. Runtime Environment & Feature Flags
+# ------------------------------------------------------------------------------
+# Runtime environment mode: 'development' | 'production' | 'test'
 ENVIRONMENT="development"
-QR_ACTIVE_KID="k1"
 
-# 32-Byte Base64 Encoded Key for AES-256-GCM JWE QR Cryptography
-# Generate your own using: openssl rand -base64 32
-QR_KEY_K1="dGhpcy1pcy1hLTMyLWJ5dGUtZGV2LWtleS1mb3ItandlISE="
+# Enable guest-to-candidate member conversion feature flag: 'true' | 'false'
+ENABLE_GUEST_CONVERSION="true"
 
-# Stateless HMAC-SHA256 Session Secret (Minimum 32 characters)
+# Fallback administrator email for local development auto-login
+DEV_ADMIN_EMAIL="admin@ccunbaja.web.id"
+
+# ------------------------------------------------------------------------------
+# 2. Domain, Issuer & Security Boundaries
+# ------------------------------------------------------------------------------
+# Canonical application domain and issuer URL for JWT/JWE verification
+APP_DOMAIN="localhost"
+APP_ISSUER="https://ams.ccunbaja.web.id"
+APP_AUDIENCE="ams"
+
+# Comma-delimited list of allowed CORS origins for local frontend clients
+ALLOWED_ORIGINS="http://localhost:5173,http://127.0.0.1:8787,http://127.0.0.1:5175,http://localhost:3000"
+
+# Comma-delimited list of trusted QR pass issuer URLs validated during attendance scanning
+TRUSTED_ISSUERS="https://ams.ccunbaja.web.id,https://absen.local,https://ams.humanone.workers.dev"
+
+# ------------------------------------------------------------------------------
+# 3. Session & Cryptographic Secrets (HMAC-SHA256 & AES-256-GCM JWE)
+# ------------------------------------------------------------------------------
+# Stateless HMAC-SHA256 session token signature secret (Minimum 32 characters)
+# Generate a new production secret via: openssl rand -hex 32
 SESSION_SECRET="ams-dev-session-secret-key-32-chars-long"
 
-APP_ISSUER="https://absen.local"
-APP_AUDIENCE="ams"
-DEV_ADMIN_EMAIL="admin@absen.local"
-ENABLE_GUEST_CONVERSION="true"
+# Active Key Identifier for signing new QR passes ('k1', 'k2', etc.)
+QR_ACTIVE_KID="k1"
+
+# Primary 32-Byte Base64-encoded symmetric key for AES-256-GCM JWE encryption (Key 'k1')
+# Generate a new key via: openssl rand -base64 32
+QR_KEY_K1="dGhpcy1pcy1hLTMyLWJ5dGUtZGV2LWtleS1mb3ItandlISE="
+
+# Secondary/Standby 32-Byte Base64 key for zero-downtime key rotation testing (Key 'k2')
+# Leave empty or set a secondary base64 key when testing rotation
+QR_KEY_K2=""

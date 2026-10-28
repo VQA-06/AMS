@@ -75,11 +75,11 @@ flowchart TB
         D1[("Cloudflare D1 (SQLite Transactional Database)")]
     end
 
-    Client <-->|HTTPS REST API| Worker
+    Client <-->|"HTTPS REST API"| Worker
     Worker --> SecHeaders --> RateLimit --> JWEAuth
-    Worker <-->|Tag-based Cache & Invalidation| EdgeCache
-    Worker <-->|Token Blacklist & Sliding Counters| KV
-    Worker <-->|Prepared Statements (Chunk <= 50)| D1
+    Worker <-->|"Tag-based Cache & Invalidation"| EdgeCache
+    Worker <-->|"Token Blacklist & Sliding Counters"| KV
+    Worker <-->|"Prepared Statements (Chunk <= 50)"| D1
 ```
 
 ---
